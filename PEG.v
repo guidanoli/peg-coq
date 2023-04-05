@@ -4,13 +4,13 @@ From Coq Require Import Lists.List.
 
 (* Parsing Expression *)
 Inductive Exp : Type :=
-  | PETrue : Exp (* Always matches *)
-  | PEFalse : Exp (* Never matches *)
-  | PETerminal : ascii -> Exp (* Matches an ASCII character *)
-  | PENonTerminal : nat -> Exp (* Matches a non-terminal *)
-  | PESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
-  | PEOrderedChoice : Exp -> Exp -> Exp (* Matches one of two subexpressions *)
-  | PEWrapper : Exp -> Exp (* Wraps subexpression for backtracking *)
+  | ETrue : Exp (* Always matches *)
+  | EFalse : Exp (* Never matches *)
+  | ETerminal : ascii -> Exp (* Matches an ASCII character *)
+  | ENonTerminal : nat -> Exp (* Matches a non-terminal *)
+  | ESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
+  | EOrderedChoice : Exp -> Exp -> Exp (* Matches one of two subexpressions *)
+  | EWrapper : Exp -> Exp (* Wraps subexpression for backtracking *)
   .
 
 (* Parsing Expression Grammar
@@ -19,7 +19,7 @@ Definition PEG : Type := list Exp.
 
 (* Starting Expression
    The first parsing expression in the list of parsing rules *)
-Definition startExp (peg : PEG) : Exp := PENonTerminal 0.
+Definition startExp (peg : PEG) : Exp := ENonTerminal 0.
 
 (* Stack Entry
    Each stack entry is composed of:
@@ -43,40 +43,40 @@ Reserved Notation " ps1 '==[' peg ']==>' ps2 " (at level 50, left associativity)
 Inductive step : PEG -> PState -> PState -> Prop :=
   | STerminal1 :
       forall peg st a s,
-      (PETerminal a, st, String a s) ==[ peg ]==> (PETrue, st, s)
+      (ETerminal a, st, String a s) ==[ peg ]==> (ETrue, st, s)
   | STerminal2 :
       forall peg st a,
-      (PETerminal a, st, EmptyString) ==[ peg ]==> (PEFalse, st, EmptyString)
+      (ETerminal a, st, EmptyString) ==[ peg ]==> (EFalse, st, EmptyString)
   | SNonTerminal1 :
       forall peg st i e s,
       nth_error peg i = Some e ->
-      (PENonTerminal i, st, s) ==[ peg ]==> (e, st, s)
+      (ENonTerminal i, st, s) ==[ peg ]==> (e, st, s)
   | SNonTerminal2 :
       forall peg st i s,
       nth_error peg i = None ->
-      (PENonTerminal i, st, s) ==[ peg ]==> (PEFalse, st, s)
+      (ENonTerminal i, st, s) ==[ peg ]==> (EFalse, st, s)
   | SSequence1 :
       forall peg st st' e1 e1' s s' e2,
       (e1, st, s) ==[ peg ]==> (e1', st', s') ->
-      (PESequence e1 e2, st, s) ==[ peg ]==> (PESequence e1' e2, st', s')
+      (ESequence e1 e2, st, s) ==[ peg ]==> (ESequence e1' e2, st', s')
   | SSequence2 :
       forall peg st e2 s,
-      (PESequence PETrue e2, st, s) ==[ peg ]==> (e2, st, s)
+      (ESequence ETrue e2, st, s) ==[ peg ]==> (e2, st, s)
   | SSequence3 :
       forall peg st e2 s,
-      (PESequence PEFalse e2, st, s) ==[ peg ]==> (PEFalse, st, s)
+      (ESequence EFalse e2, st, s) ==[ peg ]==> (EFalse, st, s)
   | SOrderedChoice :
       forall peg st e1 e2 s,
-      (PEOrderedChoice e1 e2, st, s) ==[ peg ]==> (PEWrapper e1, (e2, s) :: st, s)
+      (EOrderedChoice e1 e2, st, s) ==[ peg ]==> (EWrapper e1, (e2, s) :: st, s)
   | SWrapper1 :
       forall peg st st' e e' s s',
       (e, st, s) ==[ peg ]==> (e', st', s') ->
-      (PEWrapper e, st, s) ==[ peg ]==> (PEWrapper e', st', s')
+      (EWrapper e, st, s) ==[ peg ]==> (EWrapper e', st', s')
   | SWrapper2 :
       forall peg st s h,
-      (PEWrapper PETrue, h :: st, s) ==[ peg ]==> (PETrue, st, s)
+      (EWrapper ETrue, h :: st, s) ==[ peg ]==> (ETrue, st, s)
   | SWrapper3 :
       forall peg st s e s',
-      (PEWrapper PEFalse, (e, s') :: st, s) ==[ peg ]==> (e, st, s')
+      (EWrapper EFalse, (e, s') :: st, s) ==[ peg ]==> (e, st, s')
 
 where " ps1 '==[' peg ']==>' ps2 " := (step peg ps1 ps2).

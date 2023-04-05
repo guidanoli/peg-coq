@@ -1,0 +1,27 @@
+2023-04-04
+
+Tried formalizing PEG with a big-step semantics, but Coq wouldn't let me.
+I think the problem lies in the reduction of non-terminal expressions.
+After all, Coq wouldn't let me define a fixpoint that might enter an
+infinite loop, like "A <- A".
+
+So, I tried formalizing a small-step semantics. I quickly noticed that the
+evaluation state had to contain some sort of stack that we could use for
+ordered choices and predicates. I also noticed that some parsing expressions
+could be made from others. For example, the optional parsing expression
+could be defined as an ordered choice between some parsing expression and
+the empty string. Same for the star and plus operators.
+
+2023-04-05
+
+After reading the LPEG article, I also noticed that the and operator
+could be defined in terms of the not operator. Later, I realised that the
+not operator could be described in terms of the ordered choice expression.
+Therefore, I removed both the and and the not operator.
+
+I also noticed that there was some non-determinism at play when reducing
+sequences, because we could pop certain entries from the stack which were
+not meant to be popped. So, I created the wrap expression which allows us
+to emulate the commit instruction from the PEG virtual machine. When
+the wrapped subexpression is true, it is simply unwrapped. When it is false,
+the entry on top of the stack is popped and its state is recuperated.

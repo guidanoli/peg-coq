@@ -5,25 +5,28 @@ Open Scope char_scope.
 
 (* Parsing Expression *)
 Inductive PExp : Type :=
-  | PETrue : PExp
-  | PEFalse : PExp
-  | PETerminal : ascii -> PExp
-  | PENonTerminal : nat -> PExp
-  | PESequence : PExp -> PExp -> PExp
-  | PEOrderedChoice : PExp -> PExp -> PExp
-  | PEAndPredicate : PExp -> PExp
-  | PENotPredicate : PExp -> PExp.
+  | PETrue : PExp (* Always matches *)
+  | PEFalse : PExp (* Never matches *)
+  | PETerminal : ascii -> PExp (* Matches a ASCII character *)
+  | PENonTerminal : nat -> PExp (* Matches a non-terminal *)
+  | PESequence : PExp -> PExp -> PExp (* Matches two subexpressions in sequence *)
+  | PEOrderedChoice : PExp -> PExp -> PExp (* Matches one of two subexpressions *)
+  | PEWrapper : PExp -> PExp (* Wraps subexpression for backtracking *)
+  .
 
 (* Parsing Expression Grammar
-   Each PEG is composed of a starting rule (the first on the list)
-   and a finite set of parsing rules (indexed by natural numbers) *)
+   Each PEG is composed of a finite set of parsing rule *)
 Definition PEG : Type := list PExp.
 
+(* Starting Expression
+   The first parsing expression in the list of parsing rules *)
+Definition startExp (peg : PEG) : PExp := PENonTerminal 0.
+
 (* Stack Entry
-   The stack contains entries that allow backtracking *)
-Inductive StackEntry : Type :=
-  | SEIfFalse : PExp -> string -> StackEntry
-  | SEIfTrue : PExp -> string -> StackEntry.
+   Each stack entry is composed of:
+   - an expression (to recover)
+   - a string (to recover) *)
+Definition StackEntry : Type := PExp * string.
 
 (* Stack
    A list of stack entries *)
@@ -39,18 +42,6 @@ Definition PState : Type := PExp * Stack * string.
 Reserved Notation " ps1 '==[' peg ']==>' ps2 " (at level 50, left associativity).
 
 Inductive step : PEG -> PState -> PState -> Prop :=
-  | STrue1 :
-      forall peg st s e s',
-      (PETrue, (SEIfTrue e s') :: st, s) ==[ peg ]==> (e, st, s')
-  | STrue2 :
-      forall peg st s e s',
-      (PETrue, (SEIfFalse e s') :: st, s) ==[ peg ]==> (PETrue, st, s)
-  | SFalse1 :
-      forall peg st s e s',
-      (PEFalse, (SEIfFalse e s') :: st, s) ==[ peg ]==> (e, st, s')
-  | SFalse2 :
-      forall peg st s e s',
-      (PEFalse, (SEIfTrue e s') :: st, s) ==[ peg ]==> (PEFalse, st, s)
   | STerminal1 :
       forall peg st a s,
       (PETerminal a, st, String a s) ==[ peg ]==> (PETrue, st, s)
@@ -70,27 +61,23 @@ Inductive step : PEG -> PState -> PState -> Prop :=
       (e1, st, s) ==[ peg ]==> (e1', st', s') ->
       (PESequence e1 e2, st, s) ==[ peg ]==> (PESequence e1' e2, st', s')
   | SSequence2 :
-      forall peg st st' e2 e2' s s',
-      (e2, st, s) ==[ peg ]==> (e2', st', s') ->
-      (PESequence PETrue e2, st, s) ==[ peg ]==> (PESequence PETrue e2', st', s')
+      forall peg st e2 s,
+      (PESequence PETrue e2, st, s) ==[ peg ]==> (e2, st, s)
   | SSequence3 :
       forall peg st e2 s,
       (PESequence PEFalse e2, st, s) ==[ peg ]==> (PEFalse, st, s)
-  | SSequence4 :
-      forall peg st s,
-      (PESequence PETrue PETrue, st, s) ==[ peg ]==> (PETrue, st, s)
-  | SSequence5 :
-      forall peg st s,
-      (PESequence PETrue PEFalse, st, s) ==[ peg ]==> (PEFalse, st, s)
   | SOrderedChoice :
       forall peg st e1 e2 s,
-      (PEOrderedChoice e1 e2, st, s) ==[ peg ]==> (e1, (SEIfFalse e2 s) :: st, s)
-  | SAndPredicate :
-      forall peg st e s,
-      (PEAndPredicate e, st, s) ==[ peg ]==> (e, (SEIfTrue PETrue EmptyString) :: st, s)
-  | SNotPredicate :
-      forall peg st e s,
-      (PENotPredicate e, st, s) ==[ peg ]==> (e, (SEIfFalse PETrue EmptyString) :: st, s)
+      (PEOrderedChoice e1 e2, st, s) ==[ peg ]==> (PEWrapper e1, (e2, s) :: st, s)
+  | SWrapper1 :
+      forall peg st st' e e' s s',
+      (e, st, s) ==[ peg ]==> (e', st', s') ->
+      (PEWrapper e, st, s) ==[ peg ]==> (PEWrapper e', st', s')
+  | SWrapper2 :
+      forall peg st s h,
+      (PEWrapper PETrue, h :: st, s) ==[ peg ]==> (PETrue, st, s)
+  | SWrapper3 :
+      forall peg st s e s',
+      (PEWrapper PEFalse, (e, s') :: st, s) ==[ peg ]==> (e, st, s')
 
 where " ps1 '==[' peg ']==>' ps2 " := (step peg ps1 ps2).
-

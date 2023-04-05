@@ -36,11 +36,11 @@ Definition Stack : Type := list StackEntry.
    - the current parsing expression
    - a list of fallbacks (for ordered choices)
    - the current string being parsed *)
-Definition PState : Type := Exp * Stack * string.
+Definition State : Type := Exp * Stack * string.
 
 Reserved Notation " ps1 '==[' peg ']==>' ps2 " (at level 50, left associativity).
 
-Inductive step : PEG -> PState -> PState -> Prop :=
+Inductive step : PEG -> State -> State -> Prop :=
   | STerminal1 :
       forall peg st a s,
       (ETerminal a, st, String a s) ==[ peg ]==> (ETrue, st, s)

@@ -1,7 +1,6 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Lists.List.
-Open Scope char_scope.
 
 (* Parsing Expression *)
 Inductive PExp : Type :=

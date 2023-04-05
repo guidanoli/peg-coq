@@ -3,29 +3,29 @@ From Coq Require Import Strings.String.
 From Coq Require Import Lists.List.
 
 (* Parsing Expression *)
-Inductive PExp : Type :=
-  | PETrue : PExp (* Always matches *)
-  | PEFalse : PExp (* Never matches *)
-  | PETerminal : ascii -> PExp (* Matches a ASCII character *)
-  | PENonTerminal : nat -> PExp (* Matches a non-terminal *)
-  | PESequence : PExp -> PExp -> PExp (* Matches two subexpressions in sequence *)
-  | PEOrderedChoice : PExp -> PExp -> PExp (* Matches one of two subexpressions *)
-  | PEWrapper : PExp -> PExp (* Wraps subexpression for backtracking *)
+Inductive Exp : Type :=
+  | PETrue : Exp (* Always matches *)
+  | PEFalse : Exp (* Never matches *)
+  | PETerminal : ascii -> Exp (* Matches an ASCII character *)
+  | PENonTerminal : nat -> Exp (* Matches a non-terminal *)
+  | PESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
+  | PEOrderedChoice : Exp -> Exp -> Exp (* Matches one of two subexpressions *)
+  | PEWrapper : Exp -> Exp (* Wraps subexpression for backtracking *)
   .
 
 (* Parsing Expression Grammar
    Each PEG is composed of a finite set of parsing rule *)
-Definition PEG : Type := list PExp.
+Definition PEG : Type := list Exp.
 
 (* Starting Expression
    The first parsing expression in the list of parsing rules *)
-Definition startExp (peg : PEG) : PExp := PENonTerminal 0.
+Definition startExp (peg : PEG) : Exp := PENonTerminal 0.
 
 (* Stack Entry
    Each stack entry is composed of:
    - an expression (to recover)
    - a string (to recover) *)
-Definition StackEntry : Type := PExp * string.
+Definition StackEntry : Type := Exp * string.
 
 (* Stack
    A list of stack entries *)
@@ -36,7 +36,7 @@ Definition Stack : Type := list StackEntry.
    - the current parsing expression
    - a list of fallbacks (for ordered choices)
    - the current string being parsed *)
-Definition PState : Type := PExp * Stack * string.
+Definition PState : Type := Exp * Stack * string.
 
 Reserved Notation " ps1 '==[' peg ']==>' ps2 " (at level 50, left associativity).
 

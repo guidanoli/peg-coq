@@ -67,3 +67,45 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
       parse peg e1 s Failure ->
       parse peg e2 s res ->
       parse peg (EOrderedChoice e1 e2) s res.
+
+Definition peg_example1 : PEG :=
+  [EOrderedChoice (ESequence (ETerminal "a") (ENonTerminal 0)) ETrue].
+
+Theorem parse_example1 :
+  parse peg_example1 (ENonTerminal 0) "aa" (Success "").
+Proof.
+  unfold peg_example1.
+  eapply PENonTerminal; simpl; eauto.
+  eapply PEOrderedChoiceSuccess.
+  eapply PESequenceSuccess.
+  eapply PETerminalSuccess.
+  eapply PENonTerminal; simpl; eauto.
+  eapply PEOrderedChoiceSuccess.
+  eapply PESequenceSuccess.
+  eapply PETerminalSuccess.
+  eapply PENonTerminal; simpl; eauto.
+  eapply PEOrderedChoiceFailure.
+  eapply PESequenceFailure.
+  eapply PETerminalFailureEmptyString.
+  eapply PETrue.
+Qed.
+
+Theorem parse_example2 :
+  parse peg_example1 (ENonTerminal 0) "aab" (Success "b").
+Proof.
+  unfold peg_example1.
+  eapply PENonTerminal; simpl; eauto.
+  eapply PEOrderedChoiceSuccess.
+  eapply PESequenceSuccess.
+  eapply PETerminalSuccess.
+  eapply PENonTerminal; simpl; eauto.
+  eapply PEOrderedChoiceSuccess.
+  eapply PESequenceSuccess.
+  eapply PETerminalSuccess.
+  eapply PENonTerminal; simpl; eauto.
+  eapply PEOrderedChoiceFailure.
+  eapply PESequenceFailure.
+  eapply PETerminalFailureString.
+  eapply Ascii.eqb_neq; simpl; eauto.
+  eapply PETrue.
+Qed.

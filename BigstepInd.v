@@ -34,9 +34,16 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
   | PEFalse :
       forall peg s,
       parse peg EFalse s Failure
-  | PETerminal :
+  | PETerminalSuccess :
       forall peg a s,
       parse peg (ETerminal a) (String a s) (Success s)
+  | PETerminalFailureString :
+      forall peg a a' s,
+      a <> a' ->
+      parse peg (ETerminal a) (String a' s) Failure
+  | PETerminalFailureEmptyString :
+      forall peg a,
+      parse peg (ETerminal a) EmptyString Failure
   | PENonTerminal :
       forall peg i s e res,
       nth_error peg i = Some e ->

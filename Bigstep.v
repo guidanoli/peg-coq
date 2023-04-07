@@ -20,8 +20,8 @@ Definition PEG : Type := list Exp.
 (* Parsing Result
    The result of parsing a string against a PEG *)
 Inductive Result : Type :=
-  | Match : string -> nat -> Result (* String suffix and remaining gas *)
-  | Fail : string -> nat -> Result (* String suffix and remaining gas *)
+  | Success : string -> nat -> Result (* String suffix and remaining gas *)
+  | Failure : string -> nat -> Result (* String suffix and remaining gas *)
   | OutOfGas : string -> Result (* String suffix *)
   | NoTerminal : nat -> Result (* Terminal ID *)
   .
@@ -32,24 +32,24 @@ Fixpoint eparse (peg : PEG) (e : Exp) (s : string) (gas : nat) : Result :=
   match gas with
   | O => OutOfGas s
   | S gas' => match e with
-              | ETrue => Match s gas'
-              | EFalse => Fail s gas'
+              | ETrue => Success s gas'
+              | EFalse => Failure s gas'
               | ETerminal a => match s with
-                               | EmptyString => Fail s gas'
+                               | EmptyString => Failure s gas'
                                | String a' s' => if Ascii.eqb a a'
-                                                 then Match s' gas'
-                                                 else Fail s gas'
+                                                 then Success s' gas'
+                                                 else Failure s gas'
                                end
               | ENonTerminal i => match nth_error peg i with
                                   | Some e' => eparse peg e' s gas'
                                   | None => NoTerminal i
                                   end
               | ESequence e1 e2 => match eparse peg e1 s gas' with
-                                   | Match s' gas'' => eparse peg e2 s' gas'
+                                   | Success s' gas'' => eparse peg e2 s' gas'
                                    | res => res
                                    end
               | EOrderedChoice e1 e2 => match eparse peg e1 s gas' as res with
-                                        | Fail _ _ => eparse peg e2 s gas'
+                                        | Failure _ _ => eparse peg e2 s gas'
                                         | res => res
                                         end
               end

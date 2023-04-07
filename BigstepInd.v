@@ -23,7 +23,7 @@ Definition PEG : Type := list Exp.
    The result of parsing a string against a PEG *)
 Inductive Result : Type :=
   | Success : string -> Result (* String suffix *)
-  | Failure : Result (* String suffix *)
+  | Failure : Result
   .
 
 (* Parse string according to PEG and parsing expression *)

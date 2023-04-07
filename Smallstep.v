@@ -17,10 +17,6 @@ Inductive Exp : Type :=
    Each PEG is composed of a finite set of parsing rule *)
 Definition PEG : Type := list Exp.
 
-(* Starting Expression
-   The first parsing expression in the list of parsing rules *)
-Definition startExp (peg : PEG) : Exp := ENonTerminal 0.
-
 (* Stack Entry
    Each stack entry is composed of:
    - an expression (to recover)

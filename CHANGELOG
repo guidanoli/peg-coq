@@ -25,3 +25,23 @@ not meant to be popped. So, I created the wrap expression which allows us
 to emulate the commit instruction from the PEG virtual machine. When
 the wrapped subexpression is true, it is simply unwrapped. When it is false,
 the entry on top of the stack is popped and its state is recuperated.
+
+The not-so-nice thing about the wrap expression is that it is something
+I made up so that the small step semantics worked somehow. If this expression
+were present in the tree already, it could lead to undersired behavior.
+This "internal" node is not something elegant, I find.
+
+2023-04-07
+
+Frustrated with the small step semantics having an artificial expression,
+I gave the big step semantics some thought. Coq wouldn't let me define
+a fixpoint if there weren't something decreasing (or getting "smaller").
+This reminded me of the summer classes with Philip Wadler, where he would
+define a language and a big step semantics with a gas meter that would
+go down every level of the fixpoint recursion. I was about to sleep when
+this idea came to me. And so I moved the PEG.v file to Smallstep.v and
+cloned it to a new file called Bigstep.v. After some hacking, I managed
+to get the fixpoint definition working. I made some dummy tests and it
+seems to be working fine. First time I tried proving something about it,
+my computer crashed somehow. Maybe Coq isn't a good engine for running
+languages, I guess---just for proving things about them. :-)

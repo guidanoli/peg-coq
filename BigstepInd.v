@@ -2,6 +2,8 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Lists.List.
 Import ListNotations.
+Open Scope char_scope.
+Open Scope string_scope.
 
 (* Parsing Expression *)
 Inductive Exp : Type :=

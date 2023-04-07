@@ -23,7 +23,7 @@ Inductive Result : Type :=
   | Success : string -> nat -> Result (* String suffix and remaining gas *)
   | Failure : string -> nat -> Result (* String suffix and remaining gas *)
   | OutOfGas : string -> Result (* String suffix *)
-  | NoTerminal : nat -> Result (* Terminal ID *)
+  | MissingRule : nat -> Result (* Terminal ID *)
   .
 
 (* Parse string according to PEG and parsing expression
@@ -42,7 +42,7 @@ Fixpoint eparse (peg : PEG) (e : Exp) (s : string) (gas : nat) : Result :=
                                end
               | ENonTerminal i => match nth_error peg i with
                                   | Some e' => eparse peg e' s gas'
-                                  | None => NoTerminal i
+                                  | None => MissingRule i
                                   end
               | ESequence e1 e2 => match eparse peg e1 s gas' with
                                    | Success s' gas'' => eparse peg e2 s' gas'

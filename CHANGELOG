@@ -44,4 +44,28 @@ cloned it to a new file called Bigstep.v. After some hacking, I managed
 to get the fixpoint definition working. I made some dummy tests and it
 seems to be working fine. First time I tried proving something about it,
 my computer crashed somehow. Maybe Coq isn't a good engine for running
-languages, I guess---just for proving things about them. :-)
+programs, I guess---just for proving things about them. :-)
+
+The parsing can result in one of four things: success, failure, out of
+gas exception and missing non-terminal reference exception. The success
+result also carries the string suffix of the match, which is essential
+when defining the operational semantics of the sequence expression.
+The other result constructors also take some values but they are mainly
+for debugging purposes and are not crucial to the specification.
+I quickly noticed that the fixpoint definition wouldn't help me prove
+propositions about the language, because they heavily rely on induction.
+That's why I decided to re-write the big step semantics but using an
+inductive set of inference rules. Not only was the structure of the
+code more organized than in the fixpoint case, but also how the program
+was being executed was made much more transparent.
+
+In this new implementation, there were only two results possible:
+success (which also carries the string match suffix) or failure.
+The out-of-gas exception made no sense anymore since we don't need
+to use the gas mechanism to allow Coq to define the parse function.
+We still don't accept invalid non-terminal indices, but not through
+a result value. Rather, you simply cannot say anything about the
+parsing. The expression and PEG simply don't get along! It is a
+programming error, not a parsing one! And since we don't care about
+programming errors when specifying the semantics of PEGs, we can
+simply ignore these cases for the sake of simplicity!

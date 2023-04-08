@@ -130,3 +130,54 @@ Proof.
   end;
   eauto using parse.
 Qed.
+
+(* Tactic for inverting parsing of false expression as success *)
+Ltac invert_false_success :=
+    match goal with
+    | H: parse _ EFalse _ (Success _) |- _ => inversion H
+    end.
+
+(* Show that a false first choice is useless *)
+Theorem first_choice_false :
+  forall peg e,
+  equivalent peg e (EOrderedChoice EFalse e).
+Proof.
+  intros.
+  constructor.
+  intros.
+  split; intros H.
+  - (* -> *)
+    eauto using parse.
+  - (* <- *)
+    inversion H; subst; eauto using parse;
+    invert_false_success.
+Qed.
+
+(* Show that a false second choice is useless *)
+Theorem second_choice_false :
+  forall peg e,
+  equivalent peg e (EOrderedChoice e EFalse).
+Proof.
+  intros.
+  constructor.
+  intros.
+  split; intros H.
+  - (* -> *)
+    destruct res; econstructor; eauto using parse.
+  - (* <- *)
+    inversion H; subst; auto.
+    destruct res; auto.
+    invert_false_success.
+Qed.
+
+(* Kleene star operator *)
+Definition EStar (e : Exp) (i : nat) : Exp :=
+  EOrderedChoice (ESequence e (ENonTerminal i)) ETrue.
+
+(* Plus operator *)
+Definition EPlus (e : Exp) (i : nat) : Exp :=
+  ESequence e (EStar e i).
+
+(* Optional expression *)
+Definition EOptional (e : Exp) : Exp :=
+  EOrderedChoice e ETrue.

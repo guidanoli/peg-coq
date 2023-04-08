@@ -109,3 +109,47 @@ Proof.
   eapply Ascii.eqb_neq; simpl; eauto.
   eapply PETrue.
 Qed.
+
+(* Equivalent parsing expressions under the same PEG *)
+Inductive equivalent : PEG -> Exp -> Exp -> Prop :=
+  | Equivalent :
+      forall peg e1 e2,
+      (forall s res, parse peg e1 s res <-> parse peg e2 s res) ->
+      equivalent peg e1 e2.
+
+(* Proving that the sequence expression is associative *)
+Theorem sequence_assoc :
+  forall peg e1 e2 e3,
+  equivalent peg
+  (ESequence e1 (ESequence e2 e3))
+  (ESequence (ESequence e1 e2) e3).
+Proof.
+  intros.
+  apply Equivalent.
+  intros.
+  split; intros H;
+  inversion H; subst;
+  try match goal with 
+  | H12 : parse _ (ESequence e1 e2) _ _ |- _ => inversion H12; subst
+  | H23 : parse _ (ESequence e2 e3) _ _ |- _ => inversion H23; subst
+  end;
+  eauto using parse.
+Qed.
+
+Theorem ordered_choice_assoc :
+  forall peg e1 e2 e3,
+  equivalent peg
+  (EOrderedChoice e1 (EOrderedChoice e2 e3))
+  (EOrderedChoice (EOrderedChoice e1 e2) e3).
+Proof.
+  intros.
+  apply Equivalent.
+  intros.
+  split; intros H;
+  inversion H; subst;
+  try match goal with 
+  | H12 : parse _ (EOrderedChoice e1 e2) _ _ |- _ => inversion H12; subst
+  | H23 : parse _ (EOrderedChoice e2 e3) _ _ |- _ => inversion H23; subst
+  end;
+  eauto using parse.
+Qed.

@@ -101,7 +101,7 @@ Theorem sequence_assoc :
   (ESequence (ESequence e1 e2) e3).
 Proof.
   intros.
-  apply Equivalent.
+  constructor.
   intros.
   split; intros H;
   inversion H; subst;
@@ -120,7 +120,7 @@ Theorem ordered_choice_assoc :
   (EOrderedChoice (EOrderedChoice e1 e2) e3).
 Proof.
   intros.
-  apply Equivalent.
+  constructor.
   intros.
   split; intros H;
   inversion H; subst;

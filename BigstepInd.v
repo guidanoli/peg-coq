@@ -75,39 +75,15 @@ Theorem parse_example1 :
   parse peg_example1 (ENonTerminal 0) "aa" (Success "").
 Proof.
   unfold peg_example1.
-  eapply PENonTerminal; simpl; eauto.
-  eapply PEOrderedChoiceSuccess.
-  eapply PESequenceSuccess.
-  eapply PETerminalSuccess.
-  eapply PENonTerminal; simpl; eauto.
-  eapply PEOrderedChoiceSuccess.
-  eapply PESequenceSuccess.
-  eapply PETerminalSuccess.
-  eapply PENonTerminal; simpl; eauto.
-  eapply PEOrderedChoiceFailure.
-  eapply PESequenceFailure.
-  eapply PETerminalFailureEmptyString.
-  eapply PETrue.
+  do 10 (econstructor; simpl; eauto).
 Qed.
 
 Theorem parse_example2 :
   parse peg_example1 (ENonTerminal 0) "aab" (Success "b").
 Proof.
   unfold peg_example1.
-  eapply PENonTerminal; simpl; eauto.
-  eapply PEOrderedChoiceSuccess.
-  eapply PESequenceSuccess.
-  eapply PETerminalSuccess.
-  eapply PENonTerminal; simpl; eauto.
-  eapply PEOrderedChoiceSuccess.
-  eapply PESequenceSuccess.
-  eapply PETerminalSuccess.
-  eapply PENonTerminal; simpl; eauto.
-  eapply PEOrderedChoiceFailure.
-  eapply PESequenceFailure.
-  eapply PETerminalFailureString.
-  eapply Ascii.eqb_neq; simpl; eauto.
-  eapply PETrue.
+  do 10 (econstructor; simpl; eauto).
+  eapply Ascii.eqb_neq; simpl; trivial.
 Qed.
 
 (* Equivalent parsing expressions under the same PEG *)

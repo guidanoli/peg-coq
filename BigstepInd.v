@@ -13,6 +13,7 @@ Inductive Exp : Type :=
   | ENonTerminal : nat -> Exp (* Matches a non-terminal *)
   | ESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
   | EOrderedChoice : Exp -> Exp -> Exp (* Matches one of two subexpressions *)
+  | ENotPredicate : Exp -> Exp (* Matches if subexpression doesn't *)
   .
 
 (* Parsing Expression Grammar
@@ -22,7 +23,7 @@ Definition PEG : Type := list Exp.
 (* Parsing Result
    The result of parsing a string against a PEG *)
 Inductive Result : Type :=
-  | Success : string -> Result (* String suffix *)
+  | Success : string -> Result (* Match suffix *)
   | Failure : Result
   .
 
@@ -66,7 +67,16 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
       forall peg e1 e2 s res,
       parse peg e1 s Failure ->
       parse peg e2 s res ->
-      parse peg (EOrderedChoice e1 e2) s res.
+      parse peg (EOrderedChoice e1 e2) s res
+  | PENotPredicateSuccess :
+      forall peg e s,
+      parse peg e s Failure ->
+      parse peg (ENotPredicate e) s (Success s)
+  | PENotPredicateFailure :
+      forall peg e s s',
+      parse peg e s (Success s') ->
+      parse peg (ENotPredicate e) s Failure
+  .
 
 Definition peg_example1 : PEG :=
   [EOrderedChoice (ESequence (ETerminal "a") (ENonTerminal 0)) ETrue].
@@ -170,6 +180,20 @@ Proof.
     invert_false_success.
 Qed.
 
+(* Show that a false first sequence part is enough *)
+Theorem first_part_false :
+  forall peg e,
+  equivalent peg EFalse (ESequence EFalse e).
+Proof.
+  intros.
+  constructor.
+  intros.
+  split; intros H;
+  inversion H; subst;
+  eauto using parse;
+  try invert_false_success.
+Qed.
+
 (* Kleene star operator *)
 Definition EStar (e : Exp) (i : nat) : Exp :=
   EOrderedChoice (ESequence e (ENonTerminal i)) ETrue.
@@ -181,3 +205,7 @@ Definition EPlus (e : Exp) (i : nat) : Exp :=
 (* Optional expression *)
 Definition EOptional (e : Exp) : Exp :=
   EOrderedChoice e ETrue.
+
+(* And predicate *)
+Definition EAndPredicate (e : Exp) : Exp :=
+  ENotPredicate (ENotPredicate e).

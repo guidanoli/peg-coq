@@ -69,3 +69,13 @@ parsing. The expression and PEG simply don't get along! It is a
 programming error, not a parsing one! And since we don't care about
 programming errors when specifying the semantics of PEGs, we can
 simply ignore these cases for the sake of simplicity!
+
+2023-04-08
+
+Next step was trying to write high-level parsing expression using
+the ones defined in the big-step semantics. I was able to define
+?, * and + operators. However, I could not define the & and !
+predicates with the ones defined. That barrier has led me to make
+the ! predicate an integral part of the language. With this predicate
+defined, I can define & as !!. This is the definition given in the
+LPEG article—a syntatic sugar.

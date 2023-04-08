@@ -112,6 +112,7 @@ Proof.
   eauto using parse.
 Qed.
 
+(* Proving that the ordered choice expression is associative *)
 Theorem ordered_choice_assoc :
   forall peg e1 e2 e3,
   equivalent peg

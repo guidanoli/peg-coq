@@ -17,8 +17,8 @@ Inductive Exp : Type :=
   .
 
 Notation "A ';' B" := (ESequence A B) (at level 70, right associativity).
-Notation "A '//' B" := (EOrderedChoice A B) (at level 60, right associativity).
-Notation "'!' A" := (ENotPredicate A) (at level 80, right associativity).
+Notation "A '//' B" := (EOrderedChoice A B) (at level 80, right associativity).
+Notation "'!' A" := (ENotPredicate A) (at level 60, right associativity).
 
 (* Parsing Expression Grammar
    Each PEG is composed of a finite set of parsing rule *)
@@ -75,15 +75,15 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
   | PENotPredicateSuccess :
       forall peg e s,
       parse peg e s Failure ->
-      parse peg (ENotPredicate e) s (Success s)
+      parse peg (!e) s (Success s)
   | PENotPredicateFailure :
       forall peg e s s',
       parse peg e s (Success s') ->
-      parse peg (ENotPredicate e) s Failure
+      parse peg (!e) s Failure
   .
 
 Definition peg_example1 : PEG :=
-  [(ETerminal "a"; ENonTerminal 0) // ETrue].
+  [ETerminal "a"; ENonTerminal 0 // ETrue].
 
 Theorem parse_example1 :
   parse peg_example1 (ENonTerminal 0) "aa" (Success "").
@@ -198,18 +198,12 @@ Proof.
   try invert_false_success.
 Qed.
 
-(* Kleene star operator *)
-Definition EStar (e : Exp) (i : nat) : Exp :=
-  (e; ENonTerminal i) // ETrue.
-
-(* Plus operator *)
-Definition EPlus (e : Exp) (i : nat) : Exp :=
-  e; (EStar e i).
-
 (* Optional expression *)
 Definition EOptional (e : Exp) : Exp :=
   e // ETrue.
 
+Notation "A '?'" := (EOptional A) (at level 60, right associativity).
+
 (* And predicate *)
 Definition EAndPredicate (e : Exp) : Exp :=
-  ENotPredicate (ENotPredicate e).
+  !!e.

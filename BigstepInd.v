@@ -16,6 +16,10 @@ Inductive Exp : Type :=
   | ENotPredicate : Exp -> Exp (* Matches if subexpression doesn't *)
   .
 
+Notation "A ';' B" := (ESequence A B) (at level 70, right associativity).
+Notation "A '//' B" := (EOrderedChoice A B) (at level 60, right associativity).
+Notation "'!' A" := (ENotPredicate A) (at level 80, right associativity).
+
 (* Parsing Expression Grammar
    Each PEG is composed of a finite set of parsing rule *)
 Definition PEG : Type := list Exp.
@@ -54,20 +58,20 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
       forall peg e1 e2 s s' res,
       parse peg e1 s (Success s') ->
       parse peg e2 s' res ->
-      parse peg (ESequence e1 e2) s res
+      parse peg (e1; e2) s res
   | PESequenceFailure :
       forall peg e1 e2 s,
       parse peg e1 s Failure ->
-      parse peg (ESequence e1 e2) s Failure
+      parse peg (e1; e2) s Failure
   | PEOrderedChoiceSuccess :
       forall peg e1 e2 s s',
       parse peg e1 s (Success s') ->
-      parse peg (EOrderedChoice e1 e2) s (Success s')
+      parse peg (e1 // e2) s (Success s')
   | PEOrderedChoiceFailure :
       forall peg e1 e2 s res,
       parse peg e1 s Failure ->
       parse peg e2 s res ->
-      parse peg (EOrderedChoice e1 e2) s res
+      parse peg (e1 // e2) s res
   | PENotPredicateSuccess :
       forall peg e s,
       parse peg e s Failure ->
@@ -79,7 +83,7 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
   .
 
 Definition peg_example1 : PEG :=
-  [EOrderedChoice (ESequence (ETerminal "a") (ENonTerminal 0)) ETrue].
+  [(ETerminal "a"; ENonTerminal 0) // ETrue].
 
 Theorem parse_example1 :
   parse peg_example1 (ENonTerminal 0) "aa" (Success "").
@@ -107,8 +111,8 @@ Inductive equivalent : PEG -> Exp -> Exp -> Prop :=
 Theorem sequence_assoc :
   forall peg e1 e2 e3,
   equivalent peg
-  (ESequence e1 (ESequence e2 e3))
-  (ESequence (ESequence e1 e2) e3).
+  (e1; (e2; e3))
+  ((e1; e2); e3).
 Proof.
   intros.
   constructor.
@@ -116,8 +120,8 @@ Proof.
   split; intros H;
   inversion H; subst;
   try match goal with 
-  | H12 : parse _ (ESequence e1 e2) _ _ |- _ => inversion H12; subst
-  | H23 : parse _ (ESequence e2 e3) _ _ |- _ => inversion H23; subst
+  | H12 : parse _ (e1; e2) _ _ |- _ => inversion H12; subst
+  | H23 : parse _ (e2; e3) _ _ |- _ => inversion H23; subst
   end;
   eauto using parse.
 Qed.
@@ -126,8 +130,8 @@ Qed.
 Theorem ordered_choice_assoc :
   forall peg e1 e2 e3,
   equivalent peg
-  (EOrderedChoice e1 (EOrderedChoice e2 e3))
-  (EOrderedChoice (EOrderedChoice e1 e2) e3).
+  (e1 // (e2 // e3))
+  ((e1 // e2) // e3).
 Proof.
   intros.
   constructor.
@@ -135,8 +139,8 @@ Proof.
   split; intros H;
   inversion H; subst;
   try match goal with 
-  | H12 : parse _ (EOrderedChoice e1 e2) _ _ |- _ => inversion H12; subst
-  | H23 : parse _ (EOrderedChoice e2 e3) _ _ |- _ => inversion H23; subst
+  | H12 : parse _ (e1 // e2) _ _ |- _ => inversion H12; subst
+  | H23 : parse _ (e2 // e3) _ _ |- _ => inversion H23; subst
   end;
   eauto using parse.
 Qed.
@@ -150,7 +154,7 @@ Ltac invert_false_success :=
 (* Show that a false first choice is useless *)
 Theorem first_choice_false :
   forall peg e,
-  equivalent peg e (EOrderedChoice EFalse e).
+  equivalent peg e (EFalse // e).
 Proof.
   intros.
   constructor.
@@ -166,7 +170,7 @@ Qed.
 (* Show that a false second choice is useless *)
 Theorem second_choice_false :
   forall peg e,
-  equivalent peg e (EOrderedChoice e EFalse).
+  equivalent peg e (e // EFalse).
 Proof.
   intros.
   constructor.
@@ -183,7 +187,7 @@ Qed.
 (* Show that a false first sequence part is enough *)
 Theorem first_part_false :
   forall peg e,
-  equivalent peg EFalse (ESequence EFalse e).
+  equivalent peg EFalse (EFalse; e).
 Proof.
   intros.
   constructor.
@@ -196,15 +200,15 @@ Qed.
 
 (* Kleene star operator *)
 Definition EStar (e : Exp) (i : nat) : Exp :=
-  EOrderedChoice (ESequence e (ENonTerminal i)) ETrue.
+  (e; ENonTerminal i) // ETrue.
 
 (* Plus operator *)
 Definition EPlus (e : Exp) (i : nat) : Exp :=
-  ESequence e (EStar e i).
+  e; (EStar e i).
 
 (* Optional expression *)
 Definition EOptional (e : Exp) : Exp :=
-  EOrderedChoice e ETrue.
+  e // ETrue.
 
 (* And predicate *)
 Definition EAndPredicate (e : Exp) : Exp :=

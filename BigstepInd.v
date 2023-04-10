@@ -17,7 +17,7 @@ Inductive Exp : Type :=
   .
 
 Notation "A ';' B" := (ESequence A B) (at level 70, right associativity).
-Notation "A '//' B" := (EOrderedChoice A B) (at level 80, right associativity).
+Notation "A '//' B" := (EOrderedChoice A B) (at level 90, right associativity).
 Notation "'!' A" := (ENotPredicate A) (at level 60, right associativity).
 
 (* Parsing Expression Grammar
@@ -207,3 +207,5 @@ Notation "A '?'" := (EOptional A) (at level 60, right associativity).
 (* And predicate *)
 Definition EAndPredicate (e : Exp) : Exp :=
   !!e.
+
+Notation "'&' A" := (EAndPredicate A) (at level 60, right associativity).

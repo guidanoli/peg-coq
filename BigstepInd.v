@@ -252,28 +252,13 @@ Notation "'if&' A 'then' B 'else' C" := (EIf A B C) (at level 60, right associat
 Theorem if_true :
   forall peg e1 e2 e3 s s' res,
   parse peg e1 s (Success s') ->
-  (parse peg (if& e1 then e2 else e3) s res <-> parse peg e2 s res).
+  parse peg e2 s res ->
+  parse peg (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  split; intros H'.
-  - (* -> *)
-    inversion H'; subst;
-    parse_exp (&e1;e2).
-    + (* &e1 and e2 succeed *)
-      parse_exp (&e1).
-    + (* &e1 succeeds, but e2 fails *)
-      parse_exp (!e1;e3);
-      parse_exp (&e1);
-      discriminate_results.
-    + (* &e1 fails *)
-      parse_exp (&e1).
-      parse_exp (!e1).
-      discriminate_results.
-  - (* <- *)
-    assert (parse peg (&e1) s (Success s)).
-    { eauto using parse. }
-    destruct res;
-    eauto using parse.
+  assert (parse peg (&e1) s (Success s));
+  destruct res;
+  eauto using parse.
 Qed.
 
 (* If the condition is false, then
@@ -281,22 +266,13 @@ Qed.
 Theorem if_false :
   forall peg e1 e2 e3 s res,
   parse peg e1 s Failure ->
-  (parse peg (if& e1 then e2 else e3) s res <-> parse peg e3 s res).
+  parse peg e3 s res ->
+  parse peg (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  split; intros H'.
-  - (* -> *)
-    inversion H'; subst;
-    parse_exp (&e1;e2);
-    try (parse_exp (&e1); parse_exp(!e1); discriminate_results);
-    parse_exp (!e1;e3);
-    parse_exp (!e1);
-    discriminate_results.
-  - (* <- *)
-    assert (parse peg (&e1) s Failure).
-    { eauto using parse. }
-    destruct res;
-    eauto using parse.
+  assert (parse peg (&e1) s Failure);
+  destruct res;
+  eauto using parse.
 Qed.
 
 (* If the condition is undecided, then

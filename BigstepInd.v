@@ -82,6 +82,50 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
       parse peg (!e) s Failure
   .
 
+(* Finds 'x = c e1' and 'x = c e2', and replaces e1 for e2 *)
+Ltac injection_subst :=
+    match goal with
+    [ H1: ?x = ?c ?e1,
+      H2: ?x = ?c ?e2 |- _ ] =>
+          rewrite -> H1 in H2;
+          assert (e1 = e2);
+          try (congruence; trivial);
+          clear H2;
+          subst
+    end.
+
+(* Finds 'c e1 = c e2', and replaces e1 for e2 *)
+Ltac injection_subst2 :=
+  match goal with
+    [ H: ?c ?e1 = ?c ?e2 |- _ ] =>
+        assert (e1 = e2);
+        try (congruence; trivial);
+        clear H;
+        subst
+  end.
+
+(* Apply parse induction hypothesis whenever possible *)
+Ltac apply_parseIH :=
+  match goal with
+    [ IH: forall _, parse _ ?e _ _ -> _,
+      H: parse _ ?e _ _ |- _ ] =>
+      apply IH in H
+  end.
+
+Definition deterministic_result :
+  forall peg e s r1,
+  parse peg e s r1 ->
+  (forall r2, parse peg e s r2 -> r1 = r2).
+Proof.
+  intros peg e s r1 H1.
+  induction H1; intros r2 H';
+  inversion H'; subst;
+  try congruence;
+  try injection_subst;
+  try (apply_parseIH; try discriminate; try injection_subst2);
+  auto.
+Qed.
+
 Definition peg_example1 : PEG :=
   [ETerminal "a"; ENonTerminal 0 // ETrue].
 

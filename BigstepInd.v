@@ -235,12 +235,6 @@ Proof.
   parse_exp EFalse.
 Qed.
 
-(* Optional expression *)
-Definition EOptional (e : Exp) : Exp :=
-  e // ETrue.
-
-Notation "A '?'" := (EOptional A) (at level 60, right associativity).
-
 (* And predicate *)
 Definition EAndPredicate (e : Exp) : Exp :=
   !!e.
@@ -250,10 +244,6 @@ Notation "'&' A" := (EAndPredicate A) (at level 60, right associativity).
 (* If-then-else expression *)
 Definition EIf (e1 e2 e3 : Exp) : Exp :=
   &e1; e2 // !e1; e3.
-
-(* Unwrap &e into e *)
-Ltac parse_and_exp e :=
-  parse_exp(&e); parse_exp(!e).
 
 (* If the condition is true, then
    the whole 'if-then-else' is equivalent to the 'then' *)
@@ -274,7 +264,8 @@ Proof.
       parse_exp (&e1);
       discriminate_results.
     + (* &e1 fails *)
-      parse_and_exp (e1).
+      parse_exp (&e1).
+      parse_exp (!e1).
       discriminate_results.
   - (* <- *)
     assert (parse peg (&e1) s (Success s)).
@@ -295,7 +286,7 @@ Proof.
   - (* -> *)
     inversion H'; subst;
     parse_exp (&e1;e2);
-    try (parse_and_exp (e1); discriminate_results);
+    try (parse_exp (&e1); parse_exp(!e1); discriminate_results);
     parse_exp (!e1;e3);
     parse_exp (!e1);
     discriminate_results.
@@ -316,7 +307,8 @@ Proof.
   intros peg e1 e2 e3 s H1 [res2 Hif].
   parse_exp (EIf e1 e2 e3);
   parse_exp (&e1;e2);
-  parse_and_exp (e1);
+  parse_exp (&e1);
+  parse_exp (!e1);
   match goal with
   [ Hf: forall r, ~ parse _ e1 _ r,
     Hx: parse _ e1 _ _ |- _ ] =>

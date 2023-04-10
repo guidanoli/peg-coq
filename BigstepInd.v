@@ -112,37 +112,55 @@ Ltac apply_parseIH :=
       apply IH in H
   end.
 
-Definition deterministic_result :
+(* Invert, substitute and clear *)
+Ltac unwrap H :=
+  inversion H; subst.
+
+(* Unwrap parse proposition with expression *)
+Ltac unwrap_exp e :=
+  match goal with
+  | H: parse _ e _ _ |- _ => unwrap H; auto
+  end.
+
+(* The parsing result is deterministic *)
+Theorem deterministic_result :
   forall peg e s r1,
   parse peg e s r1 ->
   (forall r2, parse peg e s r2 -> r1 = r2).
 Proof.
   intros peg e s r1 H1.
   induction H1; intros r2 H';
-  inversion H'; subst;
+  unwrap H';
   try congruence;
   try injection_subst;
   try (apply_parseIH; try discriminate; try injection_subst2);
   auto.
 Qed.
 
-Definition peg_example1 : PEG :=
-  [ETerminal "a"; ENonTerminal 0 // ETrue].
+(* Use deterministic_result to discriminate
+   different result types *)
+Ltac discriminate_results :=
+  match goal with
+  [ H1: parse ?peg ?e ?s (Success ?s'),
+    H2: parse ?peg ?e ?s Failure |- _ ] =>
+        assert (Success s' = Failure);
+        eauto using deterministic_result;
+        discriminate
+  end.
 
-Theorem parse_example1 :
-  parse peg_example1 (ENonTerminal 0) "aa" (Success "").
-Proof.
-  unfold peg_example1.
-  do 10 (econstructor; simpl; eauto).
-Qed.
-
-Theorem parse_example2 :
-  parse peg_example1 (ENonTerminal 0) "aab" (Success "b").
-Proof.
-  unfold peg_example1.
-  do 10 (econstructor; simpl; eauto).
-  eapply Ascii.eqb_neq; simpl; trivial.
-Qed.
+(* Use deterministic_result to unify
+   two Success results *)
+Ltac unify_results :=
+   match goal with
+   [ H1: parse ?peg ?e ?s (Success ?s1),
+     H2: parse ?peg ?e ?s (Success ?s2) |- _ ] =>
+         assert (Success s1 = Success s2) as Haux;
+         eauto using deterministic_result;
+         assert (s1 = s2);
+         try congruence;
+         clear Haux;
+         subst
+   end.
 
 (* Equivalent parsing expressions under the same PEG *)
 Inductive equivalent : PEG -> Exp -> Exp -> Prop :=
@@ -162,11 +180,9 @@ Proof.
   constructor.
   intros.
   split; intros H;
-  inversion H; subst;
-  try match goal with 
-  | H12 : parse _ (e1; e2) _ _ |- _ => inversion H12; subst
-  | H23 : parse _ (e2; e3) _ _ |- _ => inversion H23; subst
-  end;
+  unwrap H;
+  try unwrap_exp (e1; e2);
+  try unwrap_exp (e2; e3);
   eauto using parse.
 Qed.
 
@@ -181,19 +197,11 @@ Proof.
   constructor.
   intros.
   split; intros H;
-  inversion H; subst;
-  try match goal with 
-  | H12 : parse _ (e1 // e2) _ _ |- _ => inversion H12; subst
-  | H23 : parse _ (e2 // e3) _ _ |- _ => inversion H23; subst
-  end;
+  unwrap H;
+  try unwrap_exp (e1 // e2);
+  try unwrap_exp (e2 // e3);
   eauto using parse.
 Qed.
-
-(* Tactic for inverting parsing of false expression as success *)
-Ltac invert_false_success :=
-    match goal with
-    | H: parse _ EFalse _ (Success _) |- _ => inversion H
-    end.
 
 (* Show that a false first choice is useless *)
 Theorem first_choice_false :
@@ -207,8 +215,9 @@ Proof.
   - (* -> *)
     eauto using parse.
   - (* <- *)
-    inversion H; subst; eauto using parse;
-    invert_false_success.
+    unwrap H;
+    eauto using parse;
+    unwrap_exp EFalse.
 Qed.
 
 (* Show that a false second choice is useless *)
@@ -223,9 +232,9 @@ Proof.
   - (* -> *)
     destruct res; econstructor; eauto using parse.
   - (* <- *)
-    inversion H; subst; auto.
+    unwrap H; auto.
     destruct res; auto.
-    invert_false_success.
+    unwrap_exp EFalse.
 Qed.
 
 (* Show that a false first sequence part is enough *)
@@ -237,9 +246,9 @@ Proof.
   constructor.
   intros.
   split; intros H;
-  inversion H; subst;
+  unwrap H;
   eauto using parse;
-  try invert_false_success.
+  unwrap_exp EFalse.
 Qed.
 
 (* Optional expression *)

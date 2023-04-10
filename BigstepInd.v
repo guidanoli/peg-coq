@@ -262,3 +262,80 @@ Definition EAndPredicate (e : Exp) : Exp :=
   !!e.
 
 Notation "'&' A" := (EAndPredicate A) (at level 60, right associativity).
+
+(* If-then-else expression *)
+Definition EIf (e1 e2 e3 : Exp) : Exp :=
+  &e1; e2 // !e1; e3.
+
+(* Unwrap &e into e *)
+Ltac unwrap_and e :=
+  unwrap_exp(&e); unwrap_exp(!e).
+
+(* If the condition is true, then
+   the whole 'if-then-else' is equivalent to the 'then' *)
+Theorem if_true :
+  forall peg e1 e2 e3 s s' res,
+  parse peg e1 s (Success s') ->
+  (parse peg (EIf e1 e2 e3) s res <-> parse peg e2 s res).
+Proof.
+  intros.
+  split; intros H'.
+  - (* -> *)
+    unwrap H';
+    unwrap_exp (&e1;e2).
+    + (* &e1 and e2 succeed *)
+      unwrap_exp (&e1).
+    + (* &e1 succeeds, but e2 fails *)
+      unwrap_exp (!e1;e3);
+      unwrap_exp (&e1);
+      discriminate_results.
+    + (* &e1 fails *)
+      unwrap_and (e1).
+      discriminate_results.
+  - (* <- *)
+    assert (parse peg (&e1) s (Success s)).
+    { eauto using parse. }
+    destruct res;
+    eauto using parse.
+Qed.
+
+(* If the condition is false, then
+   the whole 'if-then-else' is equivalent to the 'else' *)
+Theorem if_false :
+  forall peg e1 e2 e3 s res,
+  parse peg e1 s Failure ->
+  (parse peg (EIf e1 e2 e3) s res <-> parse peg e3 s res).
+Proof.
+  intros.
+  split; intros H'.
+  - (* -> *)
+    unwrap H';
+    unwrap_exp (&e1;e2);
+    try (unwrap_and (e1); discriminate_results);
+    unwrap_exp (!e1;e3);
+    unwrap_exp (!e1);
+    discriminate_results.
+  - (* <- *)
+    assert (parse peg (&e1) s Failure).
+    { eauto using parse. }
+    destruct res;
+    eauto using parse.
+Qed.
+
+(* If the condition is undecided, then
+   the whole 'if-then-else' is undecided *)
+Theorem if_undecided :
+  forall peg e1 e2 e3 s,
+  (forall res1, ~ parse peg e1 s res1) ->
+  (~ exists res2, parse peg (EIf e1 e2 e3) s res2).
+Proof.
+  intros peg e1 e2 e3 s H1 [res2 Hif].
+  unwrap_exp (EIf e1 e2 e3);
+  unwrap_exp (&e1;e2);
+  unwrap_and (e1);
+  match goal with
+  [ Hf: forall r, ~ parse _ e1 _ r,
+    Hx: parse _ e1 _ _ |- _ ] =>
+      apply Hf in Hx; contradiction
+  end.
+Qed.

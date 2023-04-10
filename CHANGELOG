@@ -79,3 +79,28 @@ predicates with the ones defined. That barrier has led me to make
 the ! predicate an integral part of the language. With this predicate
 defined, I can define & as !!. This is the definition given in the
 LPEG article—a syntatic sugar.
+
+2023-04-09
+
+I added notation for the following core expression operators:
+- Sequence: e1; e2
+- Ordered choice: e1 // e2
+- Not predicate: !e
+
+and for the following high-level expression operators:
+- And predicate: &e
+
+One of the motives given by Roberto was to try to define an
+if-then-else expression using the canonical PEG syntax. I decided
+to use the following definition:
+
+if& e1 then e2 else e3 === &e1; e2 // !e1; e3
+
+I proved that the parse proposition was deterministic in the result.
+This allowed me to prove theorems about the if-then-else expression.
+For example, if e1 matches, the if expression is equivalent to e2.
+Likewise, if e1 fails, the if expression is equivalent to e3.
+Finally, if e1 can't be parsed, then the if expression also can't.
+
+Also, I removed any unused high-level expressions, such as:
+Kleene star (*), plus (+), optional (?).

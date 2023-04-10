@@ -79,47 +79,14 @@ Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
       parse peg (!e) s Failure
   .
 
-(* Finds 'x = c e1' and 'x = c e2', and replaces e1 for e2 *)
-Ltac injection_subst :=
-    match goal with
-    [ H1: ?x = ?c ?e1,
-      H2: ?x = ?c ?e2 |- _ ] =>
-          rewrite -> H1 in H2;
-          assert (e1 = e2);
-          try (congruence; trivial);
-          clear H2;
-          subst
-    end.
-
-(* Finds 'c e1 = c e2', and replaces e1 for e2 *)
-Ltac injection_subst2 :=
+(* Invert parse proposition with Exp e *)
+Ltac parse_exp e :=
   match goal with
-    [ H: ?c ?e1 = ?c ?e2 |- _ ] =>
-        assert (e1 = e2);
-        try (congruence; trivial);
-        clear H;
-        subst
+  | H: parse _ e _ _ |- _ => inversion H; subst; auto
   end.
 
-(* Apply parse induction hypothesis whenever possible *)
-Ltac apply_parseIH :=
-  match goal with
-    [ IH: forall _, parse _ ?e _ _ -> _,
-      H: parse _ ?e _ _ |- _ ] =>
-      apply IH in H
-  end.
-
-(* Invert, substitute and clear *)
-Ltac unwrap H :=
-  inversion H; subst.
-
-(* Unwrap parse proposition with expression *)
-Ltac unwrap_exp e :=
-  match goal with
-  | H: parse _ e _ _ |- _ => unwrap H; auto
-  end.
-
-(* The parsing result is deterministic *)
+(* Parsing a string against a parsing expression
+   in the context of a PEG always outputs the same result *)
 Theorem deterministic_result :
   forall peg e s r1,
   parse peg e s r1 ->
@@ -127,10 +94,30 @@ Theorem deterministic_result :
 Proof.
   intros peg e s r1 H1.
   induction H1; intros r2 H';
-  unwrap H';
+  inversion H'; subst;
   try congruence;
-  try injection_subst;
-  try (apply_parseIH; try discriminate; try injection_subst2);
+  try match goal with
+  [ H1: ?x = ?c ?e1,
+    H2: ?x = ?c ?e2 |- _ ] =>
+        rewrite -> H1 in H2;
+        assert (e1 = e2);
+        try (congruence; trivial);
+        clear H2;
+        subst
+  end;
+  try match goal with
+    [ IH: forall _, parse _ ?e _ _ -> _,
+      H: parse _ ?e _ _ |- _ ] =>
+      apply IH in H
+  end;
+  try discriminate;
+  try match goal with
+    [ H: ?c ?e1 = ?c ?e2 |- _ ] =>
+        assert (e1 = e2);
+        try (congruence; trivial);
+        clear H;
+        subst
+  end;
   auto.
 Qed.
 
@@ -159,7 +146,8 @@ Ltac unify_results :=
          subst
    end.
 
-(* Equivalent parsing expressions under the same PEG *)
+(* Given a PEG, two parsing expressions are said equivalent
+   if, and only if, for every input string, they output the same result *)
 Inductive equivalent : PEG -> Exp -> Exp -> Prop :=
   | Equivalent :
       forall peg e1 e2,
@@ -177,9 +165,9 @@ Proof.
   constructor.
   intros.
   split; intros H;
-  unwrap H;
-  try unwrap_exp (e1; e2);
-  try unwrap_exp (e2; e3);
+  inversion H; subst;
+  try parse_exp (e1; e2);
+  try parse_exp (e2; e3);
   eauto using parse.
 Qed.
 
@@ -194,9 +182,9 @@ Proof.
   constructor.
   intros.
   split; intros H;
-  unwrap H;
-  try unwrap_exp (e1 // e2);
-  try unwrap_exp (e2 // e3);
+  inversion H; subst;
+  try parse_exp (e1 // e2);
+  try parse_exp (e2 // e3);
   eauto using parse.
 Qed.
 
@@ -212,9 +200,9 @@ Proof.
   - (* -> *)
     eauto using parse.
   - (* <- *)
-    unwrap H;
+    inversion H; subst;
     eauto using parse;
-    unwrap_exp EFalse.
+    parse_exp EFalse.
 Qed.
 
 (* Show that a false second choice is useless *)
@@ -229,9 +217,9 @@ Proof.
   - (* -> *)
     destruct res; econstructor; eauto using parse.
   - (* <- *)
-    unwrap H; auto.
+    inversion H; subst; auto.
     destruct res; auto.
-    unwrap_exp EFalse.
+    parse_exp EFalse.
 Qed.
 
 (* Show that a false first sequence part is enough *)
@@ -243,9 +231,9 @@ Proof.
   constructor.
   intros.
   split; intros H;
-  unwrap H;
+  inversion H; subst;
   eauto using parse;
-  unwrap_exp EFalse.
+  parse_exp EFalse.
 Qed.
 
 (* Optional expression *)
@@ -265,8 +253,8 @@ Definition EIf (e1 e2 e3 : Exp) : Exp :=
   &e1; e2 // !e1; e3.
 
 (* Unwrap &e into e *)
-Ltac unwrap_and e :=
-  unwrap_exp(&e); unwrap_exp(!e).
+Ltac parse_and_exp e :=
+  parse_exp(&e); parse_exp(!e).
 
 (* If the condition is true, then
    the whole 'if-then-else' is equivalent to the 'then' *)
@@ -278,16 +266,16 @@ Proof.
   intros.
   split; intros H'.
   - (* -> *)
-    unwrap H';
-    unwrap_exp (&e1;e2).
+    inversion H'; subst;
+    parse_exp (&e1;e2).
     + (* &e1 and e2 succeed *)
-      unwrap_exp (&e1).
+      parse_exp (&e1).
     + (* &e1 succeeds, but e2 fails *)
-      unwrap_exp (!e1;e3);
-      unwrap_exp (&e1);
+      parse_exp (!e1;e3);
+      parse_exp (&e1);
       discriminate_results.
     + (* &e1 fails *)
-      unwrap_and (e1).
+      parse_and_exp (e1).
       discriminate_results.
   - (* <- *)
     assert (parse peg (&e1) s (Success s)).
@@ -306,11 +294,11 @@ Proof.
   intros.
   split; intros H'.
   - (* -> *)
-    unwrap H';
-    unwrap_exp (&e1;e2);
-    try (unwrap_and (e1); discriminate_results);
-    unwrap_exp (!e1;e3);
-    unwrap_exp (!e1);
+    inversion H'; subst;
+    parse_exp (&e1;e2);
+    try (parse_and_exp (e1); discriminate_results);
+    parse_exp (!e1;e3);
+    parse_exp (!e1);
     discriminate_results.
   - (* <- *)
     assert (parse peg (&e1) s Failure).
@@ -327,9 +315,9 @@ Theorem if_undecided :
   (~ exists res2, parse peg (EIf e1 e2 e3) s res2).
 Proof.
   intros peg e1 e2 e3 s H1 [res2 Hif].
-  unwrap_exp (EIf e1 e2 e3);
-  unwrap_exp (&e1;e2);
-  unwrap_and (e1);
+  parse_exp (EIf e1 e2 e3);
+  parse_exp (&e1;e2);
+  parse_and_exp (e1);
   match goal with
   [ Hf: forall r, ~ parse _ e1 _ r,
     Hx: parse _ e1 _ _ |- _ ] =>

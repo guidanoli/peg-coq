@@ -304,9 +304,9 @@ Qed.
 Theorem if_undecided :
   forall peg e1 e2 e3 s,
   (forall res1, ~ parse peg e1 s res1) ->
-  (~ exists res2, parse peg (if& e1 then e2 else e3) s res2).
+  (forall res2, ~ parse peg (if& e1 then e2 else e3) s res2).
 Proof.
-  intros peg e1 e2 e3 s H1 [res2 Hif].
+  intros peg e1 e2 e3 s H1 r H2.
   parse_exp (if& e1 then e2 else e3);
   parse_exp (&e1;e2);
   parse_exp (&e1);

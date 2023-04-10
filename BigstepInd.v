@@ -146,20 +146,20 @@ Ltac unify_results :=
          subst
    end.
 
-(* Given a PEG, two parsing expressions are said equivalent
-   if, and only if, for every input string, they output the same result *)
-Inductive equivalent : PEG -> Exp -> Exp -> Prop :=
+(* Two parsing expressions are said equivalent
+   if, and only if, for every PEG and input string,
+   they output the same result *)
+Inductive equivalent : Exp -> Exp -> Prop :=
   | Equivalent :
-      forall peg e1 e2,
-      (forall s res, parse peg e1 s res <-> parse peg e2 s res) ->
-      equivalent peg e1 e2.
+      forall e1 e2,
+      (forall peg s res, parse peg e1 s res <-> parse peg e2 s res) ->
+      equivalent e1 e2.
 
 (* Proving that the sequence expression is associative *)
 Theorem sequence_assoc :
-  forall peg e1 e2 e3,
-  equivalent peg
-  (e1; (e2; e3))
-  ((e1; e2); e3).
+  forall e1 e2 e3,
+  equivalent (e1; (e2; e3))
+             ((e1; e2); e3).
 Proof.
   intros.
   constructor.
@@ -173,10 +173,9 @@ Qed.
 
 (* Proving that the ordered choice expression is associative *)
 Theorem ordered_choice_assoc :
-  forall peg e1 e2 e3,
-  equivalent peg
-  (e1 // (e2 // e3))
-  ((e1 // e2) // e3).
+  forall e1 e2 e3,
+  equivalent (e1 // (e2 // e3))
+             ((e1 // e2) // e3).
 Proof.
   intros.
   constructor.
@@ -190,8 +189,8 @@ Qed.
 
 (* Show that a false first choice is useless *)
 Theorem first_choice_false :
-  forall peg e,
-  equivalent peg e (EFalse // e).
+  forall e,
+  equivalent e (EFalse // e).
 Proof.
   intros.
   constructor.
@@ -207,8 +206,8 @@ Qed.
 
 (* Show that a false second choice is useless *)
 Theorem second_choice_false :
-  forall peg e,
-  equivalent peg e (e // EFalse).
+  forall e,
+  equivalent e (e // EFalse).
 Proof.
   intros.
   constructor.
@@ -224,8 +223,8 @@ Qed.
 
 (* Show that a false first sequence part is enough *)
 Theorem first_part_false :
-  forall peg e,
-  equivalent peg EFalse (EFalse; e).
+  forall e,
+  equivalent EFalse (EFalse; e).
 Proof.
   intros.
   constructor.

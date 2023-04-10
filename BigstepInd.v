@@ -249,7 +249,7 @@ Notation "'if&' A 'then' B 'else' C" := (EIf A B C) (at level 60, right associat
 
 (* If the condition is true, then
    the whole 'if-then-else' is equivalent to the 'then' *)
-Theorem if_true :
+Theorem if_condition_suceeds :
   forall peg e1 e2 e3 s s' res,
   parse peg e1 s (Success s') ->
   parse peg e2 s res ->
@@ -261,9 +261,34 @@ Proof.
   eauto using parse.
 Qed.
 
+Ltac contradict_parse e :=
+  match goal with
+  [ Hf: forall r, ~ parse _ e _ r,
+    Hx: parse _ e _ _ |- _ ] =>
+      apply Hf in Hx; contradiction
+  end.
+
+(* If the condition is true, but
+   the 'then' expression is undecided, then
+   the whole 'if-then-else' is undecided *)
+Theorem if_then_undec :
+  forall peg e1 e2 e3 s s',
+  parse peg e1 s (Success s') ->
+  (forall res, ~ parse peg e2 s res) ->
+  (forall res, ~ parse peg (if& e1 then e2 else e3) s res).
+Proof.
+  intros peg e1 e2 e3 s s' H1 H2 r H3.
+  parse_exp (if& e1 then e2 else e3);
+  parse_exp (&e1;e2);
+  parse_exp (&e1);
+  parse_exp (!e1);
+  try contradict_parse e2;
+  try discriminate_results.
+Qed.
+
 (* If the condition is false, then
    the whole 'if-then-else' is equivalent to the 'else' *)
-Theorem if_false :
+Theorem if_condition_fails :
   forall peg e1 e2 e3 s res,
   parse peg e1 s Failure ->
   parse peg e3 s res ->
@@ -275,9 +300,30 @@ Proof.
   eauto using parse.
 Qed.
 
+(* If the condition is false, but
+   the 'else' expression is undecided, then
+   the whole 'if-then-else' is undecided *)
+Theorem if_else_undec :
+  forall peg e1 e2 e3 s,
+  parse peg e1 s Failure ->
+  (forall res, ~ parse peg e3 s res) ->
+  (forall res, ~ parse peg (if& e1 then e2 else e3) s res).
+Proof.
+  intros peg e1 e2 e3 s H1 H2 r H3.
+  parse_exp (if& e1 then e2 else e3);
+  parse_exp (&e1;e2);
+  parse_exp (&e1);
+  parse_exp (!e1);
+  try discriminate_results;
+  parse_exp (!e1;e3);
+  parse_exp (!e1);
+  try discriminate_results;
+  try contradict_parse e3.
+Qed.
+
 (* If the condition is undecided, then
    the whole 'if-then-else' is undecided *)
-Theorem if_undecided :
+Theorem if_condition_undec :
   forall peg e1 e2 e3 s,
   (forall res1, ~ parse peg e1 s res1) ->
   (forall res2, ~ parse peg (if& e1 then e2 else e3) s res2).
@@ -287,9 +333,5 @@ Proof.
   parse_exp (&e1;e2);
   parse_exp (&e1);
   parse_exp (!e1);
-  match goal with
-  [ Hf: forall r, ~ parse _ e1 _ r,
-    Hx: parse _ e1 _ _ |- _ ] =>
-      apply Hf in Hx; contradiction
-  end.
+  contradict_parse e1.
 Qed.

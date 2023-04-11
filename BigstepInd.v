@@ -78,7 +78,8 @@ Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
 (* Invert Match proposition with Exp e *)
 Ltac match_exp e :=
   match goal with
-  | H: Match _ e _ _ |- _ => inversion H; subst; auto
+  | H: Match _ e _ _ |- _ =>
+      inversion H; subst; auto
   end.
 
 (* Parsing a string against a parsing expression
@@ -131,7 +132,7 @@ Ltac discriminate_results :=
   end.
 
 (* Use deterministic_result to unify
-   two Some results *)
+   two successful (Some) results *)
 Ltac unify_results :=
    match goal with
    [ H1: Match ?peg ?e ?s (Some ?s1),

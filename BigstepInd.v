@@ -26,50 +26,50 @@ Definition PEG : Type := list Exp.
    can either result in success (with `Some` leftover string)
    or failure (with `None` left) *)
 Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
-  | PETrue :
+  | METrue :
       forall peg s,
       Match peg ETrue s (Some s)
-  | PEFalse :
+  | MEFalse :
       forall peg s,
       Match peg EFalse s None
-  | PETerminal1 :
+  | METerminal1 :
       forall peg a s,
       Match peg (ETerminal a) (String a s) (Some s)
-  | PETerminal2 :
+  | METerminal2 :
       forall peg a a' s,
       a <> a' ->
       Match peg (ETerminal a) (String a' s) None
-  | PETerminal3 :
+  | METerminal3 :
       forall peg a,
       Match peg (ETerminal a) EmptyString None
-  | PENonTerminal :
+  | MENonTerminal :
       forall peg i s e res,
       nth_error peg i = Some e ->
       Match peg e s res ->
       Match peg (ENonTerminal i) s res
-  | PESequence1 :
+  | MESequence1 :
       forall peg e1 e2 s s' res,
       Match peg e1 s (Some s') ->
       Match peg e2 s' res ->
       Match peg (e1; e2) s res
-  | PESequence2 :
+  | MESequence2 :
       forall peg e1 e2 s,
       Match peg e1 s None ->
       Match peg (e1; e2) s None
-  | PEOrderedChoice1 :
+  | MEOrderedChoice1 :
       forall peg e1 e2 s s',
       Match peg e1 s (Some s') ->
       Match peg (e1 // e2) s (Some s')
-  | PEOrderedChoice2 :
+  | MEOrderedChoice2 :
       forall peg e1 e2 s res,
       Match peg e1 s None ->
       Match peg e2 s res ->
       Match peg (e1 // e2) s res
-  | PENotPredicate1 :
+  | MENotPredicate1 :
       forall peg e s,
       Match peg e s None ->
       Match peg (!e) s (Some s)
-  | PENotPredicate2 :
+  | MENotPredicate2 :
       forall peg e s s',
       Match peg e s (Some s') ->
       Match peg (!e) s None

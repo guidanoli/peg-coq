@@ -21,69 +21,72 @@ Notation "'!' A" := (ENotPredicate A) (at level 60, right associativity).
    Each PEG is composed of a finite set of parsing rule *)
 Definition PEG : Type := list Exp.
 
-(* Parse string according to PEG and parsing expression *)
-Inductive parse : PEG -> Exp -> string -> option string -> Prop :=
+(* Match an expression
+   Given a PEG, a parsing expression, and an input string,
+   can either result in success (with `Some` leftover string)
+   or failure (with `None` left) *)
+Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
   | PETrue :
       forall peg s,
-      parse peg ETrue s (Some s)
+      Match peg ETrue s (Some s)
   | PEFalse :
       forall peg s,
-      parse peg EFalse s None
+      Match peg EFalse s None
   | PETerminal1 :
       forall peg a s,
-      parse peg (ETerminal a) (String a s) (Some s)
+      Match peg (ETerminal a) (String a s) (Some s)
   | PETerminal2 :
       forall peg a a' s,
       a <> a' ->
-      parse peg (ETerminal a) (String a' s) None
+      Match peg (ETerminal a) (String a' s) None
   | PETerminal3 :
       forall peg a,
-      parse peg (ETerminal a) EmptyString None
+      Match peg (ETerminal a) EmptyString None
   | PENonTerminal :
       forall peg i s e res,
       nth_error peg i = Some e ->
-      parse peg e s res ->
-      parse peg (ENonTerminal i) s res
+      Match peg e s res ->
+      Match peg (ENonTerminal i) s res
   | PESequence1 :
       forall peg e1 e2 s s' res,
-      parse peg e1 s (Some s') ->
-      parse peg e2 s' res ->
-      parse peg (e1; e2) s res
+      Match peg e1 s (Some s') ->
+      Match peg e2 s' res ->
+      Match peg (e1; e2) s res
   | PESequence2 :
       forall peg e1 e2 s,
-      parse peg e1 s None ->
-      parse peg (e1; e2) s None
+      Match peg e1 s None ->
+      Match peg (e1; e2) s None
   | PEOrderedChoice1 :
       forall peg e1 e2 s s',
-      parse peg e1 s (Some s') ->
-      parse peg (e1 // e2) s (Some s')
+      Match peg e1 s (Some s') ->
+      Match peg (e1 // e2) s (Some s')
   | PEOrderedChoice2 :
       forall peg e1 e2 s res,
-      parse peg e1 s None ->
-      parse peg e2 s res ->
-      parse peg (e1 // e2) s res
+      Match peg e1 s None ->
+      Match peg e2 s res ->
+      Match peg (e1 // e2) s res
   | PENotPredicate1 :
       forall peg e s,
-      parse peg e s None ->
-      parse peg (!e) s (Some s)
+      Match peg e s None ->
+      Match peg (!e) s (Some s)
   | PENotPredicate2 :
       forall peg e s s',
-      parse peg e s (Some s') ->
-      parse peg (!e) s None
+      Match peg e s (Some s') ->
+      Match peg (!e) s None
   .
 
-(* Invert parse proposition with Exp e *)
-Ltac parse_exp e :=
+(* Invert Match proposition with Exp e *)
+Ltac match_exp e :=
   match goal with
-  | H: parse _ e _ _ |- _ => inversion H; subst; auto
+  | H: Match _ e _ _ |- _ => inversion H; subst; auto
   end.
 
 (* Parsing a string against a parsing expression
    in the context of a PEG always outputs the same result *)
 Theorem deterministic_result :
   forall peg e s r1,
-  parse peg e s r1 ->
-  (forall r2, parse peg e s r2 -> r1 = r2).
+  Match peg e s r1 ->
+  (forall r2, Match peg e s r2 -> r1 = r2).
 Proof.
   intros peg e s r1 H1.
   induction H1; intros r2 H';
@@ -99,8 +102,8 @@ Proof.
         subst
   end;
   try match goal with
-    [ IH: forall _, parse _ ?e _ _ -> _,
-      H: parse _ ?e _ _ |- _ ] =>
+    [ IH: forall _, Match _ ?e _ _ -> _,
+      H: Match _ ?e _ _ |- _ ] =>
       apply IH in H
   end;
   try discriminate;
@@ -118,8 +121,8 @@ Qed.
    different result types *)
 Ltac discriminate_results :=
   match goal with
-  [ H1: parse ?peg ?e ?s (Some ?s'),
-    H2: parse ?peg ?e ?s None |- _ ] =>
+  [ H1: Match ?peg ?e ?s (Some ?s'),
+    H2: Match ?peg ?e ?s None |- _ ] =>
         assert (Some s' = None);
         eauto using deterministic_result;
         discriminate
@@ -129,8 +132,8 @@ Ltac discriminate_results :=
    two Some results *)
 Ltac unify_results :=
    match goal with
-   [ H1: parse ?peg ?e ?s (Some ?s1),
-     H2: parse ?peg ?e ?s (Some ?s2) |- _ ] =>
+   [ H1: Match ?peg ?e ?s (Some ?s1),
+     H2: Match ?peg ?e ?s (Some ?s2) |- _ ] =>
          assert (Some s1 = Some s2) as Haux;
          eauto using deterministic_result;
          assert (s1 = s2);
@@ -145,7 +148,7 @@ Ltac unify_results :=
 Inductive equivalent : Exp -> Exp -> Prop :=
   | Equivalent :
       forall e1 e2,
-      (forall peg s res, parse peg e1 s res <-> parse peg e2 s res) ->
+      (forall peg s res, Match peg e1 s res <-> Match peg e2 s res) ->
       equivalent e1 e2.
 
 (* Proving that the sequence expression is associative *)
@@ -159,9 +162,9 @@ Proof.
   intros.
   split; intros H;
   inversion H; subst;
-  try parse_exp (e1; e2);
-  try parse_exp (e2; e3);
-  eauto using parse.
+  try match_exp (e1; e2);
+  try match_exp (e2; e3);
+  eauto using Match.
 Qed.
 
 (* Proving that the ordered choice expression is associative *)
@@ -175,9 +178,9 @@ Proof.
   intros.
   split; intros H;
   inversion H; subst;
-  try parse_exp (e1 // e2);
-  try parse_exp (e2 // e3);
-  eauto using parse.
+  try match_exp (e1 // e2);
+  try match_exp (e2 // e3);
+  eauto using Match.
 Qed.
 
 (* Show that a false first choice is useless *)
@@ -190,11 +193,11 @@ Proof.
   intros.
   split; intros H.
   - (* -> *)
-    eauto using parse.
+    eauto using Match.
   - (* <- *)
     inversion H; subst;
-    eauto using parse;
-    parse_exp EFalse.
+    eauto using Match;
+    match_exp EFalse.
 Qed.
 
 (* Show that a false second choice is useless *)
@@ -207,11 +210,11 @@ Proof.
   intros.
   split; intros H.
   - (* -> *)
-    destruct res; econstructor; eauto using parse.
+    destruct res; econstructor; eauto using Match.
   - (* <- *)
     inversion H; subst; auto.
     destruct res; auto.
-    parse_exp EFalse.
+    match_exp EFalse.
 Qed.
 
 (* Show that a false first sequence part is enough *)
@@ -224,8 +227,8 @@ Proof.
   intros.
   split; intros H;
   inversion H; subst;
-  eauto using parse;
-  parse_exp EFalse.
+  eauto using Match;
+  match_exp EFalse.
 Qed.
 
 (* And predicate *)
@@ -244,20 +247,20 @@ Notation "'if&' A 'then' B 'else' C" := (EIf A B C) (at level 60, right associat
    the whole 'if-then-else' is equivalent to the 'then' *)
 Theorem if_condition_suceeds :
   forall peg e1 e2 e3 s s' res,
-  parse peg e1 s (Some s') ->
-  parse peg e2 s res ->
-  parse peg (if& e1 then e2 else e3) s res.
+  Match peg e1 s (Some s') ->
+  Match peg e2 s res ->
+  Match peg (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  assert (parse peg (&e1) s (Some s));
+  assert (Match peg (&e1) s (Some s));
   destruct res;
-  eauto using parse.
+  eauto using Match.
 Qed.
 
-Ltac contradict_parse e :=
+Ltac contradict_match e :=
   match goal with
-  [ Hf: forall r, ~ parse _ e _ r,
-    Hx: parse _ e _ _ |- _ ] =>
+  [ Hf: forall r, ~ Match _ e _ r,
+    Hx: Match _ e _ _ |- _ ] =>
       apply Hf in Hx; contradiction
   end.
 
@@ -266,16 +269,16 @@ Ltac contradict_parse e :=
    the whole 'if-then-else' is undecided *)
 Theorem if_then_undec :
   forall peg e1 e2 e3 s s',
-  parse peg e1 s (Some s') ->
-  (forall res, ~ parse peg e2 s res) ->
-  (forall res, ~ parse peg (if& e1 then e2 else e3) s res).
+  Match peg e1 s (Some s') ->
+  (forall res, ~ Match peg e2 s res) ->
+  (forall res, ~ Match peg (if& e1 then e2 else e3) s res).
 Proof.
   intros peg e1 e2 e3 s s' H1 H2 r H3.
-  parse_exp (if& e1 then e2 else e3);
-  parse_exp (&e1;e2);
-  parse_exp (&e1);
-  parse_exp (!e1);
-  try contradict_parse e2;
+  match_exp (if& e1 then e2 else e3);
+  match_exp (&e1;e2);
+  match_exp (&e1);
+  match_exp (!e1);
+  try contradict_match e2;
   try discriminate_results.
 Qed.
 
@@ -283,14 +286,14 @@ Qed.
    the whole 'if-then-else' is equivalent to the 'else' *)
 Theorem if_condition_fails :
   forall peg e1 e2 e3 s res,
-  parse peg e1 s None ->
-  parse peg e3 s res ->
-  parse peg (if& e1 then e2 else e3) s res.
+  Match peg e1 s None ->
+  Match peg e3 s res ->
+  Match peg (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  assert (parse peg (&e1) s None);
+  assert (Match peg (&e1) s None);
   destruct res;
-  eauto using parse.
+  eauto using Match.
 Qed.
 
 (* If the condition is false, but
@@ -298,33 +301,33 @@ Qed.
    the whole 'if-then-else' is undecided *)
 Theorem if_else_undec :
   forall peg e1 e2 e3 s,
-  parse peg e1 s None ->
-  (forall res, ~ parse peg e3 s res) ->
-  (forall res, ~ parse peg (if& e1 then e2 else e3) s res).
+  Match peg e1 s None ->
+  (forall res, ~ Match peg e3 s res) ->
+  (forall res, ~ Match peg (if& e1 then e2 else e3) s res).
 Proof.
   intros peg e1 e2 e3 s H1 H2 r H3.
-  parse_exp (if& e1 then e2 else e3);
-  parse_exp (&e1;e2);
-  parse_exp (&e1);
-  parse_exp (!e1);
+  match_exp (if& e1 then e2 else e3);
+  match_exp (&e1;e2);
+  match_exp (&e1);
+  match_exp (!e1);
   try discriminate_results;
-  parse_exp (!e1;e3);
-  parse_exp (!e1);
+  match_exp (!e1;e3);
+  match_exp (!e1);
   try discriminate_results;
-  try contradict_parse e3.
+  try contradict_match e3.
 Qed.
 
 (* If the condition is undecided, then
    the whole 'if-then-else' is undecided *)
 Theorem if_condition_undec :
   forall peg e1 e2 e3 s,
-  (forall res1, ~ parse peg e1 s res1) ->
-  (forall res2, ~ parse peg (if& e1 then e2 else e3) s res2).
+  (forall res1, ~ Match peg e1 s res1) ->
+  (forall res2, ~ Match peg (if& e1 then e2 else e3) s res2).
 Proof.
   intros peg e1 e2 e3 s H1 r H2.
-  parse_exp (if& e1 then e2 else e3);
-  parse_exp (&e1;e2);
-  parse_exp (&e1);
-  parse_exp (!e1);
-  contradict_parse e1.
+  match_exp (if& e1 then e2 else e3);
+  match_exp (&e1;e2);
+  match_exp (&e1);
+  match_exp (!e1);
+  contradict_match e1.
 Qed.

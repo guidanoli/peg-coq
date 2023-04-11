@@ -145,25 +145,22 @@ Ltac unify_results :=
          subst
    end.
 
-(* Two parsing expressions are said equivalent
-   if, and only if, for every PEG and input string,
+(* Two parsing expressions are said equivalent in the
+   context of some PEG iff for every input string,
    they output the same result *)
-Inductive equivalent : Exp -> Exp -> Prop :=
-  | Equivalent :
-      forall e1 e2,
-      (forall peg s res, Match peg e1 s res <-> Match peg e2 s res) ->
-      equivalent e1 e2.
+Definition equivalent (peg : PEG) (e1 e2 : Exp) : Prop :=
+  forall s res,
+  Match peg e1 s res <-> Match peg e2 s res.
 
 (* Proving that the sequence expression is associative *)
 Theorem sequence_assoc :
-  forall e1 e2 e3,
-  equivalent (e1; (e2; e3))
-             ((e1; e2); e3).
+  forall peg e1 e2 e3,
+  equivalent peg (e1; (e2; e3))
+                 ((e1; e2); e3).
 Proof.
   intros.
-  constructor.
-  intros.
-  split; intros H;
+  constructor;
+  intros H;
   inversion H; subst;
   try match_exp (e1; e2);
   try match_exp (e2; e3);
@@ -172,14 +169,13 @@ Qed.
 
 (* Proving that the ordered choice expression is associative *)
 Theorem ordered_choice_assoc :
-  forall e1 e2 e3,
-  equivalent (e1 // (e2 // e3))
-             ((e1 // e2) // e3).
+  forall peg e1 e2 e3,
+  equivalent peg (e1 // (e2 // e3))
+                 ((e1 // e2) // e3).
 Proof.
   intros.
-  constructor.
-  intros.
-  split; intros H;
+  constructor;
+  intros H;
   inversion H; subst;
   try match_exp (e1 // e2);
   try match_exp (e2 // e3);
@@ -188,13 +184,12 @@ Qed.
 
 (* Show that a false first choice is useless *)
 Theorem first_choice_false :
-  forall e,
-  equivalent e (EFalse // e).
+  forall peg e,
+  equivalent peg e (EFalse // e).
 Proof.
   intros.
-  constructor.
-  intros.
-  split; intros H.
+  constructor;
+  intros H.
   - (* -> *)
     eauto using Match.
   - (* <- *)
@@ -205,13 +200,12 @@ Qed.
 
 (* Show that a false second choice is useless *)
 Theorem second_choice_false :
-  forall e,
-  equivalent e (e // EFalse).
+  forall peg e,
+  equivalent peg e (e // EFalse).
 Proof.
   intros.
-  constructor.
-  intros.
-  split; intros H.
+  constructor;
+  intros H.
   - (* -> *)
     destruct res; econstructor; eauto using Match.
   - (* <- *)
@@ -222,13 +216,12 @@ Qed.
 
 (* Show that a false first sequence part is enough *)
 Theorem first_part_false :
-  forall e,
-  equivalent EFalse (EFalse; e).
+  forall peg e,
+  equivalent peg EFalse (EFalse; e).
 Proof.
   intros.
-  constructor.
-  intros.
-  split; intros H;
+  constructor;
+  intros H;
   inversion H; subst;
   eauto using Match;
   match_exp EFalse.

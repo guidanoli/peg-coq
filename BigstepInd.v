@@ -84,11 +84,13 @@ Ltac match_exp e :=
 (* Parsing a string against a parsing expression
    in the context of a PEG always outputs the same result *)
 Theorem deterministic_result :
-  forall peg e s r1,
+  forall peg e s r1 r2,
   Match peg e s r1 ->
-  (forall r2, Match peg e s r2 -> r1 = r2).
+  Match peg e s r2 ->
+  r1 = r2.
 Proof.
-  intros peg e s r1 H1.
+  intros peg e s r1 r2 H1 H2.
+  generalize dependent r2.
   induction H1; intros r2 H';
   inversion H'; subst;
   try congruence;

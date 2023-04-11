@@ -198,6 +198,22 @@ Proof.
     match_exp EFalse.
 Qed.
 
+(* Show that a true first choice is enough *)
+Theorem first_choice_true :
+  forall peg e,
+  equivalent peg ETrue (ETrue // e).
+Proof.
+  intros.
+  constructor;
+  intros H.
+  - (* -> *)
+    match_exp ETrue.
+    eauto using Match.
+  - (* <- *)
+    match_exp (ETrue // e).
+    match_exp (ETrue).
+Qed.
+
 (* Show that a false second choice is useless *)
 Theorem second_choice_false :
   forall peg e,
@@ -212,6 +228,19 @@ Proof.
     inversion H; subst; auto.
     destruct res; auto.
     match_exp EFalse.
+Qed.
+
+(* Show that a true first sequence part is useless *)
+Theorem first_part_true :
+  forall peg e,
+  equivalent peg e (ETrue; e).
+Proof.
+  intros.
+  constructor;
+  intros H;
+  inversion H; subst;
+  eauto using Match;
+  match_exp ETrue.
 Qed.
 
 (* Show that a false first sequence part is enough *)

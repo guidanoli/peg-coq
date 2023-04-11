@@ -241,7 +241,7 @@ Notation "'if&' A 'then' B 'else' C" := (EIf A B C) (at level 60, right associat
 
 (* If the condition is true, then
    the whole 'if-then-else' is equivalent to the 'then' *)
-Theorem if_condition_suceeds :
+Theorem if_condition_succeeds :
   forall peg e1 e2 e3 s s' res,
   Match peg e1 s (Some s') ->
   Match peg e2 s res ->
@@ -263,7 +263,7 @@ Ltac contradict_match e :=
 (* If the condition is true, but
    the 'then' expression is undecided, then
    the whole 'if-then-else' is undecided *)
-Theorem if_then_undec :
+Theorem if_condition_succeeds_then_undec :
   forall peg e1 e2 e3 s s',
   Match peg e1 s (Some s') ->
   (forall res, ~ Match peg e2 s res) ->
@@ -295,7 +295,7 @@ Qed.
 (* If the condition is false, but
    the 'else' expression is undecided, then
    the whole 'if-then-else' is undecided *)
-Theorem if_else_undec :
+Theorem if_condition_fails_else_undec :
   forall peg e1 e2 e3 s,
   Match peg e1 s None ->
   (forall res, ~ Match peg e3 s res) ->

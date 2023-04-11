@@ -21,62 +21,55 @@ Notation "'!' A" := (ENotPredicate A) (at level 60, right associativity).
    Each PEG is composed of a finite set of parsing rule *)
 Definition PEG : Type := list Exp.
 
-(* Parsing Result
-   The result of parsing a string against a PEG *)
-Inductive Result : Type :=
-  | Success : string -> Result (* Match suffix *)
-  | Failure : Result
-  .
-
 (* Parse string according to PEG and parsing expression *)
-Inductive parse : PEG -> Exp -> string -> Result -> Prop :=
+Inductive parse : PEG -> Exp -> string -> option string -> Prop :=
   | PETrue :
       forall peg s,
-      parse peg ETrue s (Success s)
+      parse peg ETrue s (Some s)
   | PEFalse :
       forall peg s,
-      parse peg EFalse s Failure
-  | PETerminalSuccess :
+      parse peg EFalse s None
+  | PETerminal1 :
       forall peg a s,
-      parse peg (ETerminal a) (String a s) (Success s)
-  | PETerminalFailureString :
+      parse peg (ETerminal a) (String a s) (Some s)
+  | PETerminal2 :
       forall peg a a' s,
       a <> a' ->
-      parse peg (ETerminal a) (String a' s) Failure
-  | PETerminalFailureEmptyString :
+      parse peg (ETerminal a) (String a' s) None
+  | PETerminal3 :
       forall peg a,
-      parse peg (ETerminal a) EmptyString Failure
+      parse peg (ETerminal a) EmptyString None
   | PENonTerminal :
       forall peg i s e res,
       nth_error peg i = Some e ->
       parse peg e s res ->
       parse peg (ENonTerminal i) s res
-  | PESequenceSuccess :
+  | PESequence1 :
       forall peg e1 e2 s s' res,
-      parse peg e1 s (Success s') ->
+      parse peg e1 s (Some s') ->
       parse peg e2 s' res ->
       parse peg (e1; e2) s res
-  | PESequenceFailure :
+  | PESequence2 :
       forall peg e1 e2 s,
-      parse peg e1 s Failure ->
-      parse peg (e1; e2) s Failure
-  | PEOrderedChoiceSuccess :
+      parse peg e1 s None ->
+      parse peg (e1; e2) s None
+  | PEOrderedChoice1 :
       forall peg e1 e2 s s',
-      parse peg e1 s (Success s') ->
-      parse peg (e1 // e2) s (Success s')
-  | PEOrderedChoiceFailure :
+      parse peg e1 s (Some s') ->
+      parse peg (e1 // e2) s (Some s')
+  | PEOrderedChoice2 :
       forall peg e1 e2 s res,
-      parse peg e1 s Failure ->
+      parse peg e1 s None ->
       parse peg e2 s res ->
       parse peg (e1 // e2) s res
-  | PENotPredicateSuccess :
+  | PENotPredicate1 :
       forall peg e s,
-      parse peg e s Failure ->
-      parse peg (!e) s (Success s)
-  | PENotPredicateFailure :
+      parse peg e s None ->
+      parse peg (!e) s (Some s)
+  | PENotPredicate2 :
       forall peg e s s',
-      parse peg e s (Success s') ->
-      parse peg (!e) s Failure
+      parse peg e s (Some s') ->
+      parse peg (!e) s None
   .
 
 (* Invert parse proposition with Exp e *)
@@ -125,20 +118,20 @@ Qed.
    different result types *)
 Ltac discriminate_results :=
   match goal with
-  [ H1: parse ?peg ?e ?s (Success ?s'),
-    H2: parse ?peg ?e ?s Failure |- _ ] =>
-        assert (Success s' = Failure);
+  [ H1: parse ?peg ?e ?s (Some ?s'),
+    H2: parse ?peg ?e ?s None |- _ ] =>
+        assert (Some s' = None);
         eauto using deterministic_result;
         discriminate
   end.
 
 (* Use deterministic_result to unify
-   two Success results *)
+   two Some results *)
 Ltac unify_results :=
    match goal with
-   [ H1: parse ?peg ?e ?s (Success ?s1),
-     H2: parse ?peg ?e ?s (Success ?s2) |- _ ] =>
-         assert (Success s1 = Success s2) as Haux;
+   [ H1: parse ?peg ?e ?s (Some ?s1),
+     H2: parse ?peg ?e ?s (Some ?s2) |- _ ] =>
+         assert (Some s1 = Some s2) as Haux;
          eauto using deterministic_result;
          assert (s1 = s2);
          try congruence;
@@ -251,12 +244,12 @@ Notation "'if&' A 'then' B 'else' C" := (EIf A B C) (at level 60, right associat
    the whole 'if-then-else' is equivalent to the 'then' *)
 Theorem if_condition_suceeds :
   forall peg e1 e2 e3 s s' res,
-  parse peg e1 s (Success s') ->
+  parse peg e1 s (Some s') ->
   parse peg e2 s res ->
   parse peg (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  assert (parse peg (&e1) s (Success s));
+  assert (parse peg (&e1) s (Some s));
   destruct res;
   eauto using parse.
 Qed.
@@ -273,7 +266,7 @@ Ltac contradict_parse e :=
    the whole 'if-then-else' is undecided *)
 Theorem if_then_undec :
   forall peg e1 e2 e3 s s',
-  parse peg e1 s (Success s') ->
+  parse peg e1 s (Some s') ->
   (forall res, ~ parse peg e2 s res) ->
   (forall res, ~ parse peg (if& e1 then e2 else e3) s res).
 Proof.
@@ -290,12 +283,12 @@ Qed.
    the whole 'if-then-else' is equivalent to the 'else' *)
 Theorem if_condition_fails :
   forall peg e1 e2 e3 s res,
-  parse peg e1 s Failure ->
+  parse peg e1 s None ->
   parse peg e3 s res ->
   parse peg (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  assert (parse peg (&e1) s Failure);
+  assert (parse peg (&e1) s None);
   destruct res;
   eauto using parse.
 Qed.
@@ -305,7 +298,7 @@ Qed.
    the whole 'if-then-else' is undecided *)
 Theorem if_else_undec :
   forall peg e1 e2 e3 s,
-  parse peg e1 s Failure ->
+  parse peg e1 s None ->
   (forall res, ~ parse peg e3 s res) ->
   (forall res, ~ parse peg (if& e1 then e2 else e3) s res).
 Proof.

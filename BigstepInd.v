@@ -255,6 +255,23 @@ Proof.
   match_exp EFalse.
 Qed.
 
+Theorem choice_sequence_distributive_left :
+  forall peg e1 e2 e3,
+  equivalent peg (e1; (e2 // e3))
+                 (e1; e2 // e1; e3).
+Proof.
+  intros.
+  constructor;
+  intros H;
+  inversion H; subst;
+  try match_exp (e2 // e3);
+  try match_exp (e1; e2);
+  try match_exp (e1; e3);
+  try unify_results;
+  try discriminate_results;
+  eauto using Match.
+Qed.
+
 (* And predicate *)
 Definition EAndPredicate (e : Exp) : Exp :=
   !!e.

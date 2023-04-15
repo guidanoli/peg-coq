@@ -79,7 +79,7 @@ Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
 Ltac match_exp e :=
   match goal with
   | H: Match _ e _ _ |- _ =>
-      inversion H; subst; auto
+      inversion H; subst; eauto using Match
   end.
 
 (* Parsing a string against a parsing expression
@@ -208,7 +208,6 @@ Proof.
   intros H.
   - (* -> *)
     match_exp ETrue.
-    eauto using Match.
   - (* <- *)
     match_exp (ETrue // e).
     match_exp (ETrue).

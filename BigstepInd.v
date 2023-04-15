@@ -6,6 +6,7 @@ From Coq Require Import Lists.List.
 Inductive Exp : Type :=
   | ETrue : Exp (* Always matches *)
   | EFalse : Exp (* Never matches *)
+  | EAny : Exp (* Matches any ASCII character *)
   | ETerminal : ascii -> Exp (* Matches an ASCII character *)
   | ENonTerminal : nat -> Exp (* Matches a non-terminal *)
   | ESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
@@ -32,6 +33,12 @@ Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
   | MEFalse :
       forall peg s,
       Match peg EFalse s None
+  | MEAny1 :
+      forall peg a s,
+      Match peg EAny (String a s) (Some s)
+  | MEAny2 :
+      forall peg,
+      Match peg EAny EmptyString None
   | METerminal1 :
       forall peg a s,
       Match peg (ETerminal a) (String a s) (Some s)

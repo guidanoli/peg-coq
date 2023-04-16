@@ -18,6 +18,7 @@ Inductive Exp : Type :=
 Notation "A ';' B" := (ESequence A B) (at level 70, right associativity).
 Notation "A '//' B" := (EOrderedChoice A B) (at level 90, right associativity).
 Notation "'!' A" := (ENotPredicate A) (at level 60, right associativity).
+Notation "A '~'" := (EKleeneStar A) (at level 60, right associativity).
 
 (* Parsing Expression Grammar
    Each PEG is composed of a finite set of parsing rule *)
@@ -83,12 +84,12 @@ Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
       Match peg (!e) s None
   | MEKleeneStar1 :
       forall peg e s s',
-      Match peg (e; EKleeneStar e) s (Some s') ->
-      Match peg (EKleeneStar e) s (Some s')
+      Match peg (e; e~) s (Some s') ->
+      Match peg (e~) s (Some s')
   | MEKleeneStar2 :
       forall peg e s,
       Match peg e s None ->
-      Match peg (EKleeneStar e) s (Some s)
+      Match peg (e~) s (Some s)
   .
 
 (* Invert Match proposition with Exp e *)

@@ -12,6 +12,7 @@ Inductive Exp : Type :=
   | ESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
   | EOrderedChoice : Exp -> Exp -> Exp (* Matches one of two subexpressions *)
   | ENotPredicate : Exp -> Exp (* Matches if subexpression doesn't *)
+  | EKleeneStar : Exp -> Exp (* Matches a subexpression as many times as possible *)
   .
 
 Notation "A ';' B" := (ESequence A B) (at level 70, right associativity).
@@ -80,6 +81,14 @@ Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
       forall peg e s s',
       Match peg e s (Some s') ->
       Match peg (!e) s None
+  | MEKleeneStar1 :
+      forall peg e s s',
+      Match peg (e; EKleeneStar e) s (Some s') ->
+      Match peg (EKleeneStar e) s (Some s')
+  | MEKleeneStar2 :
+      forall peg e s,
+      Match peg e s None ->
+      Match peg (EKleeneStar e) s (Some s)
   .
 
 (* Invert Match proposition with Exp e *)
@@ -112,8 +121,19 @@ Proof.
         subst
   end;
   try match goal with
-    [ IH: forall _, Match _ ?e _ _ -> _,
-      H: Match _ ?e _ _ |- _ ] =>
+  [ IH: forall r, Match ?peg (?e; ?e') ?s r -> Some _ = r,
+    H: Match ?peg ?e ?s None |- _ ] =>
+        assert (Match peg (e; e') s None);
+        eauto using Match
+  end;
+  try match goal with
+  [ IH: forall r, Match ?peg ?e ?s r -> None = r,
+    H: Match peg (?e; ?e') ?s (Some _) |- _ ] =>
+        inversion H; subst
+  end;
+  try match goal with
+  [ IH: forall r, Match ?peg ?e ?s r -> _ = r,
+    H: Match ?peg ?e ?s _ |- _ ] =>
       apply IH in H
   end;
   try discriminate;

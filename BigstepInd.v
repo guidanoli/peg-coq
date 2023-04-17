@@ -2,6 +2,7 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Lists.List.
 From Coq Require Import Bool.Bool.
+Open Scope string.
 
 (* Parsing Expression *)
 Inductive Exp : Type :=
@@ -304,6 +305,59 @@ Proof.
   try unify_results;
   try discriminate_results;
   eauto using Match.
+Qed.
+
+Theorem append_assoc :
+  forall s1 s2 s3,
+  (s1 ++ s2) ++ s3 = s1 ++ (s2 ++ s3).
+Proof.
+  intros.
+  induction s1 as [|a s1 IH].
+  - (* EmptyString *) trivial.
+  - (* String a s1 *) simpl. rewrite IH. trivial.
+Qed.
+
+Theorem some_result_is_suffix_of_input :
+  forall peg e s res s2,
+  Match peg e s res ->
+  res = Some s2 ->
+  exists s1, s = s1 ++ s2.
+Proof.
+  intros.
+  generalize dependent s2.
+  induction H;
+  subst;
+  intros s2 Hs2;
+  try match goal with
+  [ H: Some _ = Some _ |- _ ] =>
+      injection H as H;
+      subst
+  end;
+  try match goal with
+  [ |- exists s1, ?s2 = s1 ++ ?s2 ] =>
+      exists "";
+      trivial
+  end;
+  try match goal with
+  [ |- exists s1, String ?a ?s2 = s1 ++ ?s2 ] =>
+      exists (String a EmptyString);
+      trivial
+  end;
+  try match goal with
+  [ IH1: forall sx, Some ?s' = Some sx -> exists sy, ?s = sy ++ sx,
+    IH2: forall sx, ?res = Some sx -> exists sy, ?s' = sy ++ sx,
+    H1: ?res = Some ?s2 |- exists s1, ?s = s1 ++ ?s2 ] =>
+      apply IH2 in H1;
+      destruct H1 as [sk H1];
+      assert (Some s' = Some s') as H2; trivial;
+      apply IH1 in H2;
+      destruct H2 as [sm H2];
+      exists (sm ++ sk);
+      rewrite H1 in H2;
+      rewrite append_assoc
+  end;
+  try discriminate;
+  eauto.
 Qed.
 
 (* And predicate *)

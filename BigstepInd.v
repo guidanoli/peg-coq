@@ -428,12 +428,12 @@ Definition union (cs1 cs2 : charset) : charset := (fun a => cs1 a || cs2 a).
 (* The set complement operator uses the boolean 'not' *)
 Definition complement (cs : charset) : charset := (fun a => negb (cs a)).
 
-Reserved Notation " cs1 '==[' e '@' peg ']==>' cs2 " (at level 50).
+Reserved Notation " cs1 '<==[' e '@' peg ']==' cs2 " (at level 50).
 
 (*
    "First-and-follow"
 
-   `First peg e cs1 cs2` or `cs1 ==[ e @ peg ]==> cs2`
+   `First peg e cs1 cs2` or `cs1 <==[ e @ peg ]== cs2`
 
    peg - the PEG used to contextualize the expression `e`
    e   - the expression itself being parsed
@@ -446,46 +446,46 @@ Reserved Notation " cs1 '==[' e '@' peg ']==>' cs2 " (at level 50).
 Inductive First : PEG -> Exp -> charset -> charset -> Prop :=
   | FETrue :
       forall peg cs,
-      cs ==[ ETrue @ peg ]==> cs
+      cs <==[ ETrue @ peg ]== cs
   | FEFalse :
       forall peg cs,
-      emptyset ==[ EFalse @ peg ]==> cs
+      emptyset <==[ EFalse @ peg ]== cs
   | FEAny :
       forall peg cs,
-      fullset ==[ EAny @ peg ]==> cs
+      fullset <==[ EAny @ peg ]== cs
   | FETerminal :
       forall peg cs a,
-      singleton a ==[ ETerminal a @ peg ]==> cs
+      singleton a <==[ ETerminal a @ peg ]== cs
   | FENonTerminal :
       forall peg i e cs cs',
       nth_error peg i = Some e ->
-      cs ==[ e @ peg ]==> cs' ->
-      cs ==[ ENonTerminal i @ peg ]==> cs'
+      cs <==[ e @ peg ]== cs' ->
+      cs <==[ ENonTerminal i @ peg ]== cs'
   | FESequence :
       forall peg cs cs' cs'' e1 e2,
-      cs ==[ e1 @ peg ]==> cs' ->
-      cs' ==[ e2 @ peg ]==> cs'' ->
-      cs ==[ e1; e2 @ peg ]==> cs''
+      cs <==[ e1 @ peg ]== cs' ->
+      cs' <==[ e2 @ peg ]== cs'' ->
+      cs <==[ e1; e2 @ peg ]== cs''
   | FEOrderedChoice :
       forall peg cs1 cs2 cs' e1 e2,
-      cs1 ==[ e1 @ peg ]==> cs' ->
-      cs2 ==[ e2 @ peg ]==> cs' ->
-      union cs1 cs2 ==[ e1 // e2 @ peg ]==> cs'
+      cs1 <==[ e1 @ peg ]== cs' ->
+      cs2 <==[ e2 @ peg ]== cs' ->
+      union cs1 cs2 <==[ e1 // e2 @ peg ]== cs'
   | FENotPredicate :
       forall peg cs cs' e,
-      cs ==[ e @ peg ]==> cs' ->
-      complement cs ==[ !e @ peg ]==> cs'
+      cs <==[ e @ peg ]== cs' ->
+      complement cs <==[ !e @ peg ]== cs'
   | FEKleeneStar :
       forall peg cs cs' e,
-      cs ==[ e @ peg ]==> cs' ->
-      union cs cs' ==[ e~ @ peg ]==> cs'
+      cs <==[ e @ peg ]== cs' ->
+      union cs cs' <==[ e~ @ peg ]== cs'
 
-where " cs1 '==[' e '@' peg ']==>' cs2 " := (First peg e cs1 cs2).
+where " cs1 '<==[' e '@' peg ']==' cs2 " := (First peg e cs1 cs2).
 
 Theorem first_deterministic :
   forall peg e cs1 cs2 cs',
-  cs1 ==[ e @ peg ]==> cs' ->
-  cs2 ==[ e @ peg ]==> cs' ->
+  cs1 <==[ e @ peg ]== cs' ->
+  cs2 <==[ e @ peg ]== cs' ->
   cs1 = cs2.
 Proof.
   intros peg e cs1 cs2 cs' H1 H2.
@@ -494,8 +494,8 @@ Proof.
   inversion H2; subst;
   try trivial_congruence;
   try repeat match goal with
-  [ IH: forall csx, csx ==[ ?e @ ?peg ]==> ?cs' -> _ = csx,
-    H: _ ==[ ?e @ ?peg ]==> ?cs' |- _ ] =>
+  [ IH: forall csx, csx <==[ ?e @ ?peg ]== ?cs' -> _ = csx,
+    H: _ <==[ ?e @ ?peg ]== ?cs' |- _ ] =>
         apply IH in H; subst
   end;
   auto.

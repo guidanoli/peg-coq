@@ -1,6 +1,7 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Lists.List.
+From Coq Require Import Bool.Bool.
 
 (* Parsing Expression *)
 Inductive Exp : Type :=
@@ -404,4 +405,98 @@ Proof.
   match_exp (&e1);
   match_exp (!e1);
   contradict_match e1.
+Qed.
+
+(* We define a set of ASCII characters as a function of ascii to boolean values *)
+Definition charset : Type := ascii -> bool.
+
+(* An empty set is that where, for every character, the return is false *)
+Definition emptyset : charset := (fun _ => false).
+
+(* A full set is that where, for every character, the return is true *)
+Definition fullset : charset := (fun _ => true).
+
+(* A singleton only contains one character
+   We could define this function as (fun a a' => Ascii.eqb a a'),
+   but we can use currying and define it simply as Ascii.eqb *)
+Definition singleton : ascii -> charset := Ascii.eqb.
+
+(* A set union contains the elements of two sets.
+   By how we've defined charsets, this corresponds to the boolean 'or' *)
+Definition union (cs1 cs2 : charset) : charset := (fun a => cs1 a || cs2 a).
+
+(* The set complement operator uses the boolean 'not' *)
+Definition complement (cs : charset) : charset := (fun a => negb (cs a)).
+
+Reserved Notation " cs1 '==[' e '@' peg ']==>' cs2 " (at level 50).
+
+(*
+   "First-and-follow"
+
+   `First peg e cs1 cs2` or `cs1 ==[ e @ peg ]==> cs2`
+
+   peg - the PEG used to contextualize the expression `e`
+   e   - the expression itself being parsed
+   cs1 - "first": the set of characters that will not fail the expression `e`
+         and whatever comes after
+   cs2 - "follow": the set of characters allowed after expression `e`,
+         as if there expression `e` were in a sequence expression and this
+         was the first of the following expression
+*)
+Inductive First : PEG -> Exp -> charset -> charset -> Prop :=
+  | FETrue :
+      forall peg cs,
+      cs ==[ ETrue @ peg ]==> cs
+  | FEFalse :
+      forall peg cs,
+      emptyset ==[ EFalse @ peg ]==> cs
+  | FEAny :
+      forall peg cs,
+      fullset ==[ EAny @ peg ]==> cs
+  | FETerminal :
+      forall peg cs a,
+      singleton a ==[ ETerminal a @ peg ]==> cs
+  | FENonTerminal :
+      forall peg i e cs cs',
+      nth_error peg i = Some e ->
+      cs ==[ e @ peg ]==> cs' ->
+      cs ==[ ENonTerminal i @ peg ]==> cs'
+  | FESequence :
+      forall peg cs cs' cs'' e1 e2,
+      cs ==[ e1 @ peg ]==> cs' ->
+      cs' ==[ e2 @ peg ]==> cs'' ->
+      cs ==[ e1; e2 @ peg ]==> cs''
+  | FEOrderedChoice :
+      forall peg cs1 cs2 cs' e1 e2,
+      cs1 ==[ e1 @ peg ]==> cs' ->
+      cs2 ==[ e2 @ peg ]==> cs' ->
+      union cs1 cs2 ==[ e1 // e2 @ peg ]==> cs'
+  | FENotPredicate :
+      forall peg cs cs' e,
+      cs ==[ e @ peg ]==> cs' ->
+      complement cs ==[ !e @ peg ]==> cs'
+  | FEKleeneStar :
+      forall peg cs cs' e,
+      cs ==[ e @ peg ]==> cs' ->
+      union cs cs' ==[ e~ @ peg ]==> cs'
+
+where " cs1 '==[' e '@' peg ']==>' cs2 " := (First peg e cs1 cs2).
+
+Theorem first_deterministic :
+  forall peg e cs1 cs2 cs',
+  cs1 ==[ e @ peg ]==> cs' ->
+  cs2 ==[ e @ peg ]==> cs' ->
+  cs1 = cs2.
+Proof.
+  intros peg e cs1 cs2 cs' H1 H2.
+  generalize dependent cs2.
+  induction H1; intros cs2' H2;
+  inversion H2; subst;
+  try trivial_congruence;
+  try repeat match goal with
+  [ IH: forall csx, csx ==[ ?e @ ?peg ]==> ?cs' -> _ = csx,
+    H: _ ==[ ?e @ ?peg ]==> ?cs' |- _ ] =>
+        apply IH in H; subst
+  end;
+  auto.
 Qed.

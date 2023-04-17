@@ -482,7 +482,7 @@ Definition union (cs1 cs2 : charset) : charset := (fun a => cs1 a || cs2 a).
 (* The set complement operator uses the boolean 'not' *)
 Definition complement (cs : charset) : charset := (fun a => negb (cs a)).
 
-Reserved Notation " cs1 '<==[' e '@' peg ']==' cs2 " (at level 50).
+Reserved Notation "cs1 '<==[' e '@' peg ']==' cs2" (at level 50).
 
 (*
    "First-and-follow"
@@ -534,7 +534,7 @@ Inductive First : PEG -> Exp -> charset -> charset -> Prop :=
       cs <==[ e @ peg ]== cs' ->
       union cs cs' <==[ e~ @ peg ]== cs'
 
-where " cs1 '<==[' e '@' peg ']==' cs2 " := (First peg e cs1 cs2).
+where "cs1 '<==[' e '@' peg ']==' cs2" := (First peg e cs1 cs2).
 
 Theorem first_deterministic :
   forall peg e cs1 cs2 cs',

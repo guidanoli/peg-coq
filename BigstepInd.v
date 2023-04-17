@@ -99,9 +99,22 @@ Ltac match_exp e :=
       inversion H; subst; eauto using Match
   end.
 
+(* Try establishing the equality e1 = e2 from
+   x = c e1 and x = c e2 *)
+Ltac trivial_congruence :=
+  match goal with
+  [ H1: ?x = ?c ?e1,
+    H2: ?x = ?c ?e2 |- _ ] =>
+        rewrite -> H1 in H2;
+        assert (e1 = e2);
+        try (congruence; trivial);
+        clear H2;
+        subst
+  end.
+
 (* Parsing a string against a parsing expression
    in the context of a PEG always outputs the same result *)
-Theorem deterministic_result :
+Theorem match_deterministic :
   forall peg e s r1 r2,
   Match peg e s r1 ->
   Match peg e s r2 ->
@@ -112,15 +125,7 @@ Proof.
   induction H1; intros r2 H';
   inversion H'; subst;
   try congruence;
-  try match goal with
-  [ H1: ?x = ?c ?e1,
-    H2: ?x = ?c ?e2 |- _ ] =>
-        rewrite -> H1 in H2;
-        assert (e1 = e2);
-        try (congruence; trivial);
-        clear H2;
-        subst
-  end;
+  try trivial_congruence;
   try match goal with
   [ IH: forall r, Match ?peg (?e; ?e') ?s r -> Some _ = r,
     H: Match ?peg ?e ?s None |- _ ] =>
@@ -148,25 +153,25 @@ Proof.
   auto.
 Qed.
 
-(* Use deterministic_result to discriminate
+(* Use match_deterministic to discriminate
    different result types *)
 Ltac discriminate_results :=
   match goal with
   [ H1: Match ?peg ?e ?s (Some ?s'),
     H2: Match ?peg ?e ?s None |- _ ] =>
         assert (Some s' = None);
-        eauto using deterministic_result;
+        eauto using match_deterministic;
         discriminate
   end.
 
-(* Use deterministic_result to unify
+(* Use match_deterministic to unify
    two successful (Some) results *)
 Ltac unify_results :=
    match goal with
    [ H1: Match ?peg ?e ?s (Some ?s1),
      H2: Match ?peg ?e ?s (Some ?s2) |- _ ] =>
          assert (Some s1 = Some s2) as Haux;
-         eauto using deterministic_result;
+         eauto using match_deterministic;
          assert (s1 = s2);
          try congruence;
          clear Haux;

@@ -317,7 +317,7 @@ Proof.
   - (* String a s1 *) simpl. rewrite IH. trivial.
 Qed.
 
-Theorem some_result_is_suffix_of_input :
+Theorem result_suffix :
   forall peg e s res s2,
   Match peg e s res ->
   res = Some s2 ->

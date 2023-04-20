@@ -528,7 +528,7 @@ Inductive First : PEG -> Exp -> charset -> charset -> Prop :=
   | FENotPredicate :
       forall peg cs cs' e,
       cs <==[ e @ peg ]== cs' ->
-      complement cs <==[ !e @ peg ]== cs'
+      union (complement cs) cs' <==[ !e @ peg ]== cs'
   | FEKleeneStar :
       forall peg cs cs' e,
       cs <==[ e @ peg ]== cs' ->

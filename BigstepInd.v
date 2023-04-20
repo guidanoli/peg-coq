@@ -293,7 +293,7 @@ Qed.
 Theorem choice_sequence_distributive_left :
   forall peg e1 e2 e3,
   equivalent peg (e1; (e2 // e3))
-                 (e1; e2 // e1; e3).
+                 ((e1; e2) // (e1; e3)).
 Proof.
   intros.
   constructor;

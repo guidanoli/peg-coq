@@ -1,3 +1,5 @@
+(* @author Roberto Ierusalimschy *)
+
 (* Require Extraction. *)
 From Coq Require Import Lists.List.
 Import List.ListNotations.

@@ -23,75 +23,75 @@ Notation "'!' A" := (ENotPredicate A) (at level 60, right associativity).
 Notation "A '~'" := (EKleeneStar A) (at level 60, right associativity).
 
 (* Parsing Expression Grammar
-   Each PEG is composed of a finite set of parsing rule *)
-Definition PEG : Type := list Exp.
+   Each grammar is composed of a finite set of parsing rule *)
+Definition Grammar : Type := list Exp.
 
 (* Match an expression
-   Given a PEG, a parsing expression, and an input string,
+   Given a grammar, a parsing expression, and an input string,
    can either result in success (with `Some` leftover string)
    or failure (with `None` left) *)
-Inductive Match : PEG -> Exp -> string -> option string -> Prop :=
+Inductive Match : Grammar -> Exp -> string -> option string -> Prop :=
   | METrue :
-      forall peg s,
-      Match peg ETrue s (Some s)
+      forall g s,
+      Match g ETrue s (Some s)
   | MEFalse :
-      forall peg s,
-      Match peg EFalse s None
+      forall g s,
+      Match g EFalse s None
   | MEAny1 :
-      forall peg a s,
-      Match peg EAny (String a s) (Some s)
+      forall g a s,
+      Match g EAny (String a s) (Some s)
   | MEAny2 :
-      forall peg,
-      Match peg EAny EmptyString None
+      forall g,
+      Match g EAny EmptyString None
   | METerminal1 :
-      forall peg a s,
-      Match peg (ETerminal a) (String a s) (Some s)
+      forall g a s,
+      Match g (ETerminal a) (String a s) (Some s)
   | METerminal2 :
-      forall peg a a' s,
+      forall g a a' s,
       a <> a' ->
-      Match peg (ETerminal a) (String a' s) None
+      Match g (ETerminal a) (String a' s) None
   | METerminal3 :
-      forall peg a,
-      Match peg (ETerminal a) EmptyString None
+      forall g a,
+      Match g (ETerminal a) EmptyString None
   | MENonTerminal :
-      forall peg i s e res,
-      nth_error peg i = Some e ->
-      Match peg e s res ->
-      Match peg (ENonTerminal i) s res
+      forall g i s e res,
+      nth_error g i = Some e ->
+      Match g e s res ->
+      Match g (ENonTerminal i) s res
   | MESequence1 :
-      forall peg e1 e2 s s' res,
-      Match peg e1 s (Some s') ->
-      Match peg e2 s' res ->
-      Match peg (e1; e2) s res
+      forall g e1 e2 s s' res,
+      Match g e1 s (Some s') ->
+      Match g e2 s' res ->
+      Match g (e1; e2) s res
   | MESequence2 :
-      forall peg e1 e2 s,
-      Match peg e1 s None ->
-      Match peg (e1; e2) s None
+      forall g e1 e2 s,
+      Match g e1 s None ->
+      Match g (e1; e2) s None
   | MEOrderedChoice1 :
-      forall peg e1 e2 s s',
-      Match peg e1 s (Some s') ->
-      Match peg (e1 // e2) s (Some s')
+      forall g e1 e2 s s',
+      Match g e1 s (Some s') ->
+      Match g (e1 // e2) s (Some s')
   | MEOrderedChoice2 :
-      forall peg e1 e2 s res,
-      Match peg e1 s None ->
-      Match peg e2 s res ->
-      Match peg (e1 // e2) s res
+      forall g e1 e2 s res,
+      Match g e1 s None ->
+      Match g e2 s res ->
+      Match g (e1 // e2) s res
   | MENotPredicate1 :
-      forall peg e s,
-      Match peg e s None ->
-      Match peg (!e) s (Some s)
+      forall g e s,
+      Match g e s None ->
+      Match g (!e) s (Some s)
   | MENotPredicate2 :
-      forall peg e s s',
-      Match peg e s (Some s') ->
-      Match peg (!e) s None
+      forall g e s s',
+      Match g e s (Some s') ->
+      Match g (!e) s None
   | MEKleeneStar1 :
-      forall peg e s s',
-      Match peg (e; e~) s (Some s') ->
-      Match peg (e~) s (Some s')
+      forall g e s s',
+      Match g (e; e~) s (Some s') ->
+      Match g (e~) s (Some s')
   | MEKleeneStar2 :
-      forall peg e s,
-      Match peg e s None ->
-      Match peg (e~) s (Some s)
+      forall g e s,
+      Match g e s None ->
+      Match g (e~) s (Some s)
   .
 
 (* Invert Match proposition with Exp e *)
@@ -115,33 +115,33 @@ Ltac trivial_congruence :=
   end.
 
 (* Parsing a string against a parsing expression
-   in the context of a PEG always outputs the same result *)
+   in the context of a grammar always outputs the same result *)
 Theorem match_deterministic :
-  forall peg e s r1 r2,
-  Match peg e s r1 ->
-  Match peg e s r2 ->
+  forall g e s r1 r2,
+  Match g e s r1 ->
+  Match g e s r2 ->
   r1 = r2.
 Proof.
-  intros peg e s r1 r2 H1 H2.
+  intros g e s r1 r2 H1 H2.
   generalize dependent r2.
   induction H1; intros r2 H';
   inversion H'; subst;
   try congruence;
   try trivial_congruence;
   try match goal with
-  [ IH: forall r, Match ?peg (?e; ?e') ?s r -> Some _ = r,
-    H: Match ?peg ?e ?s None |- _ ] =>
-        assert (Match peg (e; e') s None);
+  [ IH: forall r, Match ?g (?e; ?e') ?s r -> Some _ = r,
+    H: Match ?g ?e ?s None |- _ ] =>
+        assert (Match g (e; e') s None);
         eauto using Match
   end;
   try match goal with
-  [ IH: forall r, Match ?peg ?e ?s r -> None = r,
-    H: Match peg (?e; ?e') ?s (Some _) |- _ ] =>
+  [ IH: forall r, Match ?g ?e ?s r -> None = r,
+    H: Match g (?e; ?e') ?s (Some _) |- _ ] =>
         inversion H; subst
   end;
   try match goal with
-  [ IH: forall r, Match ?peg ?e ?s r -> _ = r,
-    H: Match ?peg ?e ?s _ |- _ ] =>
+  [ IH: forall r, Match ?g ?e ?s r -> _ = r,
+    H: Match ?g ?e ?s _ |- _ ] =>
       apply IH in H
   end;
   try discriminate;
@@ -159,8 +159,8 @@ Qed.
    different result types *)
 Ltac discriminate_results :=
   match goal with
-  [ H1: Match ?peg ?e ?s (Some ?s'),
-    H2: Match ?peg ?e ?s None |- _ ] =>
+  [ H1: Match ?g ?e ?s (Some ?s'),
+    H2: Match ?g ?e ?s None |- _ ] =>
         assert (Some s' = None);
         eauto using match_deterministic;
         discriminate
@@ -170,8 +170,8 @@ Ltac discriminate_results :=
    two successful (Some) results *)
 Ltac unify_results :=
    match goal with
-   [ H1: Match ?peg ?e ?s (Some ?s1),
-     H2: Match ?peg ?e ?s (Some ?s2) |- _ ] =>
+   [ H1: Match ?g ?e ?s (Some ?s1),
+     H2: Match ?g ?e ?s (Some ?s2) |- _ ] =>
          assert (Some s1 = Some s2) as Haux;
          eauto using match_deterministic;
          assert (s1 = s2);
@@ -181,16 +181,16 @@ Ltac unify_results :=
    end.
 
 (* Two parsing expressions are said equivalent in the
-   context of some PEG iff for every input string,
+   context of some grammar iff for every input string,
    they output the same result *)
-Definition equivalent (peg : PEG) (e1 e2 : Exp) : Prop :=
+Definition equivalent (g : Grammar) (e1 e2 : Exp) : Prop :=
   forall s res,
-  Match peg e1 s res <-> Match peg e2 s res.
+  Match g e1 s res <-> Match g e2 s res.
 
 (* Proving that the sequence expression is associative *)
 Theorem sequence_assoc :
-  forall peg e1 e2 e3,
-  equivalent peg (e1; (e2; e3))
+  forall g e1 e2 e3,
+  equivalent g (e1; (e2; e3))
                  ((e1; e2); e3).
 Proof.
   intros.
@@ -204,8 +204,8 @@ Qed.
 
 (* Proving that the ordered choice expression is associative *)
 Theorem ordered_choice_assoc :
-  forall peg e1 e2 e3,
-  equivalent peg (e1 // (e2 // e3))
+  forall g e1 e2 e3,
+  equivalent g (e1 // (e2 // e3))
                  ((e1 // e2) // e3).
 Proof.
   intros.
@@ -219,8 +219,8 @@ Qed.
 
 (* Show that a false first choice is useless *)
 Theorem first_choice_false :
-  forall peg e,
-  equivalent peg e (EFalse // e).
+  forall g e,
+  equivalent g e (EFalse // e).
 Proof.
   intros.
   constructor;
@@ -235,8 +235,8 @@ Qed.
 
 (* Show that a true first choice is enough *)
 Theorem first_choice_true :
-  forall peg e,
-  equivalent peg ETrue (ETrue // e).
+  forall g e,
+  equivalent g ETrue (ETrue // e).
 Proof.
   intros.
   constructor;
@@ -250,8 +250,8 @@ Qed.
 
 (* Show that a false second choice is useless *)
 Theorem second_choice_false :
-  forall peg e,
-  equivalent peg e (e // EFalse).
+  forall g e,
+  equivalent g e (e // EFalse).
 Proof.
   intros.
   constructor;
@@ -266,8 +266,8 @@ Qed.
 
 (* Show that a true first sequence part is useless *)
 Theorem first_part_true :
-  forall peg e,
-  equivalent peg e (ETrue; e).
+  forall g e,
+  equivalent g e (ETrue; e).
 Proof.
   intros.
   constructor;
@@ -279,8 +279,8 @@ Qed.
 
 (* Show that a false first sequence part is enough *)
 Theorem first_part_false :
-  forall peg e,
-  equivalent peg EFalse (EFalse; e).
+  forall g e,
+  equivalent g EFalse (EFalse; e).
 Proof.
   intros.
   constructor;
@@ -291,8 +291,8 @@ Proof.
 Qed.
 
 Theorem choice_sequence_distributive_left :
-  forall peg e1 e2 e3,
-  equivalent peg (e1; (e2 // e3))
+  forall g e1 e2 e3,
+  equivalent g (e1; (e2 // e3))
                  ((e1; e2) // (e1; e3)).
 Proof.
   intros.
@@ -318,8 +318,8 @@ Proof.
 Qed.
 
 Theorem result_suffix :
-  forall peg e s res s2,
-  Match peg e s res ->
+  forall g e s res s2,
+  Match g e s res ->
   res = Some s2 ->
   exists s1, s = s1 ++ s2.
 Proof.
@@ -375,13 +375,13 @@ Notation "'if&' A 'then' B 'else' C" := (EIf A B C) (at level 60, right associat
 (* If the condition is true, then
    the whole 'if-then-else' is equivalent to the 'then' *)
 Theorem if_condition_succeeds :
-  forall peg e1 e2 e3 s s' res,
-  Match peg e1 s (Some s') ->
-  Match peg e2 s res ->
-  Match peg (if& e1 then e2 else e3) s res.
+  forall g e1 e2 e3 s s' res,
+  Match g e1 s (Some s') ->
+  Match g e2 s res ->
+  Match g (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  assert (Match peg (&e1) s (Some s));
+  assert (Match g (&e1) s (Some s));
   destruct res;
   eauto using Match.
 Qed.
@@ -397,12 +397,12 @@ Ltac contradict_match e :=
    the 'then' expression is undecided, then
    the whole 'if-then-else' is undecided *)
 Theorem if_condition_succeeds_then_undec :
-  forall peg e1 e2 e3 s s',
-  Match peg e1 s (Some s') ->
-  (forall res, ~ Match peg e2 s res) ->
-  (forall res, ~ Match peg (if& e1 then e2 else e3) s res).
+  forall g e1 e2 e3 s s',
+  Match g e1 s (Some s') ->
+  (forall res, ~ Match g e2 s res) ->
+  (forall res, ~ Match g (if& e1 then e2 else e3) s res).
 Proof.
-  intros peg e1 e2 e3 s s' H1 H2 r H3.
+  intros g e1 e2 e3 s s' H1 H2 r H3.
   match_exp (if& e1 then e2 else e3);
   match_exp (&e1;e2);
   match_exp (&e1);
@@ -414,13 +414,13 @@ Qed.
 (* If the condition is false, then
    the whole 'if-then-else' is equivalent to the 'else' *)
 Theorem if_condition_fails :
-  forall peg e1 e2 e3 s res,
-  Match peg e1 s None ->
-  Match peg e3 s res ->
-  Match peg (if& e1 then e2 else e3) s res.
+  forall g e1 e2 e3 s res,
+  Match g e1 s None ->
+  Match g e3 s res ->
+  Match g (if& e1 then e2 else e3) s res.
 Proof.
   intros.
-  assert (Match peg (&e1) s None);
+  assert (Match g (&e1) s None);
   destruct res;
   eauto using Match.
 Qed.
@@ -429,12 +429,12 @@ Qed.
    the 'else' expression is undecided, then
    the whole 'if-then-else' is undecided *)
 Theorem if_condition_fails_else_undec :
-  forall peg e1 e2 e3 s,
-  Match peg e1 s None ->
-  (forall res, ~ Match peg e3 s res) ->
-  (forall res, ~ Match peg (if& e1 then e2 else e3) s res).
+  forall g e1 e2 e3 s,
+  Match g e1 s None ->
+  (forall res, ~ Match g e3 s res) ->
+  (forall res, ~ Match g (if& e1 then e2 else e3) s res).
 Proof.
-  intros peg e1 e2 e3 s H1 H2 r H3.
+  intros g e1 e2 e3 s H1 H2 r H3.
   match_exp (if& e1 then e2 else e3);
   match_exp (&e1;e2);
   match_exp (&e1);
@@ -449,11 +449,11 @@ Qed.
 (* If the condition is undecided, then
    the whole 'if-then-else' is undecided *)
 Theorem if_condition_undec :
-  forall peg e1 e2 e3 s,
-  (forall res1, ~ Match peg e1 s res1) ->
-  (forall res2, ~ Match peg (if& e1 then e2 else e3) s res2).
+  forall g e1 e2 e3 s,
+  (forall res1, ~ Match g e1 s res1) ->
+  (forall res2, ~ Match g (if& e1 then e2 else e3) s res2).
 Proof.
-  intros peg e1 e2 e3 s H1 r H2.
+  intros g e1 e2 e3 s H1 r H2.
   match_exp (if& e1 then e2 else e3);
   match_exp (&e1;e2);
   match_exp (&e1);
@@ -482,14 +482,14 @@ Definition union (cs1 cs2 : charset) : charset := (fun a => cs1 a || cs2 a).
 (* The set complement operator uses the boolean 'not' *)
 Definition complement (cs : charset) : charset := (fun a => negb (cs a)).
 
-Reserved Notation "cs1 '<==[' e '@' peg ']==' cs2" (at level 50).
+Reserved Notation "cs1 '<==[' e '@' g ']==' cs2" (at level 50).
 
 (*
    "First-and-follow"
 
-   `First peg e cs1 cs2` or `cs1 <==[ e @ peg ]== cs2`
+   `First g e cs1 cs2` or `cs1 <==[ e @ g ]== cs2`
 
-   peg - the PEG used to contextualize the expression `e`
+   g - the grammar used to contextualize the expression `e`
    e   - the expression itself being parsed
    cs1 - "first": the set of characters that will not fail the expression `e`
          and whatever comes after
@@ -497,59 +497,59 @@ Reserved Notation "cs1 '<==[' e '@' peg ']==' cs2" (at level 50).
          as if there expression `e` were in a sequence expression and this
          was the first of the following expression
 *)
-Inductive First : PEG -> Exp -> charset -> charset -> Prop :=
+Inductive First : Grammar -> Exp -> charset -> charset -> Prop :=
   | FETrue :
-      forall peg cs,
-      cs <==[ ETrue @ peg ]== cs
+      forall g cs,
+      cs <==[ ETrue @ g ]== cs
   | FEFalse :
-      forall peg cs,
-      emptyset <==[ EFalse @ peg ]== cs
+      forall g cs,
+      emptyset <==[ EFalse @ g ]== cs
   | FEAny :
-      forall peg cs,
-      fullset <==[ EAny @ peg ]== cs
+      forall g cs,
+      fullset <==[ EAny @ g ]== cs
   | FETerminal :
-      forall peg cs a,
-      singleton a <==[ ETerminal a @ peg ]== cs
+      forall g cs a,
+      singleton a <==[ ETerminal a @ g ]== cs
   | FENonTerminal :
-      forall peg i e cs cs',
-      nth_error peg i = Some e ->
-      cs <==[ e @ peg ]== cs' ->
-      cs <==[ ENonTerminal i @ peg ]== cs'
+      forall g i e cs cs',
+      nth_error g i = Some e ->
+      cs <==[ e @ g ]== cs' ->
+      cs <==[ ENonTerminal i @ g ]== cs'
   | FESequence :
-      forall peg cs cs' cs'' e1 e2,
-      cs <==[ e1 @ peg ]== cs' ->
-      cs' <==[ e2 @ peg ]== cs'' ->
-      cs <==[ e1; e2 @ peg ]== cs''
+      forall g cs cs' cs'' e1 e2,
+      cs <==[ e1 @ g ]== cs' ->
+      cs' <==[ e2 @ g ]== cs'' ->
+      cs <==[ e1; e2 @ g ]== cs''
   | FEOrderedChoice :
-      forall peg cs1 cs2 cs' e1 e2,
-      cs1 <==[ e1 @ peg ]== cs' ->
-      cs2 <==[ e2 @ peg ]== cs' ->
-      union cs1 cs2 <==[ e1 // e2 @ peg ]== cs'
+      forall g cs1 cs2 cs' e1 e2,
+      cs1 <==[ e1 @ g ]== cs' ->
+      cs2 <==[ e2 @ g ]== cs' ->
+      union cs1 cs2 <==[ e1 // e2 @ g ]== cs'
   | FENotPredicate :
-      forall peg cs cs' e,
-      cs <==[ e @ peg ]== cs' ->
-      union (complement cs) cs' <==[ !e @ peg ]== cs'
+      forall g cs cs' e,
+      cs <==[ e @ g ]== cs' ->
+      union (complement cs) cs' <==[ !e @ g ]== cs'
   | FEKleeneStar :
-      forall peg cs cs' e,
-      cs <==[ e @ peg ]== cs' ->
-      union cs cs' <==[ e~ @ peg ]== cs'
+      forall g cs cs' e,
+      cs <==[ e @ g ]== cs' ->
+      union cs cs' <==[ e~ @ g ]== cs'
 
-where "cs1 '<==[' e '@' peg ']==' cs2" := (First peg e cs1 cs2).
+where "cs1 '<==[' e '@' g ']==' cs2" := (First g e cs1 cs2).
 
 Theorem first_deterministic :
-  forall peg e cs1 cs2 cs',
-  cs1 <==[ e @ peg ]== cs' ->
-  cs2 <==[ e @ peg ]== cs' ->
+  forall g e cs1 cs2 cs',
+  cs1 <==[ e @ g ]== cs' ->
+  cs2 <==[ e @ g ]== cs' ->
   cs1 = cs2.
 Proof.
-  intros peg e cs1 cs2 cs' H1 H2.
+  intros g e cs1 cs2 cs' H1 H2.
   generalize dependent cs2.
   induction H1; intros cs2' H2;
   inversion H2; subst;
   try trivial_congruence;
   try repeat match goal with
-  [ IH: forall csx, csx <==[ ?e @ ?peg ]== ?cs' -> _ = csx,
-    H: _ <==[ ?e @ ?peg ]== ?cs' |- _ ] =>
+  [ IH: forall csx, csx <==[ ?e @ ?g ]== ?cs' -> _ = csx,
+    H: _ <==[ ?e @ ?g ]== ?cs' |- _ ] =>
         apply IH in H; subst
   end;
   auto.

@@ -4,26 +4,20 @@
 From Coq Require Import Lists.List.
 Import List.ListNotations.
 
-
-
 Definition nth {A : Type} (l : list A) (n : nat)
                (H : n < length l) : A.
 refine (
   (fix nth (l0 : list A) (n0 : nat) : (n0 < length l0) -> A := 
-     match n0 with
-     | O => match l0 with
-            | nil => (fun H => _)
-            | cons x xs => (fun _ => x)
-            end
-     | S n' => match l0 with
-            | nil => (fun H => _)
-            | cons x xs => (fun _ => nth xs n' _)
-            end
+     match l0 with
+     | nil => (fun H => _)
+     | cons x xs => match n0 with
+                    | O => (fun _ => x)
+                    | S n' => (fun _ => nth xs n' _)
+                    end
      end
   ) l n H).
-  - apply PeanoNat.Nat.nlt_0_r in H. destruct H.
-  - apply PeanoNat.Nat.nlt_0_r in H. destruct H.
-  - apply PeanoNat.Nat.succ_lt_mono. trivial.
+  - exfalso. apply PeanoNat.Nat.nlt_0_r in H. trivial.
+  - apply (fun n m => proj2 (PeanoNat.Nat.succ_lt_mono n m)). trivial.
 Defined.
 
 (* The following command converts the function in Coq to ML.

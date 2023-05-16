@@ -5,3 +5,4 @@ all:
 	$(COQC) Bigstep.v
 	$(COQC) Nth.v
 	$(COQC) BigstepInd.v
+	$(COQC) WellFormed.v

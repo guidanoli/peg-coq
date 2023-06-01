@@ -42,7 +42,7 @@ Fixpoint del {A : Type} (map : Map A) (i : nat) : Map A :=
 Definition Grammar : Type := Map Exp.
 
 Inductive Result : Type :=
-  | WellFormed : bool -> Result (* Well-formed *)
+  | WellFormed : bool -> Result (* Well-formed + "always consumes some input?" *)
   | IllFormed : Result (* Ill-formed *)
   .
 

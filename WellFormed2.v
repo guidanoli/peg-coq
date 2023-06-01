@@ -38,6 +38,25 @@ Definition get {A : Type} (map : Map A) (i : nat) : option A :=
 Definition del {A : Type} (map : Map A) (i : nat) : Map A :=
   filter (fun e => negb (hasIndex i e)) map.
 
+Lemma get_after_del :
+  forall A (map : Map A) i,
+  get (del map i) i = None.
+Proof.
+  intros.
+  induction map as [|e map'].
+  - (* nil *)
+    trivial.
+  - (* cons e map' *)
+    simpl.
+    destruct (hasIndex i e) eqn:E.
+    + auto.
+    + simpl.
+      unfold get.
+      simpl.
+      rewrite E.
+      auto.
+Qed.
+
 (* Grammar, a finite set of indexed expressions *)
 Definition Grammar : Type := Map Exp.
 

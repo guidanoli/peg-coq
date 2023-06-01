@@ -28,14 +28,14 @@ Definition hasIndex {A : Type} (i : nat) (e : nat * A) : bool :=
   Nat.eqb i (fst e).
 
 (* Get the value of the first entry with index `i` *)
-Fixpoint get {A : Type} (map : Map A) (i : nat) : option A :=
+Definition get {A : Type} (map : Map A) (i : nat) : option A :=
   match filter (hasIndex i) map with
   | nil => None
   | cons (_, a) _ => Some a
   end.
 
 (* Delete every entry with index `i` *)
-Fixpoint del {A : Type} (map : Map A) (i : nat) : Map A :=
+Definition del {A : Type} (map : Map A) (i : nat) : Map A :=
   filter (fun e => negb (hasIndex i e)) map.
 
 (* Grammar, a finite set of indexed expressions *)

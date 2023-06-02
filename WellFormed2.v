@@ -61,7 +61,7 @@ Qed.
 Definition Grammar : Type := Map Exp.
 
 Inductive Result : Type :=
-  | WellFormed : bool -> Result (* Well-formed + "always consumes some input?" *)
+  | WellFormed : bool -> Result (* Well-formed + "matches the empty string?" *)
   | IllFormed : Result (* Ill-formed *)
   .
 
@@ -69,14 +69,14 @@ Fixpoint wf (e : Exp) (g : Grammar) (gas : nat) : option Result :=
   match gas with
   | O => None
   | S gas' => match e with
-              | ETrue => Some (WellFormed false)
-              | EAny => Some (WellFormed true)
+              | ETrue => Some (WellFormed true)
+              | EAny => Some (WellFormed false)
               | ENonTerminal i => match get g i with
                                   | None => Some IllFormed
                                   | Some e => wf e (del g i) gas'
                                   end
               | ESequence e1 e2 => match wf e1 g gas' with
-                                   | Some (WellFormed false) => wf e2 g gas'
+                                   | Some (WellFormed true) => wf e2 g gas'
                                    | res => res
                                    end
               end

@@ -65,7 +65,7 @@ Inductive Result : Type :=
   | IllFormed : Result (* Ill-formed *)
   .
 
-Fixpoint wf (e : Exp) (g : Grammar) (gas : nat) : option Result :=
+Fixpoint wf_exp (e : Exp) (g : Grammar) (gas : nat) : option Result :=
   match gas with
   | O => None
   | S gas' => match e with
@@ -73,10 +73,10 @@ Fixpoint wf (e : Exp) (g : Grammar) (gas : nat) : option Result :=
               | EAny => Some (WellFormed false)
               | ENonTerminal i => match get g i with
                                   | None => Some IllFormed
-                                  | Some e => wf e (del g i) gas'
+                                  | Some e => wf_exp e (del g i) gas'
                                   end
-              | ESequence e1 e2 => match wf e1 g gas' with
-                                   | Some (WellFormed true) => wf e2 g gas'
+              | ESequence e1 e2 => match wf_exp e1 g gas' with
+                                   | Some (WellFormed true) => wf_exp e2 g gas'
                                    | res => res
                                    end
               end

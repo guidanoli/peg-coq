@@ -81,3 +81,16 @@ Fixpoint wf_exp (e : Exp) (g : Grammar) (gas : nat) : option Result :=
                                    end
               end
   end.
+
+Fixpoint wf_grammar_aux (g gconst : Grammar) (gas : nat) : option bool :=
+  match g with
+  | nil => Some true
+  | cons (_, e) g' => match wf_exp e gconst gas with
+                      | Some (WellFormed _) => wf_grammar_aux g' gconst gas
+                      | Some IllFormed => Some false
+                      | None => None
+                      end
+  end.
+
+Definition wf_grammar (g : Grammar) (gas : nat) : option bool :=
+  wf_grammar_aux g g gas.

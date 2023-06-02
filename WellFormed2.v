@@ -23,32 +23,32 @@ Fixpoint cost (e : Exp) : nat :=
 (* A map is a list of index-value pairs *)
 Definition Map (A : Type) : Type := list (nat * A).
 
-(* Check if entry `e` has index `i` *)
-Definition hasIndex {A : Type} (i : nat) (e : nat * A) : bool :=
-  Nat.eqb i (fst e).
+(* Check if pair `p` has index `i` *)
+Definition hasIndex {A : Type} (i : nat) (p : nat * A) : bool :=
+  Nat.eqb i (fst p).
 
-(* Get the value of the first entry with index `i` *)
+(* Get the value of the first pair with index `i` *)
 Definition get {A : Type} (map : Map A) (i : nat) : option A :=
   match filter (hasIndex i) map with
   | nil => None
   | cons (_, a) _ => Some a
   end.
 
-(* Delete every entry with index `i` *)
+(* Delete every pair with index `i` *)
 Definition del {A : Type} (map : Map A) (i : nat) : Map A :=
-  filter (fun e => negb (hasIndex i e)) map.
+  filter (fun p => negb (hasIndex i p)) map.
 
 Lemma get_after_del :
   forall A (map : Map A) i,
   get (del map i) i = None.
 Proof.
   intros.
-  induction map as [|e map'].
+  induction map as [|p map'].
   - (* nil *)
     trivial.
-  - (* cons e map' *)
+  - (* cons p map' *)
     simpl.
-    destruct (hasIndex i e) eqn:E.
+    destruct (hasIndex i p) eqn:E.
     + auto.
     + simpl.
       unfold get.

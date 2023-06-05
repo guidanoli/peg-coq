@@ -11,13 +11,13 @@ Inductive Exp : Type :=
   | ESequence : Exp -> Exp -> Exp (* Matches two subexpressions in sequence *)
   .
 
-(* Cost of matching an expression *)
-Fixpoint cost (e : Exp) : nat :=
+(* Cost of checking if an expression is well-formed *)
+Fixpoint cost_exp (e : Exp) : nat :=
   match e with
   | ETrue => 1
   | EAny => 1
   | ENonTerminal _ => 1
-  | ESequence e1 e2 => S (cost e1 + cost e2)
+  | ESequence e1 e2 => S (cost_exp e1 + cost_exp e2)
   end.
 
 (* A map is a list of index-value pairs *)

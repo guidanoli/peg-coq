@@ -15,6 +15,10 @@ Another way to define is one a case-to-case basis.
 If p matches, do this. Otherwise, do that.
 I don't know yet how these definitions will impact the proofs later on,
 but the second one seems cleaner, as it doesn't depend on other patterns.
+Later, I defined the predicate that described when a pattern is
+possible empty (that is, it may consume no input).
+It was helpful to think of a theorem that I would like to be true
+before even defining it, like in a test-driven development process.
 
 2023-04-04
 

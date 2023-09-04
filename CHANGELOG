@@ -4,6 +4,17 @@ Today I met with Roberto, and we decided to create a plan of action.
 I removed all the code from the repository, and decided to start over.
 So, today I defined patterns without grammars with:
 empty, dot, char, sequence, choice, klenee and not.
+I also started today to define the semantics.
+It's incredible how the semantic definitions get simpler when the
+`option string` part of the inductive definition is actually the
+remaining string of the match, not the matched string!!
+Another thing that got my attention is the definition of the
+Kleene closure. There is a definition that uses other pattern
+definitions, which is [[ p* === pp* / empty ]].
+Another way to define is one a case-to-case basis.
+If p matches, do this. Otherwise, do that.
+I don't know yet how these definitions will impact the proofs later on,
+but the second one seems cleaner, as it doesn't depend on other patterns.
 
 2023-04-04
 

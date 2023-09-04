@@ -2,6 +2,8 @@
 
 Today I met with Roberto, and we decided to create a plan of action.
 I removed all the code from the repository, and decided to start over.
+So, today I defined patterns without grammars with:
+empty, dot, char, sequence, choice, klenee and not.
 
 2023-04-04
 

@@ -1,3 +1,8 @@
+2023-09-04
+
+Today I met with Roberto, and we decided to create a plan of action.
+I removed all the code from the repository, and decided to start over.
+
 2023-04-04
 
 Tried formalizing PEG with a big-step semantics, but Coq wouldn't let me.

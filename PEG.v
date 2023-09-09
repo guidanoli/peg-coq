@@ -4,7 +4,7 @@ From Coq Require Import Strings.String.
 Inductive pat : Type :=
   | PEmpty : pat
   | PChar : ascii -> pat
-  | PDot : pat
+  | PAnyChar : pat
   | PSequence : pat -> pat -> pat
   | PChoice : pat -> pat -> pat
   | PKleene : pat -> pat
@@ -25,11 +25,11 @@ Inductive matches : pat -> string -> option string -> Prop :=
       forall a a' s,
       a <> a' ->
       matches (PChar a) (String a' s) None
-  | MDotEmptyString :
-      matches PDot EmptyString None
-  | MDotString :
+  | MAnyCharEmptyString :
+      matches PAnyChar EmptyString None
+  | MAnyCharString :
       forall a s,
-      matches PDot (String a s) (Some s)
+      matches PAnyChar (String a s) (Some s)
   | MSequenceNone :
       forall p1 p2 s1 s2,
       matches p1 s1 None ->

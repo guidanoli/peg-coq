@@ -22,9 +22,9 @@ Inductive matches : pat -> string -> option string -> Prop :=
       forall a s,
       matches (PChar a) (String a s) (Some s)
   | MCharStringDifferentChar :
-      forall a a' s,
-      a <> a' ->
-      matches (PChar a) (String a' s) None
+      forall a1 a2 s,
+      a1 <> a2 ->
+      matches (PChar a1) (String a2 s) None
   | MAnyCharEmptyString :
       matches PAnyChar EmptyString None
   | MAnyCharString :

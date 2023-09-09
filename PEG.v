@@ -31,9 +31,9 @@ Inductive matches : pat -> string -> option string -> Prop :=
       forall a s,
       matches PAnyChar (String a s) (Some s)
   | MSequenceNone :
-      forall p1 p2 s1 s2,
-      matches p1 s1 None ->
-      matches (PSequence p1 p2) (append s1 s2) None
+      forall p1 p2 s,
+      matches p1 s None ->
+      matches (PSequence p1 p2) s None
   | MSequenceSome :
       forall p1 p2 s1 s2 res,
       matches p1 s1 (Some s2) ->

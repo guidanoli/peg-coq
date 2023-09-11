@@ -100,6 +100,28 @@ Proof.
   auto.
 Qed.
 
+Ltac pose_matches_det :=
+  match goal with
+  [ H1: matches ?p ?s ?r1,
+    H2: matches ?p ?s ?r2 |- _ ] =>
+        pose (match_det p s r1 r2 H1 H2)
+  end.
+
+Theorem kleene_infinite_loop :
+  forall p s,
+  matches p s (Some s) ->
+  ~ (exists res, matches (PKleene p) s res).
+Proof.
+  intros p s H1 [res H2].
+  remember (PKleene p).
+  induction H2;
+  try deconstruct1;
+  try pose_matches_det;
+  try discriminate;
+  try deconstruct1;
+  auto.
+Qed.
+
 (* If there exists some input string such that
    a pattern matches it without consuming any input,
    then it is considered "heuristically empty" *)

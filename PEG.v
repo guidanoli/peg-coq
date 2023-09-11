@@ -67,7 +67,7 @@ Inductive matches : pat -> string -> option string -> Prop :=
       matches (PNot p) s None
   .
 
-Ltac deconstruct1 :=
+Ltac destruct1 :=
   match goal with
   [ H: ?C _ = ?C _ |- _ ] =>
       inversion H; clear H; subst
@@ -95,7 +95,7 @@ Proof.
   try apply_matches_IH;
   try contradiction;
   try discriminate;
-  try deconstruct1;
+  try destruct1;
   try apply_matches_IH;
   auto.
 Qed.
@@ -115,10 +115,10 @@ Proof.
   intros p s H1 [res H2].
   remember (PKleene p).
   induction H2;
-  try deconstruct1;
+  try destruct1;
   try pose_matches_det;
   try discriminate;
-  try deconstruct1;
+  try destruct1;
   auto.
 Qed.
 

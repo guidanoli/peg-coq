@@ -122,29 +122,28 @@ Proof.
   auto.
 Qed.
 
-(* If there exists some input string such that
-   a pattern matches it without consuming any input,
-   then it is considered "heuristically empty" *)
-Inductive hempty : pat -> Prop :=
-  | HEmpty :
-      hempty PEmpty
-  | HSequence :
+(* If a pattern may match a string without consuming
+   any characters, then it is nullable. *)
+Inductive nullable : pat -> Prop :=
+  | NEmpty :
+      nullable PEmpty
+  | NSequence :
       forall p1 p2,
-      hempty p1 ->
-      hempty p2 ->
-      hempty (PSequence p1 p2)
-  | HChoice1 :
+      nullable p1 ->
+      nullable p2 ->
+      nullable (PSequence p1 p2)
+  | NChoice1 :
       forall p1 p2,
-      hempty p1 ->
-      hempty (PChoice p1 p2)
-  | HChoice2 :
+      nullable p1 ->
+      nullable (PChoice p1 p2)
+  | NChoice2 :
       forall p1 p2,
-      hempty p2 ->
-      hempty (PChoice p1 p2)
-  | HKleene :
+      nullable p2 ->
+      nullable (PChoice p1 p2)
+  | NKleene :
       forall p,
-      hempty (PKleene p)
-  | HNot :
+      nullable (PKleene p)
+  | NNot :
       forall p,
-      hempty (PNot p)
+      nullable (PNot p)
   .

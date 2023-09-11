@@ -15,53 +15,53 @@ Inductive matches : pat -> string -> option string -> Prop :=
   | MEmpty :
       forall s,
       matches PEmpty s (Some s)
-  | MCharEmptyString :
+  | MChar1 :
       forall a,
       matches (PChar a) EmptyString None
-  | MCharStringSameChar :
+  | MChar2 :
       forall a s,
       matches (PChar a) (String a s) (Some s)
-  | MCharStringDifferentChar :
+  | MChar3 :
       forall a1 a2 s,
       a1 <> a2 ->
       matches (PChar a1) (String a2 s) None
-  | MAnyCharEmptyString :
+  | MAnyChar1 :
       matches PAnyChar EmptyString None
-  | MAnyCharString :
+  | MAnyChar2 :
       forall a s,
       matches PAnyChar (String a s) (Some s)
-  | MSequenceNone :
+  | MSequence1 :
       forall p1 p2 s,
       matches p1 s None ->
       matches (PSequence p1 p2) s None
-  | MSequenceSome :
-      forall p1 p2 s1 s2 res,
-      matches p1 s1 (Some s2) ->
-      matches p2 s2 res ->
-      matches (PSequence p1 p2) s1 res
-  | MChoiceNone :
+  | MSequence2 :
+      forall p1 p2 s s' res,
+      matches p1 s (Some s') ->
+      matches p2 s' res ->
+      matches (PSequence p1 p2) s res
+  | MChoice1 :
+      forall p1 p2 s s',
+      matches p1 s (Some s') ->
+      matches (PChoice p1 p2) s (Some s')
+  | MChoice2 :
       forall p1 p2 s res,
       matches p1 s None ->
       matches p2 s res ->
       matches (PChoice p1 p2) s res
-  | MChoiceSome :
-      forall p1 p2 s s',
-      matches p1 s (Some s') ->
-      matches (PChoice p1 p2) s (Some s')
-  | MKleeneNone :
+  | MKleene1 :
       forall p s,
       matches p s None ->
       matches (PKleene p) s (Some s)
-  | MKleeneSome :
+  | MKleene2 :
       forall p s s' res,
       matches p s (Some s') ->
       matches (PKleene p) s' res ->
       matches (PKleene p) s res
-  | MNotNone :
+  | MNot1 :
       forall p s,
       matches p s None ->
       matches (PNot p) s (Some s)
-  | MNotSome :
+  | MNot2 :
       forall p s s',
       matches p s (Some s') ->
       matches (PNot p) s None

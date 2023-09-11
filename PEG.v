@@ -67,6 +67,39 @@ Inductive matches : pat -> string -> option string -> Prop :=
       matches (PNot p) s None
   .
 
+Ltac deconstruct1 :=
+  match goal with
+  [ H: ?C _ = ?C _ |- _ ] =>
+      inversion H; clear H; subst
+  end.
+
+Ltac apply_matches_IH :=
+  match goal with [
+    IHx: forall r, matches ?p ?s r -> _ = r,
+    Hx: matches ?p ?s _ |- _
+  ] =>
+    apply IHx in Hx
+  end.
+
+Theorem match_det :
+  forall p s res1 res2,
+  matches p s res1 ->
+  matches p s res2 ->
+  res1 = res2.
+Proof.
+  intros p s res1 res2 H1 H2.
+  generalize dependent res2.
+  induction H1;
+  intros res2 H2;
+  inversion H2; subst;
+  try apply_matches_IH;
+  try contradiction;
+  try discriminate;
+  try deconstruct1;
+  try apply_matches_IH;
+  auto.
+Qed.
+
 (* If there exists some input string such that
    a pattern matches it without consuming any input,
    then it is considered "heuristically empty" *)

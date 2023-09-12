@@ -284,6 +284,21 @@ Proof.
   auto.
 Qed.
 
+Lemma mutual_match_suffixes :
+  forall p1 p2 s1 s2,
+  matches p1 s1 (Some s2) ->
+  matches p2 s2 (Some s1) ->
+  s1 = s2.
+Proof.
+  intros.
+  repeat match goal with
+  [ Hx: matches _ _ (Some _) |- _ ] =>
+      apply matches_prefix2 in Hx;
+      destruct Hx
+  end.
+  eauto using mutual_prefixes.
+Qed.
+
 (*
   If a pattern may match a string without consuming any
   characters, then it is nullable.

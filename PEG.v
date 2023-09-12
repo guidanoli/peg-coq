@@ -314,8 +314,8 @@ Fixpoint nullable_comp p :=
   | PEmpty => true
   | PChar _ => false
   | PAnyChar => false
-  | PSequence p1 p2 => andb (nullable_comp p1) (nullable_comp p2)
-  | PChoice p1 p2 => orb (nullable_comp p1) (nullable_comp p2)
+  | PSequence p1 p2 => nullable_comp p1 && nullable_comp p2
+  | PChoice p1 p2 => nullable_comp p1 || nullable_comp p2
   | PKleene _ => true
   | PNot _ => true
   end.

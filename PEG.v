@@ -1,5 +1,6 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
+From Coq Require Import Bool.Bool.
 
 Inductive pat : Type :=
   | PEmpty : pat
@@ -318,3 +319,49 @@ Fixpoint nullable_comp p :=
   | PKleene _ => true
   | PNot _ => true
   end.
+
+Ltac apply_string_not_rec :=
+  match goal with
+  [ Hx: ?s = String ?a ?s |- _ ] =>
+    exfalso;
+    apply (string_not_recursive _ _ Hx)
+  end.
+
+Ltac injection_some :=
+  match goal with
+    [ Hx: Some _ = Some _ |- _ ] =>
+    injection Hx as Hx
+  end.
+
+Theorem nullable_comp_sound :
+  forall p, nullable p -> nullable_comp p = true.
+Proof.
+  intros.
+  unfold nullable in H.
+  destruct H as [s H].
+  remember (Some s) as res eqn:Hres.
+  generalize dependent Hres.
+  induction H; intro Hres;
+  auto;
+  try discriminate;
+  try injection_some;
+  try apply_string_not_rec;
+  subst;
+  try match goal with
+  [ Hx1: matches _ ?s1 (Some ?s2),
+    Hx2: matches _ ?s2 (Some ?s1) |- _ ] =>
+        specialize (mutual_match_suffixes _ _ _ _ Hx1 Hx2);
+        intro;
+        subst
+  end;
+  try repeat match goal with
+  [ Hx: ?a = ?a -> _ |- _ ] =>
+      assert (a = a) as Haux;
+      trivial;
+      apply Hx in Haux;
+      clear Hx;
+      rename Haux into Hx
+  end;
+  simpl;
+  auto using andb_true_intro, orb_true_intro.
+Qed.

@@ -128,6 +128,27 @@ Ltac destruct2 :=
       inversion H; clear H; subst
   end.
 
+Theorem string_not_recursive :
+  forall s a,
+  ~ (s = String a s).
+Proof.
+  intros s a H.
+  induction s.
+  - discriminate.
+  - destruct2.
+    auto.
+Qed.
+
+Theorem append_empty :
+  forall s,
+  append s EmptyString = s.
+Proof.
+  intros.
+  induction s.
+  - simpl. trivial.
+  - simpl. rewrite IHs. trivial.
+Qed.
+
 Theorem append_comm :
   forall s1 s2 s3,
   append s1 (append s2 s3) = append (append s1 s2) s3.
@@ -174,4 +195,91 @@ Proof.
       exists (append sa sb);
       apply append_comm
   end.
+Qed.
+
+Theorem matches_prefix2 :
+  forall p s s2,
+  matches p s (Some s2) ->
+  (exists s1, s = append s1 s2).
+Proof.
+  intros.
+  eauto using matches_prefix.
+Qed.
+
+Theorem length_append :
+  forall s1 s2,
+  length (append s1 s2) = length s1 + length s2.
+Proof.
+  intros.
+  induction s1.
+  - auto.
+  - simpl. rewrite IHs1. trivial.
+Qed.
+
+Theorem n_eq_m_plus_n :
+  forall n m,
+  n = m + n ->
+  m = 0.
+Proof.
+  intros n.
+  induction n;
+  intros.
+  - rewrite <- plus_n_O in H.
+    auto.
+  - apply IHn.
+    rewrite <- plus_n_Sm in H.
+    injection H as H.
+    trivial.
+Qed.
+
+Theorem length_zero :
+  forall s,
+  length s = 0 ->
+  s = EmptyString.
+Proof.
+  intros.
+  induction s.
+  - trivial.
+  - simpl in H. discriminate.
+Qed.
+
+Theorem empty_prefix :
+  forall s s',
+  s = append s' s ->
+  s' = EmptyString.
+Proof.
+  intros.
+  specialize (length_append s' s) as Hlen.
+  rewrite <- H in Hlen.
+  specialize (n_eq_m_plus_n _ _ Hlen) as Hlen0.
+  auto using length_zero.
+Qed.
+
+Theorem append_is_empty :
+  forall s s',
+  append s s' = EmptyString ->
+  s = EmptyString /\ s' = EmptyString.
+Proof.
+  intros s.
+  induction s;
+  intros.
+  - simpl in H.
+    split; auto.
+  - simpl in H.
+    discriminate.
+Qed.
+
+Theorem mutual_prefixes :
+  forall s s' s1 s2,
+  s = append s1 s' ->
+  s' = append s2 s ->
+  s = s'.
+Proof.
+  intros s s' s1 s2 Hs Hs'.
+  rewrite Hs in Hs'.
+  rewrite append_comm in Hs'.
+  apply empty_prefix in Hs'.
+  apply append_is_empty in Hs' as [Hs2 Hs1].
+  rewrite Hs1 in Hs.
+  auto.
 Qed.

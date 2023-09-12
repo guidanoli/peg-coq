@@ -159,19 +159,19 @@ Proof.
     [ |- exists s1, String ?a ?s2 = append s1 ?s2 ] =>
         exists (String a EmptyString)
   end;
-  auto.
-  - assert (Some s' = Some s') as Haux. trivial.
-    specialize (IHmatches1 s' Haux) as [sx].
-    assert (Some s2 = Some s2) as Haux2. trivial.
-    specialize (IHmatches2 s2 Haux2) as [sx'].
-    exists (append sx sx').
-    subst.
-    apply append_comm.
-  - assert (Some s' = Some s') as Haux. trivial.
-    specialize (IHmatches1 s' Haux) as [sx].
-    assert (Some s2 = Some s2) as Haux2. trivial.
-    specialize (IHmatches2 s2 Haux2) as [sx'].
-    exists (append sx sx').
-    subst.
-    apply append_comm.
+  auto;
+  repeat match goal with
+  [ IHx: forall sb, Some ?sx = Some sb -> exists sa, ?sy = append sa sb |- _ ] =>
+      assert (Some sx = Some sx) as Haux;
+      trivial;
+      specialize (IHx sx Haux);
+      clear Haux;
+      destruct IHx
+  end;
+  subst;
+  try match goal with
+  [ |- exists sx, (append ?sa (append ?sb ?sc)) = (append sx ?sc) ] =>
+      exists (append sa sb);
+      apply append_comm
+  end.
 Qed.

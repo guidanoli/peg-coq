@@ -283,3 +283,9 @@ Proof.
   rewrite Hs1 in Hs.
   auto.
 Qed.
+
+(*
+  If a pattern may match a string without consuming any
+  characters, then it is nullable.
+*)
+Definition nullable p := exists s, matches p s (Some s).

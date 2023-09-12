@@ -107,7 +107,7 @@ Ltac pose_matches_det :=
         pose (match_det p s r1 r2 H1 H2)
   end.
 
-Theorem kleene_infinite_loop :
+Example kleene_infinite_loop :
   forall p s,
   matches p s (Some s) ->
   ~ (exists res, matches (PKleene p) s res).
@@ -147,3 +147,57 @@ Inductive nullable : pat -> Prop :=
       forall p,
       nullable (PNot p)
   .
+
+Ltac destruct2 :=
+  match goal with
+  [ H: ?C _ _ = ?C _ _ |- _ ] =>
+      inversion H; clear H; subst
+  end.
+
+Theorem append_comm :
+  forall s1 s2 s3,
+  append s1 (append s2 s3) = append (append s1 s2) s3.
+Proof.
+  intros.
+  induction s1.
+  - simpl. trivial.
+  - simpl. rewrite IHs1. trivial.
+Qed.
+
+Theorem matches_prefix :
+  forall p s res s2,
+  matches p s res ->
+  res = Some s2 ->
+  (exists s1, s = append s1 s2).
+Proof.
+  intros.
+  generalize dependent s2.
+  induction H;
+  intros;
+  subst;
+  try destruct1;
+  try discriminate;
+  try match goal with
+    [ |- exists s1, ?s2 = append s1 ?s2 ] =>
+        exists EmptyString
+  end;
+  try match goal with
+    [ |- exists s1, String ?a ?s2 = append s1 ?s2 ] =>
+        exists (String a EmptyString)
+  end;
+  auto.
+  - assert (Some s' = Some s') as Haux. trivial.
+    specialize (IHmatches1 s' Haux) as [sx].
+    assert (Some s2 = Some s2) as Haux2. trivial.
+    specialize (IHmatches2 s2 Haux2) as [sx'].
+    exists (append sx sx').
+    subst.
+    apply append_comm.
+  - assert (Some s' = Some s') as Haux. trivial.
+    specialize (IHmatches1 s' Haux) as [sx].
+    assert (Some s2 = Some s2) as Haux2. trivial.
+    specialize (IHmatches2 s2 Haux2) as [sx'].
+    exists (append sx sx').
+    subst.
+    apply append_comm.
+Qed.

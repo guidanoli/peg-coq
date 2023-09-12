@@ -289,3 +289,17 @@ Qed.
   characters, then it is nullable.
 *)
 Definition nullable p := exists s, matches p s (Some s).
+
+(*
+  Computable version of nullable
+*)
+Fixpoint nullable_comp p :=
+  match p with
+  | PEmpty => true
+  | PChar _ => false
+  | PAnyChar => false
+  | PSequence p1 p2 => andb (nullable_comp p1) (nullable_comp p2)
+  | PChoice p1 p2 => orb (nullable_comp p1) (nullable_comp p2)
+  | PKleene _ => true
+  | PNot _ => true
+  end.

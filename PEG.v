@@ -122,32 +122,6 @@ Proof.
   auto.
 Qed.
 
-(* If a pattern may match a string without consuming
-   any characters, then it is nullable. *)
-Inductive nullable : pat -> Prop :=
-  | NEmpty :
-      nullable PEmpty
-  | NSequence :
-      forall p1 p2,
-      nullable p1 ->
-      nullable p2 ->
-      nullable (PSequence p1 p2)
-  | NChoice1 :
-      forall p1 p2,
-      nullable p1 ->
-      nullable (PChoice p1 p2)
-  | NChoice2 :
-      forall p1 p2,
-      nullable p2 ->
-      nullable (PChoice p1 p2)
-  | NKleene :
-      forall p,
-      nullable (PKleene p)
-  | NNot :
-      forall p,
-      nullable (PNot p)
-  .
-
 Ltac destruct2 :=
   match goal with
   [ H: ?C _ _ = ?C _ _ |- _ ] =>

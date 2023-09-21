@@ -2,6 +2,9 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 
+(** Syntax **)
+(************)
+
 Inductive pat : Type :=
   | PEmpty : pat
   | PChar : ascii -> pat
@@ -12,60 +15,70 @@ Inductive pat : Type :=
   | PNot : pat -> pat
   .
 
-Inductive matches : pat -> string -> option string -> Prop :=
+(** Semantics **)
+(***************)
+
+(** Match predicate **)
+
+Inductive MatchResult : Type :=
+  | Failure : MatchResult
+  | Success : string -> MatchResult
+  .
+
+Inductive matches : pat -> string -> MatchResult -> Prop :=
   | MEmpty :
       forall s,
-      matches PEmpty s (Some s)
+      matches PEmpty s (Success s)
   | MChar1 :
       forall a,
-      matches (PChar a) EmptyString None
+      matches (PChar a) EmptyString Failure
   | MChar2 :
       forall a s,
-      matches (PChar a) (String a s) (Some s)
+      matches (PChar a) (String a s) (Success s)
   | MChar3 :
       forall a1 a2 s,
       a1 <> a2 ->
-      matches (PChar a1) (String a2 s) None
+      matches (PChar a1) (String a2 s) Failure
   | MAnyChar1 :
-      matches PAnyChar EmptyString None
+      matches PAnyChar EmptyString Failure
   | MAnyChar2 :
       forall a s,
-      matches PAnyChar (String a s) (Some s)
+      matches PAnyChar (String a s) (Success s)
   | MSequence1 :
       forall p1 p2 s,
-      matches p1 s None ->
-      matches (PSequence p1 p2) s None
+      matches p1 s Failure ->
+      matches (PSequence p1 p2) s Failure
   | MSequence2 :
       forall p1 p2 s s' res,
-      matches p1 s (Some s') ->
+      matches p1 s (Success s') ->
       matches p2 s' res ->
       matches (PSequence p1 p2) s res
   | MChoice1 :
       forall p1 p2 s s',
-      matches p1 s (Some s') ->
-      matches (PChoice p1 p2) s (Some s')
+      matches p1 s (Success s') ->
+      matches (PChoice p1 p2) s (Success s')
   | MChoice2 :
       forall p1 p2 s res,
-      matches p1 s None ->
+      matches p1 s Failure ->
       matches p2 s res ->
       matches (PChoice p1 p2) s res
   | MKleene1 :
       forall p s,
-      matches p s None ->
-      matches (PKleene p) s (Some s)
+      matches p s Failure ->
+      matches (PKleene p) s (Success s)
   | MKleene2 :
       forall p s s' res,
-      matches p s (Some s') ->
+      matches p s (Success s') ->
       matches (PKleene p) s' res ->
       matches (PKleene p) s res
   | MNot1 :
       forall p s,
-      matches p s None ->
-      matches (PNot p) s (Some s)
+      matches p s Failure ->
+      matches (PNot p) s (Success s)
   | MNot2 :
       forall p s s',
-      matches p s (Some s') ->
-      matches (PNot p) s None
+      matches p s (Success s') ->
+      matches (PNot p) s Failure
   .
 
 Ltac destruct1 :=
@@ -81,6 +94,8 @@ Ltac apply_matches_IH :=
   ] =>
     apply IHx in Hx
   end.
+
+(** Match predicate determinism **)
 
 Theorem match_det :
   forall p s res1 res2,
@@ -110,7 +125,7 @@ Ltac pose_matches_det :=
 
 Example kleene_infinite_loop :
   forall p s,
-  matches p s (Some s) ->
+  matches p s (Success s) ->
   ~ (exists res, matches (PKleene p) s res).
 Proof.
   intros p s H1 [res H2].
@@ -160,10 +175,12 @@ Proof.
   - simpl. rewrite IHs1. trivial.
 Qed.
 
+(** Match prefix theorem **)
+
 Theorem matches_prefix :
   forall p s res s2,
   matches p s res ->
-  res = Some s2 ->
+  res = Success s2 ->
   (exists s1, s = append s1 s2).
 Proof.
   intros.
@@ -183,8 +200,8 @@ Proof.
   end;
   auto;
   repeat match goal with
-  [ IHx: forall sb, Some ?sx = Some sb -> exists sa, ?sy = append sa sb |- _ ] =>
-      assert (Some sx = Some sx) as Haux;
+  [ IHx: forall sb, Success ?sx = Success sb -> exists sa, ?sy = append sa sb |- _ ] =>
+      assert (Success sx = Success sx) as Haux;
       trivial;
       specialize (IHx sx Haux);
       clear Haux;
@@ -200,7 +217,7 @@ Qed.
 
 Theorem matches_prefix2 :
   forall p s s2,
-  matches p s (Some s2) ->
+  matches p s (Success s2) ->
   (exists s1, s = append s1 s2).
 Proof.
   intros.
@@ -287,24 +304,28 @@ Qed.
 
 Lemma mutual_match_suffixes :
   forall p1 p2 s1 s2,
-  matches p1 s1 (Some s2) ->
-  matches p2 s2 (Some s1) ->
+  matches p1 s1 (Success s2) ->
+  matches p2 s2 (Success s1) ->
   s1 = s2.
 Proof.
   intros.
   repeat match goal with
-  [ Hx: matches _ _ (Some _) |- _ ] =>
+  [ Hx: matches _ _ (Success _) |- _ ] =>
       apply matches_prefix2 in Hx;
       destruct Hx
   end.
   eauto using mutual_prefixes.
 Qed.
 
+(** Nullable pattern definition **)
+
 (*
   If a pattern may match a string without consuming any
   characters, then it is nullable.
 *)
 Definition nullable p := exists s, matches p s (Some s).
+
+(** Nullable pattern function **)
 
 (*
   Computable version of nullable
@@ -332,6 +353,8 @@ Ltac injection_some :=
     [ Hx: Some _ = Some _ |- _ ] =>
     injection Hx as Hx
   end.
+
+(** Nullable pattern function soundness **)
 
 Theorem nullable_comp_sound :
   forall p, nullable p -> nullable_comp p = true.

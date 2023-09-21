@@ -11,7 +11,7 @@ Inductive pat : Type :=
   | PAnyChar : pat
   | PSequence : pat -> pat -> pat
   | PChoice : pat -> pat -> pat
-  | PKleene : pat -> pat
+  | PRepetition : pat -> pat
   | PNot : pat -> pat
   .
 
@@ -62,15 +62,15 @@ Inductive matches : pat -> string -> MatchResult -> Prop :=
       matches p1 s Failure ->
       matches p2 s res ->
       matches (PChoice p1 p2) s res
-  | MKleene1 :
+  | MRepetition1 :
       forall p s,
       matches p s Failure ->
-      matches (PKleene p) s (Success s)
-  | MKleene2 :
+      matches (PRepetition p) s (Success s)
+  | MRepetition2 :
       forall p s s' res,
       matches p s (Success s') ->
-      matches (PKleene p) s' res ->
-      matches (PKleene p) s res
+      matches (PRepetition p) s' res ->
+      matches (PRepetition p) s res
   | MNot1 :
       forall p s,
       matches p s Failure ->
@@ -123,13 +123,13 @@ Ltac pose_matches_det :=
         pose (match_det p s r1 r2 H1 H2)
   end.
 
-Example kleene_infinite_loop :
+Example infinite_loop :
   forall p s,
   matches p s (Success s) ->
-  ~ (exists res, matches (PKleene p) s res).
+  ~ (exists res, matches (PRepetition p) s res).
 Proof.
   intros p s H1 [res H2].
-  remember (PKleene p).
+  remember (PRepetition p).
   induction H2;
   try destruct1;
   try pose_matches_det;
@@ -337,7 +337,7 @@ Fixpoint nullable_comp p :=
   | PAnyChar => false
   | PSequence p1 p2 => nullable_comp p1 && nullable_comp p2
   | PChoice p1 p2 => nullable_comp p1 || nullable_comp p2
-  | PKleene _ => true
+  | PRepetition _ => true
   | PNot _ => true
   end.
 

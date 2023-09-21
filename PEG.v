@@ -144,7 +144,7 @@ Ltac destruct2 :=
       inversion H; clear H; subst
   end.
 
-Theorem string_not_recursive :
+Lemma string_not_recursive :
   forall s a,
   ~ (s = String a s).
 Proof.
@@ -155,7 +155,7 @@ Proof.
     auto.
 Qed.
 
-Theorem append_empty :
+Lemma append_empty :
   forall s,
   append s EmptyString = s.
 Proof.
@@ -165,7 +165,7 @@ Proof.
   - simpl. rewrite IHs. trivial.
 Qed.
 
-Theorem append_comm :
+Lemma append_comm :
   forall s1 s2 s3,
   append s1 (append s2 s3) = append (append s1 s2) s3.
 Proof.
@@ -224,7 +224,7 @@ Proof.
   eauto using matches_prefix.
 Qed.
 
-Theorem length_append :
+Lemma length_append :
   forall s1 s2,
   length (append s1 s2) = length s1 + length s2.
 Proof.
@@ -234,7 +234,7 @@ Proof.
   - simpl. rewrite IHs1. trivial.
 Qed.
 
-Theorem n_eq_m_plus_n :
+Lemma n_eq_m_plus_n :
   forall n m,
   n = m + n ->
   m = 0.
@@ -250,7 +250,7 @@ Proof.
     trivial.
 Qed.
 
-Theorem length_zero :
+Lemma length_zero :
   forall s,
   length s = 0 ->
   s = EmptyString.
@@ -261,7 +261,7 @@ Proof.
   - simpl in H. discriminate.
 Qed.
 
-Theorem empty_prefix :
+Lemma empty_prefix :
   forall s s',
   s = append s' s ->
   s' = EmptyString.
@@ -273,7 +273,7 @@ Proof.
   auto using length_zero.
 Qed.
 
-Theorem append_is_empty :
+Lemma append_is_empty :
   forall s s',
   append s s' = EmptyString ->
   s = EmptyString /\ s' = EmptyString.
@@ -287,7 +287,7 @@ Proof.
     discriminate.
 Qed.
 
-Theorem mutual_prefixes :
+Lemma mutual_prefixes :
   forall s s' s1 s2,
   s = append s1 s' ->
   s' = append s2 s ->

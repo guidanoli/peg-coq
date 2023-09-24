@@ -485,3 +485,28 @@ Proof.
   rewrite H1 in H2.
   discriminate.
 Qed.
+
+(** Well-formed definition **)
+
+(*
+  A pattern is well-formed iff, for any input string,
+  the match procedure yields a result.
+*)
+Definition wf p :=
+  forall s, exists res, matches p s res.
+
+(** Well-formed function **)
+
+(*
+  A computational version of wf.
+*)
+Fixpoint wf_comp p :=
+  match p with
+  | PEmpty => true
+  | PChar _ => true
+  | PAnyChar => true
+  | PSequence p1 p2 => wf_comp p1 && wf_comp p2
+  | PChoice p1 p2 => wf_comp p1 && wf_comp p2
+  | PRepetition p => wf_comp p && negb (nullable_comp p)
+  | PNot p => wf_comp p
+  end.

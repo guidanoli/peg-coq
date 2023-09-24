@@ -323,7 +323,7 @@ Qed.
   If a pattern may match a string without consuming any
   characters, then it is nullable.
 *)
-Definition nullable p := exists s, matches p s (Some s).
+Definition nullable p := exists s, matches p s (Success s).
 
 (** Nullable pattern function **)
 
@@ -348,12 +348,6 @@ Ltac apply_string_not_rec :=
     apply (string_not_recursive _ _ Hx)
   end.
 
-Ltac injection_some :=
-  match goal with
-    [ Hx: Some _ = Some _ |- _ ] =>
-    injection Hx as Hx
-  end.
-
 (** Nullable pattern function soundness **)
 
 Theorem nullable_comp_sound :
@@ -362,17 +356,17 @@ Proof.
   intros.
   unfold nullable in H.
   destruct H as [s H].
-  remember (Some s) as res eqn:Hres.
+  remember (Success s) as res eqn:Hres.
   generalize dependent Hres.
   induction H; intro Hres;
   auto;
   try discriminate;
-  try injection_some;
+  try injection_subst;
   try apply_string_not_rec;
   subst;
   try match goal with
-  [ Hx1: matches _ ?s1 (Some ?s2),
-    Hx2: matches _ ?s2 (Some ?s1) |- _ ] =>
+  [ Hx1: matches _ ?s1 (Success ?s2),
+    Hx2: matches _ ?s2 (Success ?s1) |- _ ] =>
         specialize (mutual_match_suffixes _ _ _ _ Hx1 Hx2);
         intro;
         subst

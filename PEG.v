@@ -356,6 +356,60 @@ Fixpoint matches_comp p s gas {struct gas} :=
               end
   end.
 
+Ltac injection_subst :=
+  match goal with
+  [ Hx: ?C _ = ?C _ |- _ ] =>
+      injection Hx as Hx;
+      try subst
+  end.
+
+Theorem matches_comp_correct :
+  forall p s gas res,
+  matches_comp p s gas = Some res ->
+  matches p s res.
+Proof with eauto using matches.
+  intro p.
+  induction p;
+  intros;
+  destruct gas;
+  simpl in H;
+  try discriminate.
+  - injection_subst.
+    constructor.
+  - destruct s as [|a' s].
+    + injection_subst.
+      constructor.
+    + destruct (ascii_dec a a').
+      -- subst.
+         rewrite Ascii.eqb_refl in H.
+         injection_subst.
+         constructor.
+      -- assert ((a =? a')%char = false) as Haux by (apply Ascii.eqb_neq; trivial).
+         rewrite Haux in H.
+         injection_subst...
+  - destruct s;
+    injection_subst;
+    constructor.
+  - remember (matches_comp p1 s gas) as gres1 eqn:Hgres1.
+    symmetry in Hgres1.
+    destruct gres1 as [res1|];
+    try discriminate.
+    apply IHp1 in Hgres1.
+    destruct res1.
+    + injection_subst...
+    + apply IHp2 in H...
+  - remember (matches_comp p1 s gas) as gres1 eqn:Hgres1.
+    symmetry in Hgres1.
+    destruct gres1 as [res1|];
+    try discriminate.
+    apply IHp1 in Hgres1.
+    destruct res1;
+    try injection_subst...
+  - remember (matches_comp p s gas) as gres' eqn:Hgres'.
+    destruct gres' as [res'|];
+    try discriminate.
+    Abort.
+
 (** Nullable pattern definition **)
 
 (*

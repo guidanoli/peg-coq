@@ -318,6 +318,44 @@ Proof.
   eauto using mutual_prefixes.
 Qed.
 
+(** Match function with gas **)
+
+Fixpoint matches_comp p s gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some (Success s)
+              | PChar a => match s with
+                           | EmptyString => Some Failure
+                           | String a' s' => if (a =? a')%char
+                                             then Some (Success s')
+                                             else Some Failure
+                           end
+              | PAnyChar => match s with
+                            | EmptyString => Some Failure
+                            | String _ s' => Some (Success s')
+                            end
+              | PSequence p1 p2 => match matches_comp p1 s gas' with
+                                   | Some (Success s') => matches_comp p2 s' gas'
+                                   | res => res
+                                   end
+              | PChoice p1 p2 => match matches_comp p1 s gas' with
+                                 | Some Failure => matches_comp p2 s gas'
+                                 | res => res
+                                 end
+              | PRepetition p' => match matches_comp p' s gas' with
+                                 | Some Failure => Some (Success s)
+                                 | Some (Success s') => matches_comp p s' gas'
+                                 | None => None
+                                 end
+              | PNot p' => match matches_comp p' s gas' with
+                           | Some Failure => Some (Success s)
+                           | Some (Success _) => Some Failure
+                           | None => None
+                           end
+              end
+  end.
+
 (** Nullable pattern definition **)
 
 (*

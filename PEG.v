@@ -510,3 +510,45 @@ Fixpoint wf_comp p :=
   | PRepetition p => wf_comp p && negb (nullable_comp p)
   | PNot p => wf_comp p
   end.
+
+(** Well-formed function safety **)
+
+Theorem wf_comp_safe :
+  forall p, wf_comp p = true -> wf p.
+Proof with eauto using matches.
+  intros p H.
+  unfold wf.
+  induction p;
+  intro s;
+  simpl in H;
+  try match goal with
+    [ H: _ && _ = true |- _ ] =>
+      apply andb_prop in H as [H1 H2]
+  end;
+  repeat match goal with
+    [ Hx: ?a, IHx: ?a -> ?b |- _ ] =>
+      specialize (IHx Hx)
+  end...
+  - (* PChar *)
+    induction s as [| a' s]...
+    destruct (ascii_dec a a')...
+    subst...
+  - (* PAnyChar *)
+    induction s...
+  - (* PSequence *)
+    specialize (IHp1 s).
+    destruct IHp1 as [res1 IHp1].
+    destruct res1 as [s1 |]...
+    specialize (IHp2 s0).
+    destruct IHp2 as [res2 IHp2]...
+  - (* PChoice *)
+    specialize (IHp1 s).
+    destruct IHp1 as [res1 IHp1].
+    destruct res1 as [s1 |]...
+    specialize (IHp2 s).
+    destruct IHp2 as [res2 IHp2]...
+  - (* PRepetition *)
+    rewrite negb_true_iff in H2.
+    apply nullable_comp_false in H2.
+    unfold nullable in H2.
+    Abort.

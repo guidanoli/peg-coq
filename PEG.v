@@ -475,3 +475,13 @@ Proof.
   simpl;
   auto using andb_true_intro, orb_true_intro.
 Qed.
+
+Lemma nullable_comp_false :
+  forall p,
+  nullable_comp p = false -> ~ nullable p.
+Proof.
+  intros p H1 H2.
+  apply nullable_comp_sound in H2.
+  rewrite H1 in H2.
+  discriminate.
+Qed.

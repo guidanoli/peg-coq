@@ -104,10 +104,10 @@ Proof.
   induction p;
   try (left; auto using final; fail);
   try (destruct k as [|[]]; eauto using final, step; fail).
-  - right. destruct s.
+  - (* PChar *) right. destruct s.
     + eauto using step.
     + destruct (ascii_dec a a0); try subst; eauto using step.
-  - right. destruct IHp1.
+  - (* PSequence *) right. destruct IHp1.
     + inversion H; subst; eauto using step.
     + destruct H. destruct x as [[]]. eauto using step.
 Qed.

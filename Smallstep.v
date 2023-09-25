@@ -15,9 +15,6 @@ Inductive pat : Type :=
   | PNot : pat -> pat
   .
 
-(** Semantics **)
-(***************)
-
 Inductive entry : Type :=
   | IfTrue : entry
   | IfFalse : entry
@@ -26,6 +23,18 @@ Inductive entry : Type :=
 Definition stack : Type := list (entry * pat * string).
 
 Definition state : Type := pat * string * stack.
+
+Inductive final : state -> Prop :=
+  | FTrue :
+      forall s,
+      final (PTrue, s, nil)
+  | FFalse :
+      forall s,
+      final (PFalse, s, nil)
+  .
+
+(** Semantics **)
+(***************)
 
 Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 
@@ -111,15 +120,6 @@ Proof.
         auto
   end.
 Qed.
-
-Inductive final : state -> Prop :=
-  | FTrue :
-      forall s,
-      final (PTrue, s, nil)
-  | FFalse :
-      forall s,
-      final (PFalse, s, nil)
-  .
 
 Theorem strong_progress :
   forall t, final t \/ (exists t', t --> t').

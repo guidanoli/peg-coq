@@ -1,7 +1,5 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
-From Coq Require Import Bool.Bool.
-From Coq Require Import Arith.PeanoNat.
 
 (** Syntax **)
 (************)

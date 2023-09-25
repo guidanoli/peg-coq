@@ -9,6 +9,7 @@ From Coq Require Import Arith.PeanoNat.
 Inductive pat : Type :=
   | PTrue : pat
   | PFalse : pat
+  | PAnyChar : pat
   | PChar : ascii -> pat
   | PSequence : pat -> pat -> pat
   | PChoice : pat -> pat -> pat
@@ -30,6 +31,12 @@ Inductive step : state -> state -> Prop :=
   | SFalse :
       forall p s s' k,
       (PFalse, s', cons (p, s) k) --> (p, s, k)
+  | SAnyChar1 :
+      forall a s k,
+      (PAnyChar, String a s, k) --> (PTrue, s, k)
+  | SAnyChar2 :
+      forall k,
+      (PAnyChar, EmptyString, k) --> (PFalse, EmptyString, k)
   | SChar1 :
       forall a s k,
       (PChar a, String a s, k) --> (PTrue, s, k)
@@ -103,7 +110,8 @@ Proof.
   intros [[p s] k].
   induction p;
   try (left; auto using final; fail);
-  try (destruct k as [|[]]; eauto using final, step; fail).
+  try (destruct k as [|[]]; eauto using final, step; fail);
+  try (destruct s; eauto using step; fail).
   - (* PChar *) right. destruct s.
     + eauto using step.
     + destruct (ascii_dec a a0); try subst; eauto using step.

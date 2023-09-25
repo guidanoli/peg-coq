@@ -13,6 +13,7 @@ Inductive pat : Type :=
   | PChar : ascii -> pat
   | PSequence : pat -> pat -> pat
   | PChoice : pat -> pat -> pat
+  | PRepetition : pat -> pat
   .
 
 (** Semantics **)
@@ -60,6 +61,9 @@ Inductive step : state -> state -> Prop :=
   | SChoice :
       forall p1 p2 s k,
       (PChoice p1 p2, s, k) --> (p1, s, cons (p2, s) k)
+  | SRepetition :
+      forall p s k,
+      (PRepetition p, s, k) --> (PChoice (PSequence p (PRepetition p)) PTrue, s, k)
 
 where " t1 '-->' t2 " := (step t1 t2).
 

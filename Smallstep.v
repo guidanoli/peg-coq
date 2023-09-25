@@ -14,24 +14,36 @@ Inductive pat : Type :=
   | PSequence : pat -> pat -> pat
   | PChoice : pat -> pat -> pat
   | PRepetition : pat -> pat
+  | PNot : pat -> pat
   .
 
 (** Semantics **)
 (***************)
 
-Definition stack : Type := list (pat * string).
+Inductive entry : Type :=
+  | IfTrue : entry
+  | IfFalse : entry
+  .
+
+Definition stack : Type := list (entry * pat * string).
 
 Definition state : Type := pat * string * stack.
 
 Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 
 Inductive step : state -> state -> Prop :=
-  | STrue :
-      forall s k e,
-      (PTrue, s, cons e k) --> (PTrue, s, k)
-  | SFalse :
+  | STrue1 :
       forall p s s' k,
-      (PFalse, s', cons (p, s) k) --> (p, s, k)
+      (PTrue, s, cons (IfFalse, p, s') k) --> (PTrue, s, k)
+  | STrue2 :
+      forall p s s' k,
+      (PTrue, s, cons (IfTrue, p, s') k) --> (p, s', k)
+  | SFalse1 :
+      forall p s s' k,
+      (PFalse, s, cons (IfFalse, p, s') k) --> (p, s', k)
+  | SFalse2 :
+      forall p s s' k,
+      (PFalse, s, cons (IfTrue, p, s') k) --> (PFalse, s, k)
   | SAnyChar1 :
       forall a s k,
       (PAnyChar, String a s, k) --> (PTrue, s, k)
@@ -60,10 +72,13 @@ Inductive step : state -> state -> Prop :=
       (PSequence PFalse p2, s, nil) --> (PFalse, s, nil)
   | SChoice :
       forall p1 p2 s k,
-      (PChoice p1 p2, s, k) --> (p1, s, cons (p2, s) k)
+      (PChoice p1 p2, s, k) --> (p1, s, cons (IfFalse, p2, s) k)
   | SRepetition :
       forall p s k,
       (PRepetition p, s, k) --> (PChoice (PSequence p (PRepetition p)) PTrue, s, k)
+  | SNot :
+      forall p s k,
+      (PNot p, s, k) --> (p, s, cons (IfTrue, PFalse, s) k)
 
 where " t1 '-->' t2 " := (step t1 t2).
 
@@ -114,7 +129,7 @@ Proof.
   intros [[p s] k].
   induction p;
   try (left; auto using final; fail);
-  try (destruct k as [|[]]; eauto using final, step; fail);
+  try (destruct k as [|[[[]]]]; eauto using final, step; fail);
   try (destruct s; eauto using step; fail).
   - (* PChar *) right. destruct s.
     + eauto using step.

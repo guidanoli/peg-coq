@@ -42,19 +42,19 @@ Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 Inductive step : state -> state -> Prop :=
   | SConst :
       forall b p s s' k,
-      (PConst b, s, cons (RevertIf b p s') k) --> (p, s', k)
+      (PConst b, s, (RevertIf b p s' :: k)) --> (p, s', k)
   | STrue1 :
       forall p s s' k,
-      (PConst true, s, cons (RevertIf false p s') k) --> (PConst true, s, k)
+      (PConst true, s, (RevertIf false p s' :: k)) --> (PConst true, s, k)
   | STrue2 :
       forall p s k,
-      (PConst true, s, cons (Continue p) k) --> (p, s, k)
+      (PConst true, s, (Continue p :: k)) --> (p, s, k)
   | SFalse1 :
       forall p s s' k,
-      (PConst false, s, cons (RevertIf true p s') k) --> (PConst false, s, k)
+      (PConst false, s, (RevertIf true p s' :: k)) --> (PConst false, s, k)
   | SFalse2 :
       forall p s k,
-      (PConst false, s, cons (Continue p) k) --> (PConst false, s, k)
+      (PConst false, s, (Continue p :: k)) --> (PConst false, s, k)
   | SAnyChar1 :
       forall a s k,
       (PAnyChar, String a s, k) --> (PConst true, s, k)
@@ -73,16 +73,16 @@ Inductive step : state -> state -> Prop :=
       (PChar a, EmptyString, k) --> (PConst false, EmptyString, k)
   | SSequence :
       forall p1 p2 s k,
-      (PSequence p1 p2, s, k) --> (p1, s, cons (Continue p2) k)
+      (PSequence p1 p2, s, k) --> (p1, s, (Continue p2 :: k))
   | SChoice :
       forall p1 p2 s k,
-      (PChoice p1 p2, s, k) --> (p1, s, cons (RevertIf false p2 s) k)
+      (PChoice p1 p2, s, k) --> (p1, s, (RevertIf false p2 s :: k))
   | SRepetition :
       forall p s k,
       (PRepetition p, s, k) --> (expandRepetition p, s, k)
   | SNot :
       forall p s k,
-      (PNot p, s, k) --> (p, s, cons (RevertIf true (PConst false) s) k)
+      (PNot p, s, k) --> (p, s, (RevertIf true (PConst false) s) :: k)
 
 where " t1 '-->' t2 " := (step t1 t2).
 

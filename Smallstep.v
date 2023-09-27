@@ -15,6 +15,9 @@ Inductive pat : Type :=
   | PNot : pat -> pat
   .
 
+Definition expandRepetition p :=
+  PChoice (PSequence p (PRepetition p)) PTrue.
+
 Inductive entry : Type :=
   | IfTrue : entry
   | IfFalse : entry
@@ -82,7 +85,7 @@ Inductive step : state -> state -> Prop :=
       (PChoice p1 p2, s, k) --> (p1, s, cons (IfFalse, p2, s) k)
   | SRepetition :
       forall p s k,
-      (PRepetition p, s, k) --> (PChoice (PSequence p (PRepetition p)) PTrue, s, k)
+      (PRepetition p, s, k) --> (expandRepetition p, s, k)
   | SNot :
       forall p s k,
       (PNot p, s, k) --> (p, s, cons (IfTrue, PFalse, s) k)

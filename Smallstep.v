@@ -14,6 +14,9 @@ Inductive pat : Type :=
   | PNot : pat -> pat
   .
 
+(** Semantics **)
+(***************)
+
 Definition expandRepetition p :=
   PChoice (PSequence p (PRepetition p)) (PConst true).
 
@@ -31,9 +34,6 @@ Inductive final : state -> Prop :=
       forall s b,
       final (PConst b, s, nil)
   .
-
-(** Semantics **)
-(***************)
 
 Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 

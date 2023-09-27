@@ -200,90 +200,113 @@ Qed.
 
 Notation " t1 '-->*' t2 " := (multi step t1 t2) (at level 40).
 
-Ltac emulti_step :=
-  eapply multi_step; eauto using step.
-
-Ltac emulti :=
-  repeat (
-    try eapply multi_refl;
-    emulti_step
-  ).
+Ltac eapply_multi :=
+  eapply multi_refl +
+  eapply multi_step;
+    try match goal with
+      [ |- ?t --> ?t' ] =>
+          eauto using step;
+          match t with
+          | (PChar _, String _ _, _) =>
+              apply SChar2; intro; discriminate
+          end
+    end.
 
 Module StepExamples.
 
-Example pat_a := PChar "a".
-
 Lemma pat_a_with_a :
-  (pat_a, "a"%string, nil) -->*
+  (PChar "a", "a"%string, nil) -->*
   (PConst true, ""%string, nil).
 Proof.
-  emulti.
+  repeat eapply_multi.
 Qed.
 
 Lemma pat_a_with_ab :
-  (pat_a, "ab"%string, nil) -->*
+  (PChar "a", "ab"%string, nil) -->*
   (PConst true, "b"%string, nil).
 Proof.
-  emulti.
+  repeat eapply_multi.
 Qed.
 
 Lemma pat_a_with_b :
-  (pat_a, "b"%string, nil) -->*
+  (PChar "a", "b"%string, nil) -->*
   (PConst false, "b"%string, nil).
 Proof.
-  emulti.
-  apply SChar2.
-  apply Ascii.eqb_neq.
-  trivial.
+  repeat eapply_multi.
 Qed.
 
-Example pat_a_rep := PRepetition pat_a.
+Example pat_a_rep := PRepetition (PChar "a").
 
 Lemma pat_a_rep_with_empty :
   (pat_a_rep, ""%string, nil) -->*
   (PConst true, ""%string, nil).
 Proof.
-  emulti.
+  repeat eapply_multi.
 Qed.
 
 Lemma pat_a_rep_with_a :
   (pat_a_rep, "a"%string, nil) -->*
   (PConst true, ""%string, nil).
 Proof.
-  emulti.
+  repeat eapply_multi.
 Qed.
 
 Lemma pat_a_rep_with_aaa :
   (pat_a_rep, "aaa"%string, nil) -->*
   (PConst true, ""%string, nil).
 Proof.
-  emulti.
+  repeat eapply_multi.
 Qed.
 
 Lemma pat_a_rep_with_xyz :
   (pat_a_rep, "xyz"%string, nil) -->*
   (PConst true, "xyz"%string, nil).
 Proof.
-  do 4 emulti_step.
-  {
-    apply SChar2.
-    intro.
-    discriminate.
-  }
-  emulti.
+  repeat eapply_multi.
 Qed.
 
 Lemma pat_a_rep_with_aaron :
   (pat_a_rep, "aaron"%string, nil) -->*
   (PConst true, "ron"%string, nil).
 Proof.
-  do 14 emulti_step.
-  {
-    apply SChar2.
-    intro.
-    discriminate.
-  }
-  emulti.
+  repeat eapply_multi.
+Qed.
+
+Lemma pat_anychar_with_empty :
+  (PAnyChar, ""%string, nil) -->*
+  (PConst false, ""%string, nil).
+Proof.
+  repeat eapply_multi.
+Qed.
+
+Lemma pat_anychar_with_a :
+  (PAnyChar, "a"%string, nil) -->*
+  (PConst true, ""%string, nil).
+Proof.
+  repeat eapply_multi.
+Qed.
+
+Definition pat_anychar_but_a := PSequence (PNot (PChar "a")) PAnyChar.
+
+Lemma pat_anychar_but_a_with_empty :
+  (pat_anychar_but_a, ""%string, nil) -->*
+  (PConst false, ""%string, nil).
+Proof.
+  repeat eapply_multi.
+Qed.
+
+Lemma pat_anychar_but_a_with_a :
+  (pat_anychar_but_a, "a"%string, nil) -->*
+  (PConst false, "a"%string, nil).
+Proof.
+  repeat eapply_multi.
+Qed.
+
+Lemma pat_anychar_but_a_with_b :
+  (pat_anychar_but_a, "b"%string, nil) -->*
+  (PConst true, ""%string, nil).
+Proof.
+  repeat eapply_multi.
 Qed.
 
 Inductive Result :=

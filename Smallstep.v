@@ -176,3 +176,42 @@ Proof.
   - apply nf_is_final.
   - apply final_is_nf.
 Qed.
+
+Inductive Result :=
+  | Success : string -> Result
+  | Failure : Result
+  .
+
+Fixpoint eval p s gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PTrue => Some (Success s)
+              | PFalse => Some Failure
+              | PAnyChar => match s with
+                            | EmptyString => Some Failure
+                            | String a s' => Some (Success s')
+                            end
+              | PChar a' => match s with
+                            | EmptyString => Some Failure
+                            | String a s' => match ascii_dec a a' with
+                                             | left _ => Some (Success s')
+                                             | right _ => Some Failure
+                                             end
+                            end
+              | PSequence p1 p2 => match eval p1 s gas' with
+                                   | Some (Success s') => eval p2 s' gas'
+                                   | optres => optres
+                                   end
+              | PChoice p1 p2 => match eval p1 s gas' with
+                                 | Some Failure => eval p2 s gas'
+                                 | optres => optres
+                                 end
+              | PRepetition p => eval (expandRepetition p) s gas'
+              | PNot p => match eval p s gas' with
+                          | Some (Success _) => Some Failure
+                          | Some Failure => Some (Success s)
+                          | None => None
+                          end
+              end
+  end.

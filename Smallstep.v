@@ -19,11 +19,12 @@ Definition expandRepetition p :=
   PChoice (PSequence p (PRepetition p)) PTrue.
 
 Inductive entry : Type :=
-  | IfTrue : entry
-  | IfFalse : entry
+  | IfTrue : pat -> string -> entry
+  | IfFalse : pat -> string -> entry
+  | Continue : pat -> entry
   .
 
-Definition stack : Type := list (entry * pat * string).
+Definition stack : Type := list entry.
 
 Definition state : Type := pat * string * stack.
 
@@ -44,16 +45,22 @@ Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 Inductive step : state -> state -> Prop :=
   | STrue1 :
       forall p s s' k,
-      (PTrue, s, cons (IfFalse, p, s') k) --> (PTrue, s, k)
+      (PTrue, s, cons (IfFalse p s') k) --> (PTrue, s, k)
   | STrue2 :
       forall p s s' k,
-      (PTrue, s, cons (IfTrue, p, s') k) --> (p, s', k)
+      (PTrue, s, cons (IfTrue p s') k) --> (p, s', k)
+  | STrue3 :
+      forall p s k,
+      (PTrue, s, cons (Continue p) k) --> (p, s, k)
   | SFalse1 :
       forall p s s' k,
-      (PFalse, s, cons (IfFalse, p, s') k) --> (p, s', k)
+      (PFalse, s, cons (IfFalse p s') k) --> (p, s', k)
   | SFalse2 :
       forall p s s' k,
-      (PFalse, s, cons (IfTrue, p, s') k) --> (PFalse, s, k)
+      (PFalse, s, cons (IfTrue p s') k) --> (PFalse, s, k)
+  | SFalse3 :
+      forall p s k,
+      (PFalse, s, cons (Continue p) k) --> (PFalse, s, k)
   | SAnyChar1 :
       forall a s k,
       (PAnyChar, String a s, k) --> (PTrue, s, k)
@@ -70,25 +77,18 @@ Inductive step : state -> state -> Prop :=
   | SChar3 :
       forall a k,
       (PChar a, EmptyString, k) --> (PFalse, EmptyString, k)
-  | SSequence1 :
-      forall p1 p1' p2 s s' k k',
-      (p1, s, k) --> (p1', s', k') ->
-      (PSequence p1 p2, s, k) --> (PSequence p1' p2, s', k')
-  | SSequence2 :
-      forall p2 s,
-      (PSequence PTrue p2, s, nil) --> (p2, s, nil)
-  | SSequence3 :
-      forall p2 s,
-      (PSequence PFalse p2, s, nil) --> (PFalse, s, nil)
+  | SSequence :
+      forall p1 p2 s k,
+      (PSequence p1 p2, s, k) --> (p1, s, cons (Continue p2) k)
   | SChoice :
       forall p1 p2 s k,
-      (PChoice p1 p2, s, k) --> (p1, s, cons (IfFalse, p2, s) k)
+      (PChoice p1 p2, s, k) --> (p1, s, cons (IfFalse p2 s) k)
   | SRepetition :
       forall p s k,
       (PRepetition p, s, k) --> (expandRepetition p, s, k)
   | SNot :
       forall p s k,
-      (PNot p, s, k) --> (p, s, cons (IfTrue, PFalse, s) k)
+      (PNot p, s, k) --> (p, s, cons (IfTrue PFalse s) k)
 
 where " t1 '-->' t2 " := (step t1 t2).
 
@@ -130,14 +130,11 @@ Proof.
   intros [[p s] k].
   induction p;
   try (left; auto using final; fail);
-  try (destruct k as [|[[[]]]]; eauto using final, step; fail);
+  try (destruct k as [|[]]; eauto using final, step; fail);
   try (destruct s; eauto using step; fail).
   - (* PChar *) right. destruct s.
     + eauto using step.
     + destruct (ascii_dec a a0); try subst; eauto using step.
-  - (* PSequence *) right. destruct IHp1.
-    + inversion H; subst; eauto using step.
-    + destruct H. destruct x as [[]]. eauto using step.
 Qed.
 
 Definition normal_form {X : Type} (R : relation X) (t : X) : Prop :=

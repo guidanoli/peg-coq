@@ -1,5 +1,7 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
+From Coq Require Import List.
+Import ListNotations.
 
 (** Syntax **)
 (************)

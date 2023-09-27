@@ -5,8 +5,7 @@ From Coq Require Import Strings.String.
 (************)
 
 Inductive pat : Type :=
-  | PTrue : pat
-  | PFalse : pat
+  | PConst : bool -> pat
   | PAnyChar : pat
   | PChar : ascii -> pat
   | PSequence : pat -> pat -> pat
@@ -16,11 +15,10 @@ Inductive pat : Type :=
   .
 
 Definition expandRepetition p :=
-  PChoice (PSequence p (PRepetition p)) PTrue.
+  PChoice (PSequence p (PRepetition p)) (PConst true).
 
 Inductive entry : Type :=
-  | IfTrue : pat -> string -> entry
-  | IfFalse : pat -> string -> entry
+  | RevertIf : bool -> pat -> string -> entry
   | Continue : pat -> entry
   .
 
@@ -29,12 +27,9 @@ Definition stack : Type := list entry.
 Definition state : Type := pat * string * stack.
 
 Inductive final : state -> Prop :=
-  | FTrue :
-      forall s,
-      final (PTrue, s, nil)
-  | FFalse :
-      forall s,
-      final (PFalse, s, nil)
+  | FConst :
+      forall s b,
+      final (PConst b, s, nil)
   .
 
 (** Semantics **)
@@ -43,52 +38,49 @@ Inductive final : state -> Prop :=
 Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 
 Inductive step : state -> state -> Prop :=
+  | SConst :
+      forall b p s s' k,
+      (PConst b, s, cons (RevertIf b p s') k) --> (p, s', k)
   | STrue1 :
       forall p s s' k,
-      (PTrue, s, cons (IfFalse p s') k) --> (PTrue, s, k)
+      (PConst true, s, cons (RevertIf false p s') k) --> (PConst true, s, k)
   | STrue2 :
-      forall p s s' k,
-      (PTrue, s, cons (IfTrue p s') k) --> (p, s', k)
-  | STrue3 :
       forall p s k,
-      (PTrue, s, cons (Continue p) k) --> (p, s, k)
+      (PConst true, s, cons (Continue p) k) --> (p, s, k)
   | SFalse1 :
       forall p s s' k,
-      (PFalse, s, cons (IfFalse p s') k) --> (p, s', k)
+      (PConst false, s, cons (RevertIf true p s') k) --> (PConst false, s, k)
   | SFalse2 :
-      forall p s s' k,
-      (PFalse, s, cons (IfTrue p s') k) --> (PFalse, s, k)
-  | SFalse3 :
       forall p s k,
-      (PFalse, s, cons (Continue p) k) --> (PFalse, s, k)
+      (PConst false, s, cons (Continue p) k) --> (PConst false, s, k)
   | SAnyChar1 :
       forall a s k,
-      (PAnyChar, String a s, k) --> (PTrue, s, k)
+      (PAnyChar, String a s, k) --> (PConst true, s, k)
   | SAnyChar2 :
       forall k,
-      (PAnyChar, EmptyString, k) --> (PFalse, EmptyString, k)
+      (PAnyChar, EmptyString, k) --> (PConst false, EmptyString, k)
   | SChar1 :
       forall a s k,
-      (PChar a, String a s, k) --> (PTrue, s, k)
+      (PChar a, String a s, k) --> (PConst true, s, k)
   | SChar2 :
       forall a a' s k,
       a <> a' ->
-      (PChar a, String a' s, k) --> (PFalse, String a' s, k)
+      (PChar a, String a' s, k) --> (PConst false, String a' s, k)
   | SChar3 :
       forall a k,
-      (PChar a, EmptyString, k) --> (PFalse, EmptyString, k)
+      (PChar a, EmptyString, k) --> (PConst false, EmptyString, k)
   | SSequence :
       forall p1 p2 s k,
       (PSequence p1 p2, s, k) --> (p1, s, cons (Continue p2) k)
   | SChoice :
       forall p1 p2 s k,
-      (PChoice p1 p2, s, k) --> (p1, s, cons (IfFalse p2 s) k)
+      (PChoice p1 p2, s, k) --> (p1, s, cons (RevertIf false p2 s) k)
   | SRepetition :
       forall p s k,
       (PRepetition p, s, k) --> (expandRepetition p, s, k)
   | SNot :
       forall p s k,
-      (PNot p, s, k) --> (p, s, cons (IfTrue PFalse s) k)
+      (PNot p, s, k) --> (p, s, cons (RevertIf true (PConst false) s) k)
 
 where " t1 '-->' t2 " := (step t1 t2).
 
@@ -113,8 +105,7 @@ Proof.
   inversion Hy2; subst;
   auto;
   try contradiction;
-  try invert_step PTrue;
-  try invert_step PFalse;
+  try discriminate;
   try match goal with
     [ IHx: forall y2, ?y1 --> y2 -> ?y3 = y2,
     Hx: ?y1 --> ?y4 |- _ ] =>
@@ -130,7 +121,7 @@ Proof.
   intros [[p s] k].
   induction p;
   try (left; auto using final; fail);
-  try (destruct k as [|[]]; eauto using final, step; fail);
+  try (destruct b; destruct k as [|[[] p' s'|p']k']; eauto using final, step; fail);
   try (destruct s; eauto using step; fail).
   - (* PChar *) right. destruct s.
     + eauto using step.
@@ -183,8 +174,8 @@ Fixpoint eval p s gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
-              | PTrue => Some (Success s)
-              | PFalse => Some Failure
+              | PConst true => Some (Success s)
+              | PConst false => Some Failure
               | PAnyChar => match s with
                             | EmptyString => Some Failure
                             | String a s' => Some (Success s')

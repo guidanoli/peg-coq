@@ -51,7 +51,7 @@ Inductive step : state -> state -> Prop :=
       (PConst true, s, (Continue p :: k)) --> (p, s, k)
   | SFalse1 :
       forall p s s' k,
-      (PConst false, s, (RevertIf true p s' :: k)) --> (PConst false, s, k)
+      (PConst false, s, (RevertIf true p s' :: k)) --> (PConst true, s, k)
   | SFalse2 :
       forall p s k,
       (PConst false, s, (Continue p :: k)) --> (PConst false, s, k)

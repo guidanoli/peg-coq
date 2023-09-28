@@ -133,9 +133,11 @@ Qed.
 Definition normal_form {X : Type} (R : relation X) (t : X) : Prop :=
   ~ exists t', R t t'.
 
+Definition step_normal_form := normal_form step.
+
 Lemma final_is_nf :
   forall f,
-  final f -> normal_form step f.
+  final f -> step_normal_form f.
 Proof.
   intros f H.
   unfold normal_form.
@@ -147,7 +149,7 @@ Qed.
 
 Lemma nf_is_final :
   forall t,
-  normal_form step t -> final t.
+  step_normal_form t -> final t.
 Proof.
   unfold normal_form.
   intros t H1.
@@ -159,7 +161,7 @@ Qed.
 
 Corollary nf_same_as_final :
   forall t,
-  normal_form step t <-> final t.
+  step_normal_form t <-> final t.
 Proof.
   intros.
   split.

@@ -214,8 +214,6 @@ Ltac eapply_multi :=
           end
     end.
 
-Module StepExamples.
-
 Lemma pat_a_with_a :
   (PChar "a", "a"%string, nil) -->*
   (PConst true, ""%string, nil).

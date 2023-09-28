@@ -309,6 +309,39 @@ Proof.
   repeat eapply_multi.
 Qed.
 
+Definition normal_form_of t t' :=
+  (t -->* t' /\ step_normal_form t').
+
+Theorem normal_forms_unique:
+  deterministic normal_form_of.
+Proof.
+  unfold deterministic. unfold normal_form_of.
+  intros x y1 y2 P1 P2.
+  destruct P1 as [P11 P12].
+  destruct P2 as [P21 P22].
+  generalize dependent y2.
+  induction P11; intros.
+  - (* multi_refl *)
+    destruct P21.
+    + trivial.
+    + exfalso.
+      apply P12.
+      eauto.
+  - (* multi_step *)
+    specialize (IHP11 P12).
+    destruct P21.
+    + exfalso.
+      destruct P22.
+      eauto.
+    + apply IHP11;
+      try match goal with
+        [ Hx: ?y1 -->* ?z |- ?y2 -->* ?z ] =>
+            assert (y1 = y2) by (eauto using step_deterministic);
+            subst
+      end;
+      auto.
+Qed.
+
 Inductive Result :=
   | Success : string -> Result
   | Failure : Result

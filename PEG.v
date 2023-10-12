@@ -19,7 +19,7 @@ Inductive pat : Type :=
 (** Semantics **)
 (***************)
 
-(** Match predicate **)
+(** Match predicate (big step) **)
 
 Inductive MatchResult : Type :=
   | Failure : MatchResult

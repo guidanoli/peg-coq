@@ -37,6 +37,8 @@ Inductive final : state -> Prop :=
       final (PConst b, s, nil)
   .
 
+(** Match predicate (small step) **)
+
 Reserved Notation " t1 '-->' t2 " (at level 50, left associativity).
 
 Inductive step : state -> state -> Prop :=

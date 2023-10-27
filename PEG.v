@@ -82,17 +82,6 @@ Inductive matches : pat -> string -> MatchResult -> Prop :=
       matches (PNot p) s Failure
   .
 
-Inductive matchesN : nat -> pat -> string -> MatchResult -> Prop :=
-  | MZero :
-      forall p s,
-      matchesN O p s (Success s)
-  | MSucc :
-      forall n p s s' s'',
-      matches p s (Success s') ->
-      matchesN n p s' (Success s'') ->
-      matchesN (S n) p s (Success s'')
-  .
-
 Ltac destruct1 :=
   match goal with
   [ H: ?C _ = ?C _ |- _ ] =>

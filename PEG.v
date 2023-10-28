@@ -27,59 +27,59 @@ Inductive MatchResult : Type :=
   .
 
 Inductive matches : pat -> string -> MatchResult -> Prop :=
-  | MEmpty :
+  | MEmptySuccess :
       forall s,
       matches PEmpty s (Success s)
-  | MChar1 :
-      forall a,
-      matches (PChar a) EmptyString Failure
-  | MChar2 :
+  | MCharSuccess :
       forall a s,
       matches (PChar a) (String a s) (Success s)
-  | MChar3 :
+  | MCharFailureEmptyString :
+      forall a,
+      matches (PChar a) EmptyString Failure
+  | MCharFailureString :
       forall a1 a2 s,
       a1 <> a2 ->
       matches (PChar a1) (String a2 s) Failure
-  | MAnyChar1 :
-      matches PAnyChar EmptyString Failure
-  | MAnyChar2 :
+  | MAnyCharSuccess :
       forall a s,
       matches PAnyChar (String a s) (Success s)
-  | MSequence1 :
-      forall p1 p2 s,
-      matches p1 s Failure ->
-      matches (PSequence p1 p2) s Failure
-  | MSequence2 :
+  | MAnyCharFailure :
+      matches PAnyChar EmptyString Failure
+  | MSequenceSuccess :
       forall p1 p2 s s' res,
       matches p1 s (Success s') ->
       matches p2 s' res ->
       matches (PSequence p1 p2) s res
-  | MChoice1 :
+  | MSequenceFailure :
+      forall p1 p2 s,
+      matches p1 s Failure ->
+      matches (PSequence p1 p2) s Failure
+  | MChoiceSuccess :
       forall p1 p2 s s',
       matches p1 s (Success s') ->
       matches (PChoice p1 p2) s (Success s')
-  | MChoice2 :
+  | MChoiceFailure :
       forall p1 p2 s res,
       matches p1 s Failure ->
       matches p2 s res ->
       matches (PChoice p1 p2) s res
-  | MRepetition1 :
-      forall p s,
-      matches p s Failure ->
-      matches (PRepetition p) s (Success s)
-  | MRepetition2 :
+  | MRepetitionSuccess :
       forall p s s' res,
       matches p s (Success s') ->
       matches (PRepetition p) s' res ->
       matches (PRepetition p) s res
-  | MNot1 :
+  | MRepetitionFailure :
       forall p s,
       matches p s Failure ->
-      matches (PNot p) s (Success s)
-  | MNot2 :
+      matches (PRepetition p) s (Success s)
+  | MNotSuccess :
       forall p s s',
       matches p s (Success s') ->
       matches (PNot p) s Failure
+  | MNotFailure :
+      forall p s,
+      matches p s Failure ->
+      matches (PNot p) s (Success s)
   .
 
 Ltac destruct1 :=

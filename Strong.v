@@ -37,7 +37,7 @@ Proof.
   auto.
 Qed.
 
-Theorem strong_ind_nat :
+Theorem strong_induction :
   forall (P : nat -> Prop),
   (forall n, (forall m, m < n -> P m) -> P n) ->
   (forall n, P n).

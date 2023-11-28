@@ -2,18 +2,19 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.PeanoNat.
+From Peg Require Import Strong.
 
 (** Syntax **)
 (************)
 
 Inductive pat : Type :=
-  | PEmpty : pat
-  | PChar : ascii -> pat
-  | PAnyChar : pat
-  | PSequence : pat -> pat -> pat
-  | PChoice : pat -> pat -> pat
-  | PRepetition : pat -> pat
-  | PNot : pat -> pat
+  | PEmpty : pat                   (* ε        *)
+  | PChar : ascii -> pat           (* a        *)
+  | PAnyChar : pat                 (* .        *)
+  | PSequence : pat -> pat -> pat  (* p1 p2    *)
+  | PChoice : pat -> pat -> pat    (* p1 / p2  *)
+  | PRepetition : pat -> pat       (* p*       *)
+  | PNot : pat -> pat              (* p!       *)
   .
 
 (** Semantics **)

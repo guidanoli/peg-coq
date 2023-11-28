@@ -23,8 +23,8 @@ Inductive pat : Type :=
 (** Match predicate (big step) **)
 
 Inductive MatchResult : Type :=
-  | Failure : MatchResult
-  | Success : string -> MatchResult
+  | Failure : MatchResult            (* Pattern failed to match.            *)
+  | Success : string -> MatchResult  (* Pattern matched and left string s.  *)
   .
 
 Inductive matches : pat -> string -> MatchResult -> Prop :=

@@ -179,6 +179,7 @@ Qed.
 
 (** Match prefix theorem **)
 
+(* TODO: improve this proof? Make this like `matches_prefix2` and remove `matches_prefix2` *)
 Theorem matches_prefix :
   forall p s res s2,
   matches p s res ->

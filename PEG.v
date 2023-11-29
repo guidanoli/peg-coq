@@ -365,6 +365,229 @@ Ltac injection_subst :=
       try subst
   end.
 
+Ltac remember_match_subject name :=
+  match goal with
+    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+        remember x as name
+  end.
+
+Ltac remember_match_subject2 H name :=
+  match goal with
+    [ H: match ?x with | _ => _ end = _ |- _ ] =>
+        remember x as name
+  end.
+
+Theorem matches_comp_det :
+  forall p s gas1 gas2 res1 res2,
+  matches_comp p s gas1 = Some res1 ->
+  matches_comp p s gas2 = Some res2 ->
+  res1 = res2.
+Proof.
+  intro.
+  induction p;
+  intros s gas1 gas2 res1 res2 H1 H2;
+  destruct gas1;
+  destruct gas2;
+  try discriminate.
+  - (* PEmpty *)
+    simpl in H1, H2.
+    repeat injection_subst.
+    trivial.
+  - (* PChar *)
+    simpl in H1, H2.
+    destruct s as [|a' s'];
+    repeat injection_subst;
+    trivial.
+    destruct (Ascii.ascii_dec a a').
+    + subst.
+      rewrite Ascii.eqb_refl in H1, H2.
+      repeat injection_subst;
+      trivial.
+    + assert ((a =? a')%char = false) as Hneq by (apply Ascii.eqb_neq; trivial).
+      rewrite Hneq in H1, H2.
+      repeat injection_subst;
+      trivial.
+  - (* PAnyChar *)
+    simpl in H1, H2.
+    destruct s;
+    repeat injection_subst;
+    trivial.
+  - (* PSequence *)
+    simpl in H1.
+    remember_match_subject2 H1 ores1'.
+    symmetry in Heqores1'.
+    destruct ores1' as [res1'|]; try discriminate.
+    simpl in H2.
+    remember_match_subject2 H2 ores2'.
+    symmetry in Heqores2'.
+    destruct ores2' as [res2'|]; try discriminate.
+    assert (res1' = res2'). { eapply IHp1; eauto. }
+    subst res2'.
+    destruct res1';
+    repeat injection_subst;
+    trivial.
+    eapply IHp2; eauto.
+  - (* PChoice *)
+    simpl in H1.
+    remember_match_subject2 H1 ores1'.
+    symmetry in Heqores1'.
+    destruct ores1' as [res1'|]; try discriminate.
+    simpl in H2.
+    remember_match_subject2 H2 ores2'.
+    symmetry in Heqores2'.
+    destruct ores2' as [res2'|]; try discriminate.
+    assert (res1' = res2'). { eapply IHp1; eauto. }
+    subst res2'.
+    destruct res1';
+    repeat injection_subst;
+    trivial.
+    eapply IHp2; eauto.
+  - (* PRepetition *)
+    simpl in H1.
+    remember_match_subject2 H1 ores1'.
+    symmetry in Heqores1'.
+    destruct ores1' as [res1'|]; try discriminate.
+    simpl in H2.
+    remember_match_subject2 H2 ores2'.
+    symmetry in Heqores2'.
+    destruct ores2' as [res2'|]; try discriminate.
+    assert (res1' = res2'). { eapply IHp; eauto. }
+    subst res2'.
+    destruct res1';
+    repeat injection_subst;
+    trivial.
+Abort.
+
+Example infinite_loop_gas :
+  forall p s gas1 gas2,
+  matches_comp p s gas1 = Some (Success s) ->
+  matches_comp (PRepetition p) s gas2 = None.
+Proof.
+  intros.
+  induction gas2.
+  - auto.
+  - simpl.
+Abort.
+
+Definition correct (p : pat) :=
+  forall s gas res,
+  matches_comp p s gas = Some res ->
+  matches p s res.
+
+Example empty_correct :
+  correct PEmpty.
+Proof with eauto using matches.
+  unfold correct.
+  intros.
+  destruct gas; try discriminate.
+  simpl in H.
+  injection_subst...
+Qed.
+
+Example char_correct :
+  forall a,
+  correct (PChar a).
+Proof with eauto using matches.
+  unfold correct.
+  intros.
+  destruct gas; try discriminate.
+  simpl in H.
+  destruct s as [|a' s'].
+  - injection_subst.
+    eauto using matches.
+  - destruct (Ascii.ascii_dec a a').
+    + subst.
+      rewrite Ascii.eqb_refl in H.
+      injection_subst...
+    + assert ((a =? a')%char = false) as Haneq by (eapply Ascii.eqb_neq; trivial).
+      rewrite Haneq in H.
+      injection_subst...
+Qed.
+
+Example anychar_correct :
+  correct PAnyChar.
+Proof with eauto using matches.
+  unfold correct.
+  intros.
+  destruct gas; try discriminate.
+  simpl in H.
+  destruct s as [|a' s'];
+  injection_subst...
+Qed.
+
+Example sequence_correct :
+  forall p1 p2,
+  correct p1 ->
+  correct p2 ->
+  correct (PSequence p1 p2).
+Proof with eauto using matches.
+  unfold correct.
+  intros p1 p2 Hp1 Hp2 s gas res H.
+  destruct gas; try discriminate.
+  simpl in H.
+  remember_match_subject ores.
+  symmetry in Heqores.
+  destruct ores as [[]|];
+  try discriminate.
+  - injection_subst.
+    apply Hp1 in Heqores...
+  - apply Hp1 in Heqores...
+Qed.
+
+Example choice_correct :
+  forall p1 p2,
+  correct p1 ->
+  correct p2 ->
+  correct (PChoice p1 p2).
+Proof with eauto using matches.
+  unfold correct.
+  intros p1 p2 Hp1 Hp2 s gas res H.
+  destruct gas; try discriminate.
+  simpl in H.
+  remember_match_subject ores.
+  symmetry in Heqores.
+  destruct ores as [[]|];
+  try discriminate.
+  - apply Hp1 in Heqores...
+  - apply Hp1 in Heqores.
+    injection_subst...
+Qed.
+
+Example repetition_correct :
+  forall p,
+  correct p ->
+  correct (PRepetition p).
+Proof with eauto using matches.
+  unfold correct.
+  intros p IHp s gas res H.
+  destruct gas; try discriminate.
+  simpl in H.
+  remember_match_subject ores.
+  symmetry in Heqores.
+  destruct ores as [[]|];
+  try discriminate.
+  + apply IHp in Heqores.
+    injection_subst...
+  + apply IHp in Heqores as Hp.
+    (*
+    remember (length s) as n.
+    induction n as [n IHn] using strong_induction.
+    *)
+Abort.
+
+Lemma all_correct :
+  forall p,
+  correct p.
+Proof.
+  intro.
+  induction p.
+  - eauto using empty_correct.
+  - eauto using (char_correct a).
+  - eauto using anychar_correct.
+  - eauto using (sequence_correct p1 p2).
+  - eauto using (choice_correct p1 p2).
+  - Abort.
+
 Theorem matches_comp_correct :
   forall p s gas res,
   matches_comp p s gas = Some res ->

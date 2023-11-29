@@ -415,6 +415,47 @@ Proof.
   eauto using IH.
 Qed.
 
+Theorem matches_comp_suffix :
+  forall p s s' gas,
+  matches_comp p s gas = Some (Success s') ->
+  suffix s' s.
+Proof with eauto using suffix.
+  intro.
+  induction p;
+  intros;
+  destruct gas;
+  try discriminate;
+  simpl in H.
+  - (* PEmpty *)
+    injection_subst...
+  - (* PChar *)
+    destruct s as [|a' s'']; try discriminate.
+    destruct (a =? a')%char; try discriminate.
+    injection_subst...
+  - (* PAnyChar *)
+    destruct s; try discriminate.
+    injection_subst...
+  - (* PSequence *)
+    remember (matches_comp p1 s gas) as ores1.
+    symmetry in Heqores1.
+    destruct ores1 as [[|smiddle]|]; try discriminate.
+    apply IHp1 in Heqores1.
+    apply IHp2 in H.
+    eauto using suffix_trans.
+  - (* PChoice *)
+    remember (matches_comp p1 s gas) as ores1.
+    symmetry in Heqores1.
+    destruct ores1 as [[]|]; try discriminate; eauto.
+    injection_subst.
+    eauto.
+  - (* PRepetition *)
+    remember (matches_comp p s gas) as ores'.
+    symmetry in Heqores'.
+    destruct ores' as [[]|]; try discriminate.
+    + injection_subst...
+    + apply IHp in Heqores' as Hsuffix0.
+Abort.
+
 Theorem matches_comp_det :
   forall p s gas1 gas2 res1 res2,
   matches_comp p s gas1 = Some res1 ->

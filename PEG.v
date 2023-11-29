@@ -537,6 +537,62 @@ Proof.
     trivial.
 Abort.
 
+Theorem gas_succ_det :
+  forall p s gas res,
+  matches_comp p s gas = Some res ->
+  matches_comp p s (S gas) = Some res.
+Proof.
+  intro.
+  induction p;
+  intros s gas res H;
+  destruct gas;
+  try discriminate;
+  auto.
+  - (* PSequence *)
+    simpl in H.
+    remember (matches_comp p1 s gas) as ores1.
+    symmetry in Heqores1.
+    destruct ores1 as [res1|]; try discriminate.
+    apply IHp1 in Heqores1.
+    remember (S gas) as gas'.
+    simpl.
+    rewrite Heqores1.
+    destruct res1; auto.
+    subst gas'.
+    auto.
+  - (* PChoice *)
+    simpl in H.
+    remember (matches_comp p1 s gas) as ores1.
+    symmetry in Heqores1.
+    destruct ores1 as [res1|]; try discriminate.
+    apply IHp1 in Heqores1.
+    remember (S gas) as gas'.
+    simpl.
+    rewrite Heqores1.
+    destruct res1; auto.
+    subst gas'.
+    auto.
+  - (* PRepetition *)
+    remember (length s) as n.
+    generalize dependent res.
+    generalize dependent gas.
+    generalize dependent s.
+    induction n as [n IHn] using strong_induction.
+    intros.
+    simpl in H.
+    remember (matches_comp p s gas) as ores'.
+    destruct ores' as [res'|]; try discriminate.
+    symmetry in Heqores'.
+    apply IHp in Heqores'.
+    destruct res' as [s'|].
+    + injection_subst.
+      remember (S gas) as gas'.
+      simpl.
+      rewrite Heqores'.
+      auto.
+    + eapply IHn.
+Abort.
+
 Example infinite_loop_gas :
   forall p s gas1 gas2,
   matches_comp p s gas1 = Some (Success s) ->

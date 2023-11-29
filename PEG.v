@@ -594,14 +594,21 @@ Proof.
 Abort.
 
 Example infinite_loop_gas :
-  forall p s gas1 gas2,
-  matches_comp p s gas1 = Some (Success s) ->
-  matches_comp (PRepetition p) s gas2 = None.
+  forall p s gas,
+  matches_comp p s gas = Some (Success s) ->
+  matches_comp (PRepetition p) s (S gas) = None.
 Proof.
   intros.
-  induction gas2.
-  - auto.
-  - simpl.
+  generalize dependent H.
+  generalize dependent s.
+  generalize dependent p.
+  induction gas; intros.
+  - discriminate.
+  - remember (S gas) as gas'.
+    simpl.
+    rewrite H.
+    apply IHgas.
+    subst.
 Abort.
 
 Definition correct (p : pat) :=

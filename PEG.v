@@ -199,20 +199,51 @@ Theorem matches_comp_correct :
   forall p s gas res,
   matches_comp p s gas = Some res ->
   matches p s res.
-Proof.
+Proof with eauto using matches.
   intros p s gas.
   generalize dependent s.
   generalize dependent p.
   induction gas; intros; try discriminate.
-  destruct p; simpl in H; try destruct1; eauto using matches.
-  5: {
-    destruct (matches_comp p s gas) as [res'|] eqn:Hores.
-    + apply IHgas in Hores.
-      destruct res' as [|s']; try destruct1.
-      -- eauto using matches.
-      -- eapply MRepetitionSuccess.
-         ++ eauto.
-         ++ eapply IHgas.
-            eauto.
-  }
-Admitted.
+  destruct p; simpl in H.
+  - (* PEmpty *)
+    destruct1...
+  - (* PChar a *)
+    destruct s as [|a' s'];
+    try destruct (ascii_dec a a');
+    destruct1;
+    eauto using matches.
+  - (* PAnyChar *)
+    destruct s as [|a' s'];
+    destruct1;
+    eauto using matches.
+  - (* PSequence p1 p2 *)
+    destruct (matches_comp p1 s gas) as [res1|] eqn:H1; try discriminate.
+    apply IHgas in H1.
+    destruct res1 as [|s1].
+    -- (* Failure *)
+       destruct1...
+    -- (* Success s1 *)
+       apply IHgas in H...
+  - (* PChoice p1 p2 *)
+    destruct (matches_comp p1 s gas) as [res1|] eqn:H1; try discriminate.
+    apply IHgas in H1.
+    destruct res1 as [|s1].
+    -- (* Failure *)
+       apply IHgas in H...
+    -- (* Success s1 *)
+       destruct1...
+  - (* PRepetition p *)
+    destruct (matches_comp p s gas) as [res1|] eqn:H1; try discriminate.
+    apply IHgas in H1.
+    destruct res1 as [|s1].
+    -- (* Failure *)
+       destruct1...
+    -- (* Success s1 *)
+       apply IHgas in H...
+  - (* PNot p *)
+    destruct (matches_comp p s gas) as [res1|] eqn:H1; try discriminate.
+    apply IHgas in H1.
+    destruct res1 as [|s1];
+    destruct1;
+    eauto using matches.
+Qed.

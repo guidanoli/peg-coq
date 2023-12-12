@@ -303,3 +303,25 @@ Proof.
   rewrite H' in H.
   discriminate.
 Qed.
+
+Lemma matches_comp_gas_some_le :
+  forall p s gas gas' res,
+  matches_comp p s gas = Some res ->
+  gas <= gas' ->
+  matches_comp p s gas' = Some res.
+Proof.
+  intros * H1 Hle.
+  induction Hle as [|gas']; auto.
+  eauto using matches_comp_S_gas_some.
+Qed.
+
+Lemma matches_comp_gas_none_le :
+  forall p s gas gas',
+  matches_comp p s gas' = None ->
+  gas <= gas' ->
+  matches_comp p s gas = None.
+Proof.
+  intros * H1 Hle.
+  induction Hle as [|gas']; auto.
+  eauto using matches_comp_S_gas_none.
+Qed.

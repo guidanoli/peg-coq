@@ -256,3 +256,50 @@ Corollary matches_comp_det :
 Proof.
   eauto using matches_comp_correct, matches_det.
 Qed.
+
+Lemma matches_comp_S_gas_some :
+  forall p s gas res,
+  matches_comp p s gas = Some res ->
+  matches_comp p s (S gas) = Some res.
+Proof.
+  intros p s gas.
+  generalize dependent s.
+  generalize dependent p.
+  induction gas; intros; try discriminate.
+  destruct p; simpl in H;
+  try match goal with
+    [ Hx: match matches_comp ?px ?sx ?gasx with _ => _ end = _ |- _ ] =>
+      destruct (matches_comp px sx gasx) as [[]|] eqn:H1;
+      try discriminate;
+      apply IHgas in H1;
+      remember (S gasx) as gasx';
+      simpl;
+      rewrite H1;
+      auto
+  end.
+  - (* PEmpty *)
+    destruct1.
+    auto.
+  - (* PChar a *)
+    simpl.
+    destruct s as [|a' s'];
+    try destruct (ascii_dec a a');
+    destruct1;
+    auto.
+  - (* PAnyChar *)
+    destruct s;
+    destruct1;
+    auto.
+Qed.
+
+Lemma matches_comp_S_gas_none :
+  forall p s gas,
+  matches_comp p s (S gas) = None ->
+  matches_comp p s gas = None.
+Proof.
+  intros.
+  destruct (matches_comp p s gas) as [res|] eqn:H'; trivial.
+  apply matches_comp_S_gas_some in H'.
+  rewrite H' in H.
+  discriminate.
+Qed.

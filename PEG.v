@@ -166,7 +166,7 @@ Fixpoint matches_comp p s gas {struct gas} :=
               | PEmpty => Some (Success s)
               | PChar a => match s with
                            | EmptyString => Some Failure
-                           | String a' s' => if (a =? a')%char
+                           | String a' s' => if ascii_dec a a'
                                              then Some (Success s')
                                              else Some Failure
                            end

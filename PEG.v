@@ -100,7 +100,7 @@ Ltac apply_matches_IH :=
 
 (** Match predicate determinism **)
 
-Theorem match_det :
+Theorem matches_det :
   forall p s res1 res2,
   matches p s res1 ->
   matches p s res2 ->
@@ -123,7 +123,7 @@ Ltac pose_matches_det :=
   match goal with
   [ H1: matches ?p ?s ?r1,
     H2: matches ?p ?s ?r2 |- _ ] =>
-        pose (match_det p s r1 r2 H1 H2)
+        pose (matches_det p s r1 r2 H1 H2)
   end.
 
 Example infinite_loop :

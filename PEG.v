@@ -247,3 +247,12 @@ Proof with eauto using matches.
     destruct1;
     eauto using matches.
 Qed.
+
+Corollary matches_comp_det :
+  forall p s gas1 gas2 res1 res2,
+  matches_comp p s gas1 = Some res1 ->
+  matches_comp p s gas2 = Some res2 ->
+  res1 = res2.
+Proof.
+  eauto using matches_comp_correct, matches_det.
+Qed.

@@ -325,3 +325,74 @@ Proof.
   induction Hle as [|gas']; auto.
   eauto using matches_comp_S_gas_none.
 Qed.
+
+Theorem matches_comp_complete :
+  forall p s res,
+  matches p s res ->
+  (exists gas, matches_comp p s gas = Some res).
+Proof.
+  intros * H.
+  induction H;
+  try (exists 1; auto; fail).
+  - (* MCharSuccess *)
+    exists 1. simpl. destruct (ascii_dec a a); auto; contradiction.
+  - (* MCharFailureString *)
+    exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
+  - (* MSequenceSuccess *)
+    destruct IHmatches1 as [gas1 H1].
+    destruct IHmatches2 as [gas2 H2].
+    exists (1 + gas1 + gas2).
+    simpl.
+    specialize (Nat.le_add_r gas1 gas2) as Hle1.
+    rewrite (matches_comp_gas_some_le _ _ _ _ _ H1 Hle1).
+    specialize (Plus.le_plus_r gas1 gas2) as Hle2.
+    eauto using matches_comp_gas_some_le.
+  - (* MSequenceFailure *)
+    destruct IHmatches as [gas1 H1].
+    exists (1 + gas1).
+    simpl.
+    rewrite H1.
+    trivial.
+  - (* MChoiceSuccess *)
+    destruct IHmatches as [gas1 H1].
+    exists (1 + gas1).
+    simpl.
+    rewrite H1.
+    trivial.
+  - (* MChoiceFailure *)
+    destruct IHmatches1 as [gas1 H1].
+    destruct IHmatches2 as [gas2 H2].
+    exists (1 + gas1 + gas2).
+    simpl.
+    specialize (Nat.le_add_r gas1 gas2) as Hle1.
+    rewrite (matches_comp_gas_some_le _ _ _ _ _ H1 Hle1).
+    specialize (Plus.le_plus_r gas1 gas2) as Hle2.
+    eauto using matches_comp_gas_some_le.
+  - (* MRepetitionSuccess *)
+    destruct IHmatches1 as [gas1 H1].
+    destruct IHmatches2 as [gas2 H2].
+    exists (1 + gas1 + gas2).
+    simpl.
+    specialize (Nat.le_add_r gas1 gas2) as Hle1.
+    rewrite (matches_comp_gas_some_le _ _ _ _ _ H1 Hle1).
+    specialize (Plus.le_plus_r gas1 gas2) as Hle2.
+    eauto using matches_comp_gas_some_le.
+  - (* MRepetitionFailure *)
+    destruct IHmatches as [gas1 H1].
+    exists (1 + gas1).
+    simpl.
+    rewrite H1.
+    trivial.
+  - (* MNotSuccess *)
+    destruct IHmatches as [gas1 H1].
+    exists (1 + gas1).
+    simpl.
+    rewrite H1.
+    trivial.
+  - (* MNotFailure *)
+    destruct IHmatches as [gas1 H1].
+    exists (1 + gas1).
+    simpl.
+    rewrite H1.
+    trivial.
+Qed.

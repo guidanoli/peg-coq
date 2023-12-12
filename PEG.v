@@ -194,3 +194,25 @@ Fixpoint matches_comp p s gas {struct gas} :=
                            end
               end
   end.
+
+Theorem matches_comp_correct :
+  forall p s gas res,
+  matches_comp p s gas = Some res ->
+  matches p s res.
+Proof.
+  intros p s gas.
+  generalize dependent s.
+  generalize dependent p.
+  induction gas; intros; try discriminate.
+  destruct p; simpl in H; try destruct1; eauto using matches.
+  5: {
+    destruct (matches_comp p s gas) as [res'|] eqn:Hores.
+    + apply IHgas in Hores.
+      destruct res' as [|s']; try destruct1.
+      -- eauto using matches.
+      -- eapply MRepetitionSuccess.
+         ++ eauto.
+         ++ eapply IHgas.
+            eauto.
+  }
+Admitted.

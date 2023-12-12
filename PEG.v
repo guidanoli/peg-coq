@@ -359,3 +359,59 @@ Proof.
   - (* MCharFailureString *)
     exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
 Qed.
+
+(** Hungry predicate **)
+(** A "hungry" pattern always consumes a character on a successful match **)
+
+Inductive hungry : pat -> Prop :=
+  | HChar :
+      forall a,
+      hungry (PChar a)
+  | HAnyChar :
+      hungry PAnyChar
+  | HSequence1 :
+      forall p1 p2,
+      hungry p1 ->
+      hungry (PSequence p1 p2)
+  | HSequence2 :
+      forall p1 p2,
+      hungry p2 ->
+      hungry (PSequence p1 p2)
+  | HChoice :
+      forall p1 p2,
+      hungry p1 ->
+      hungry p2 ->
+      hungry (PChoice p1 p2)
+  .
+
+(** Well-formed predicate **)
+(** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
+
+Inductive well_formed : pat -> Prop :=
+  | WFEmpty :
+      well_formed PEmpty
+  | WFChar :
+      forall a,
+      well_formed (PChar a)
+  | WFAnyChar :
+      well_formed PAnyChar
+  | WFSequence :
+      forall p1 p2,
+      well_formed p1 ->
+      well_formed p2 ->
+      well_formed (PSequence p1 p2)
+  | WFChoice :
+      forall p1 p2,
+      well_formed p1 ->
+      well_formed p2 ->
+      well_formed (PChoice p1 p2)
+  | WFRepetition :
+      forall p,
+      well_formed p ->
+      hungry p ->
+      well_formed (PRepetition p)
+  | WFNot :
+      forall p,
+      well_formed p ->
+      well_formed (PNot p)
+  .

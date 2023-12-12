@@ -272,7 +272,7 @@ Proof.
       destruct (matches_comp px sx gasx) as [[]|] eqn:H1;
       try discriminate;
       apply IHgas in H1;
-      remember (S gasx) as gasx';
+      remember (S gasx);
       simpl;
       rewrite H1;
       auto
@@ -298,7 +298,7 @@ Lemma matches_comp_S_gas_none :
   matches_comp p s gas = None.
 Proof.
   intros.
-  destruct (matches_comp p s gas) as [res|] eqn:H'; trivial.
+  destruct (matches_comp p s gas) eqn:H'; trivial.
   apply matches_comp_S_gas_some in H'.
   rewrite H' in H.
   discriminate.
@@ -311,7 +311,7 @@ Lemma matches_comp_gas_some_le :
   matches_comp p s gas' = Some res.
 Proof.
   intros * H1 Hle.
-  induction Hle as [|gas']; auto.
+  induction Hle; auto.
   eauto using matches_comp_S_gas_some.
 Qed.
 
@@ -322,7 +322,7 @@ Lemma matches_comp_gas_none_le :
   matches_comp p s gas = None.
 Proof.
   intros * H1 Hle.
-  induction Hle as [|gas']; auto.
+  induction Hle; auto.
   eauto using matches_comp_S_gas_none.
 Qed.
 

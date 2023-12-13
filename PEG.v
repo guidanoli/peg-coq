@@ -457,3 +457,52 @@ Inductive well_formed : pat -> Prop :=
       well_formed p ->
       well_formed (PNot p)
   .
+
+Theorem well_formed_correct :
+  forall p s, well_formed p -> exists res, matches p s res.
+Proof with eauto using matches.
+  intros * H.
+  generalize dependent s.
+  induction H; intros.
+  - (* PEmpty *)
+    eauto using matches.
+  - (* PChar a *)
+    destruct s as [|a'].
+    + (* EmptyString *)
+      eauto using matches.
+    + (* String a' s' *)
+      destruct (ascii_dec a a');
+      subst...
+  - (* PAnyChar *)
+    destruct s...
+  - (* PSequence p1 p2 *)
+    destruct (IHwell_formed1 s) as [[|s1]].
+    + (* Failure *)
+      eauto using matches.
+    + (* Success s1 *)
+      destruct (IHwell_formed2 s1)...
+  - (* PChoice p1 p2 *)
+    destruct (IHwell_formed2 s).
+    destruct (IHwell_formed1 s) as [[|]]...
+  - (* PRepetition p *)
+    remember (length s) as n.
+    generalize dependent s.
+    induction n as [n IHn] using strong_induction; intros.
+    destruct (IHwell_formed s) as [[|s1]].
+    + (* Failure *)
+      eauto using matches.
+    + (* Success s1 *)
+      subst.
+      match goal with [
+        Hx: hungry ?p,
+        Hy: matches ?p _ (Success ?s) |- _
+      ] =>
+        specialize (matches_hungry_proper_suffix _ _ _ Hx Hy) as Hps;
+        specialize (proper_suffix_length_lt _ _ Hps) as Hlt;
+        specialize (eq_refl (length s)) as Hlen;
+        destruct (IHn _ Hlt _ Hlen)
+      end.
+      eauto using matches.
+  - (* PNot p *)
+    destruct (IHwell_formed s) as [[|]]...
+Qed.

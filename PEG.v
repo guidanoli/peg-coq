@@ -450,16 +450,17 @@ Proof.
     auto using orb_true_r.
   - (* <- *)
     induction p;
+    simpl in H;
     try discriminate;
+    try match goal with
+      [ Hx: _ && _ = true |- _ ] =>
+        destruct (andb_prop _ _ Hx)
+    end;
+    try match goal with
+      [ Hx: _ || _ = true |- _ ] =>
+        destruct (orb_prop _ _ Hx)
+    end;
     eauto using hungry.
-    + (* PSequence p1 p2 *)
-      simpl in H.
-      destruct (orb_prop _ _ H);
-      eauto using hungry.
-    + (* PChoice p1 p2 *)
-      simpl in H.
-      destruct (andb_prop _ _ H);
-      eauto using hungry.
 Qed.
 
 (** Well-formed predicate **)

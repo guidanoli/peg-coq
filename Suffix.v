@@ -72,3 +72,33 @@ Proof.
   specialize (PeanoNat.Nat.le_antisymm _ _ Hlen12 Hlen21) as Hlen.
   eauto using suffix_length_eq.
 Qed.
+
+Inductive proper_suffix : string -> string -> Prop :=
+  | ProperSuffixBase :
+      forall s a,
+      proper_suffix s (String a s)
+  | ProperSuffixRec :
+      forall s1 s2 a,
+      proper_suffix s1 s2 ->
+      proper_suffix s1 (String a s2)
+  .
+
+Lemma proper_suffix_length_lt :
+  forall s1 s2,
+  proper_suffix s1 s2 ->
+  length s1 < length s2.
+Proof.
+  intros * H.
+  induction H; simpl; auto.
+Qed.
+
+Lemma suffix_is_proper_suffix_with_char :
+  forall s1 s2 a,
+  suffix s1 s2 ->
+  proper_suffix s1 (String a s2).
+Proof.
+  intros * H.
+  generalize dependent a.
+  induction H;
+  eauto using proper_suffix.
+Qed.

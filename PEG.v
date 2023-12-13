@@ -426,6 +426,42 @@ Proof.
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
+Fixpoint hungry_comp p :=
+  match p with
+  | PChar _ => true
+  | PAnyChar => true
+  | PSequence p1 p2 => hungry_comp p1 || hungry_comp p2
+  | PChoice p1 p2 => hungry_comp p1 && hungry_comp p2
+  | _ => false
+  end.
+
+Theorem hungry_comp_correct :
+  forall p, hungry p <-> hungry_comp p = true.
+Proof.
+  intro.
+  split; intro H.
+  - (* -> *)
+    induction H;
+    simpl;
+    repeat match goal with
+      [ IH: hungry_comp _ = true |- _ ] =>
+        rewrite IH
+    end;
+    auto using orb_true_r.
+  - (* <- *)
+    induction p;
+    try discriminate;
+    eauto using hungry.
+    + (* PSequence p1 p2 *)
+      simpl in H.
+      destruct (orb_prop _ _ H);
+      eauto using hungry.
+    + (* PChoice p1 p2 *)
+      simpl in H.
+      destruct (andb_prop _ _ H);
+      eauto using hungry.
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

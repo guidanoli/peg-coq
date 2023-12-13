@@ -35,3 +35,40 @@ Proof.
   constructor.
   eauto using IH.
 Qed.
+
+Lemma suffix_length_le :
+  forall s1 s2,
+  suffix s1 s2 ->
+  length s1 <= length s2.
+Proof.
+  intros * H.
+  induction H; simpl; auto.
+Qed.
+
+Lemma suffix_length_eq :
+  forall s1 s2,
+  suffix s1 s2 ->
+  length s1 = length s2 ->
+  s1 = s2.
+Proof.
+  intros * H1 H2.
+  induction H1; auto.
+  specialize (suffix_length_le _ _ H1) as Hle.
+  rewrite H2 in Hle.
+  simpl in Hle.
+  exfalso.
+  apply (PeanoNat.Nat.nle_succ_diag_l _ Hle).
+Qed.
+
+Lemma suffix_antisymmetric :
+  forall s1 s2,
+  suffix s1 s2 ->
+  suffix s2 s1 ->
+  s1 = s2.
+Proof.
+  intros * H12 H21.
+  specialize (suffix_length_le _ _ H12) as Hlen12.
+  specialize (suffix_length_le _ _ H21) as Hlen21.
+  specialize (PeanoNat.Nat.le_antisymm _ _ Hlen12 Hlen21) as Hlen.
+  eauto using suffix_length_eq.
+Qed.

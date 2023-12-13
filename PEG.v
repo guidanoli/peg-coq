@@ -384,6 +384,36 @@ Inductive hungry : pat -> Prop :=
       hungry (PChoice p1 p2)
   .
 
+Lemma string_not_infinite :
+  forall a s,
+  s <> String a s.
+Proof.
+  intros * Hcontra.
+  induction s as [|a' s].
+  - discriminate.
+  - injection Hcontra as Heqa Heqs.
+    subst.
+    auto.
+Qed.
+
+Theorem hungry_correct :
+  forall p, hungry p -> ~ exists s, matches p s (Success s).
+Proof.
+  intros * H1 H2.
+  induction H1;
+  destruct H2 as [s H2];
+  inversion H2; subst;
+  try (eapply string_not_infinite; eauto; fail);
+  try match goal with [
+    Hx1: matches _ s (Success ?saux),
+    Hx2: matches _ ?saux (Success s) |- _
+  ] =>
+    assert (s = saux) by (eauto using suffix_antisymmetric, matches_suffix);
+    subst
+  end;
+  eauto.
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

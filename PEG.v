@@ -543,3 +543,45 @@ Proof with eauto using matches.
   - (* PNot p *)
     destruct (IHwell_formed s) as [[|]]...
 Qed.
+
+Fixpoint well_formed_comp p :=
+  match p with
+  | PEmpty => true
+  | PChar _ => true
+  | PAnyChar => true
+  | PSequence p1 p2 => well_formed_comp p1 && well_formed_comp p2
+  | PChoice p1 p2 => well_formed_comp p1 && well_formed_comp p2
+  | PRepetition p => well_formed_comp p && hungry_comp p
+  | PNot p => well_formed_comp p
+  end.
+
+Theorem well_formed_comp_correct :
+  forall p, well_formed p <-> well_formed_comp p = true.
+Proof.
+  intro.
+  split; intro H.
+  - (* -> *)
+    induction H;
+    simpl;
+    repeat match goal with
+      [ IH: well_formed_comp _ = true |- _ ] =>
+        rewrite IH
+    end;
+    try match goal with
+      [ Hx: hungry _ |- _ ] =>
+        rewrite hungry_comp_correct in Hx
+    end;
+    auto.
+  - (* <- *)
+    induction p;
+    simpl in H;
+    try match goal with
+      [ Hx: _ && _ = true |- _ ] =>
+        destruct (andb_prop _ _ Hx)
+    end;
+    try match goal with
+      [ Hx: hungry_comp _ = true |- _ ] =>
+        rewrite <- hungry_comp_correct in Hx
+    end;
+    eauto using well_formed.
+Qed.

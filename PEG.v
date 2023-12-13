@@ -410,6 +410,22 @@ Proof.
   eauto.
 Qed.
 
+Theorem matches_hungry_proper_suffix :
+  forall p s s',
+  hungry p ->
+  matches p s (Success s') ->
+  proper_suffix s' s.
+Proof.
+  intros * H1 H2.
+  specialize (matches_suffix _ _ _ H2) as H3.
+  induction H3 as [|s s' a H3 IHsuffix].
+  - (* SuffixRefl *)
+    exfalso.
+    eauto using (hungry_correct _ H1).
+  - (* SuffixChar *)
+    eauto using suffix_is_proper_suffix_with_char.
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

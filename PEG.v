@@ -389,11 +389,7 @@ Lemma string_not_infinite :
   s <> String a s.
 Proof.
   intros * Hcontra.
-  induction s as [|a' s].
-  - discriminate.
-  - injection Hcontra as Heqa Heqs.
-    subst.
-    auto.
+  induction s; congruence.
 Qed.
 
 Theorem hungry_correct :

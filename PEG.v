@@ -111,6 +111,15 @@ Ltac apply_matches_IH :=
     apply IHx in Hx
   end.
 
+Ltac eq_nth_error :=
+  match goal with [
+    Hx1: nth_error ?g ?i = _,
+    Hx2: nth_error ?g ?i = _ |- _ ] =>
+        rewrite Hx1 in Hx2;
+        try (injection Hx2 as Hx2; subst);
+        try discriminate
+  end.
+
 (** Match predicate determinism **)
 
 Theorem matches_det :
@@ -129,6 +138,7 @@ Proof.
   try discriminate;
   try destruct1;
   try apply_matches_IH;
+  try eq_nth_error;
   auto.
 Qed.
 

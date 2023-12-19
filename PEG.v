@@ -2,6 +2,7 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.PeanoNat.
+From Coq Require Import Lists.List.
 From Peg Require Import Strong.
 From Peg Require Import Suffix.
 
@@ -85,6 +86,15 @@ Inductive matches : list pat -> pat -> string -> MatchResult -> Prop :=
       forall g p s,
       matches g p s Failure ->
       matches g (PNot p) s (Success s)
+  | MRuleSome :
+      forall g i p s res,
+      nth_error g i = Some p ->
+      matches g p s res ->
+      matches g (PRule i) s res
+  | MRuleNone :
+      forall g i s,
+      nth_error g i = None ->
+      matches g (PRule i) s Failure
   .
 
 Ltac destruct1 :=

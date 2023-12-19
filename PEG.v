@@ -481,37 +481,39 @@ Qed.
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 
-Inductive well_formed : pat -> Prop :=
+Inductive well_formed : list pat -> pat -> Prop :=
   | WFEmpty :
-      well_formed PEmpty
+      forall g,
+      well_formed g PEmpty
   | WFChar :
-      forall a,
-      well_formed (PChar a)
+      forall g a,
+      well_formed g (PChar a)
   | WFAnyChar :
-      well_formed PAnyChar
+      forall g,
+      well_formed g PAnyChar
   | WFSequence :
-      forall p1 p2,
-      well_formed p1 ->
-      well_formed p2 ->
-      well_formed (PSequence p1 p2)
+      forall g p1 p2,
+      well_formed g p1 ->
+      well_formed g p2 ->
+      well_formed g (PSequence p1 p2)
   | WFChoice :
-      forall p1 p2,
-      well_formed p1 ->
-      well_formed p2 ->
-      well_formed (PChoice p1 p2)
+      forall g p1 p2,
+      well_formed g p1 ->
+      well_formed g p2 ->
+      well_formed g (PChoice p1 p2)
   | WFRepetition :
-      forall p,
-      well_formed p ->
-      hungry p ->
-      well_formed (PRepetition p)
+      forall g p,
+      well_formed g p ->
+      hungry g p ->
+      well_formed g (PRepetition p)
   | WFNot :
-      forall p,
-      well_formed p ->
-      well_formed (PNot p)
+      forall g p,
+      well_formed g p ->
+      well_formed g (PNot p)
   .
 
 Theorem well_formed_correct :
-  forall p s, well_formed p -> exists res, matches p s res.
+  forall g p s, well_formed g p -> exists res, matches g p s res.
 Proof with eauto using matches.
   intros * H.
   generalize dependent s.
@@ -546,10 +548,10 @@ Proof with eauto using matches.
     + (* Success s1 *)
       subst.
       match goal with [
-        Hx: hungry ?p,
-        Hy: matches ?p _ (Success ?s) |- _
+        Hx: hungry ?g ?p,
+        Hy: matches ?g ?p _ (Success ?s) |- _
       ] =>
-        specialize (matches_hungry_proper_suffix _ _ _ Hx Hy) as Hps;
+        specialize (matches_hungry_proper_suffix _ _ _ _ Hx Hy) as Hps;
         specialize (proper_suffix_length_lt _ _ Hps) as Hlt;
         specialize (eq_refl (length s)) as Hlen;
         destruct (IHn _ Hlt _ Hlen)
@@ -559,19 +561,20 @@ Proof with eauto using matches.
     destruct (IHwell_formed s) as [[|]]...
 Qed.
 
-Fixpoint well_formed_comp p :=
+Fixpoint well_formed_comp g p :=
   match p with
   | PEmpty => true
   | PChar _ => true
   | PAnyChar => true
-  | PSequence p1 p2 => well_formed_comp p1 && well_formed_comp p2
-  | PChoice p1 p2 => well_formed_comp p1 && well_formed_comp p2
-  | PRepetition p => well_formed_comp p && hungry_comp p
-  | PNot p => well_formed_comp p
+  | PSequence p1 p2 => well_formed_comp g p1 && well_formed_comp g p2
+  | PChoice p1 p2 => well_formed_comp g p1 && well_formed_comp g p2
+  | PRepetition p => well_formed_comp g p && hungry_comp g p
+  | PNot p => well_formed_comp g p
+  | _ => false
   end.
 
 Theorem well_formed_comp_correct :
-  forall p, well_formed p <-> well_formed_comp p = true.
+  forall g p, well_formed g p <-> well_formed_comp g p = true.
 Proof.
   intro.
   split; intro H.
@@ -579,11 +582,11 @@ Proof.
     induction H;
     simpl;
     repeat match goal with
-      [ IH: well_formed_comp _ = true |- _ ] =>
+      [ IH: well_formed_comp _ _ = true |- _ ] =>
         rewrite IH
     end;
     try match goal with
-      [ Hx: hungry _ |- _ ] =>
+      [ Hx: hungry _ _ |- _ ] =>
         rewrite hungry_comp_correct in Hx
     end;
     auto.
@@ -595,8 +598,9 @@ Proof.
         destruct (andb_prop _ _ Hx)
     end;
     try match goal with
-      [ Hx: hungry_comp _ = true |- _ ] =>
+      [ Hx: hungry_comp _ _ = true |- _ ] =>
         rewrite <- hungry_comp_correct in Hx
     end;
+    try discriminate;
     eauto using well_formed.
 Qed.

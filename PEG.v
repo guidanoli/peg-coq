@@ -182,7 +182,7 @@ Qed.
 
 (** Match function with gas **)
 
-Fixpoint matches_comp (g : list pat) p s gas {struct gas} :=
+Fixpoint matches_comp g p s gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
@@ -214,6 +214,10 @@ Fixpoint matches_comp (g : list pat) p s gas {struct gas} :=
                            | Some Failure => Some (Success s)
                            | Some (Success _) => Some Failure
                            | None => None
+                           end
+              | PRule i => match nth_error g i with
+                           | Some p' => matches_comp g p' s gas'
+                           | None => Some Failure
                            end
               | _ => None
               end
@@ -272,7 +276,12 @@ Proof with eauto using matches.
     destruct1;
     eauto using matches.
   - (* PRule n *)
-    discriminate.
+    destruct (nth_error g n) as [p|] eqn:H1.
+    + (* Some p *)
+      eauto using matches.
+    + (* None *)
+      injection H as H;
+      subst...
   - (* PGrammar l *)
     discriminate.
 Qed.
@@ -298,6 +307,15 @@ Proof.
   induction gas; intros; try discriminate.
   destruct p; simpl in H;
   try match goal with
+    [ Hx: match nth_error ?g ?n with _ => _ end = _ |- _ ] =>
+      destruct (nth_error g n) as [|] eqn:H1;
+      remember (S gas);
+      simpl;
+      rewrite H1;
+      try apply IHgas in H;
+      auto
+  end;
+  try match goal with
     [ Hx: match matches_comp ?g ?px ?sx ?gasx with _ => _ end = _ |- _ ] =>
       destruct (matches_comp g px sx gasx) as [[]|] eqn:H1;
       try discriminate;
@@ -320,8 +338,6 @@ Proof.
     destruct s;
     destruct1;
     auto.
-  - (* PRule n *)
-    discriminate.
   - (* PGrammar l *)
     discriminate.
 Qed.
@@ -360,6 +376,12 @@ Proof.
   eauto using matches_comp_S_gas_none.
 Qed.
 
+Ltac rewrite_match_subject_in_goal :=
+  match goal with
+    [ Hx: ?lhs = _ |- match ?lhs with _ => _ end = _ ] =>
+      rewrite Hx
+  end.
+
 Theorem matches_comp_complete :
   forall g p s res,
   matches g p s res ->
@@ -374,7 +396,7 @@ Proof.
     destruct IHmatches as [gas1 H1];
     exists (1 + gas1);
     simpl;
-    rewrite H1;
+    rewrite_match_subject_in_goal;
     trivial
   );
   (* Cases with two recursive calls *)
@@ -392,6 +414,8 @@ Proof.
     exists 1. simpl. destruct (ascii_dec a a); auto; contradiction.
   - (* MCharFailureString *)
     exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
+  - (* MRuleNone *)
+    exists 1. simpl. rewrite_match_subject_in_goal. auto.
 Qed.
 
 (** Hungry predicate **)

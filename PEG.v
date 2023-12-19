@@ -377,25 +377,26 @@ Qed.
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 
-Inductive hungry : pat -> Prop :=
+Inductive hungry : list pat -> pat -> Prop :=
   | HChar :
-      forall a,
-      hungry (PChar a)
+      forall g a,
+      hungry g (PChar a)
   | HAnyChar :
-      hungry PAnyChar
+      forall g,
+      hungry g PAnyChar
   | HSequence1 :
-      forall p1 p2,
-      hungry p1 ->
-      hungry (PSequence p1 p2)
+      forall g p1 p2,
+      hungry g p1 ->
+      hungry g (PSequence p1 p2)
   | HSequence2 :
-      forall p1 p2,
-      hungry p2 ->
-      hungry (PSequence p1 p2)
+      forall g p1 p2,
+      hungry g p2 ->
+      hungry g (PSequence p1 p2)
   | HChoice :
-      forall p1 p2,
-      hungry p1 ->
-      hungry p2 ->
-      hungry (PChoice p1 p2)
+      forall g p1 p2,
+      hungry g p1 ->
+      hungry g p2 ->
+      hungry g (PChoice p1 p2)
   .
 
 Lemma string_not_infinite :
@@ -407,7 +408,7 @@ Proof.
 Qed.
 
 Theorem hungry_correct :
-  forall p, hungry p -> ~ exists s, matches p s (Success s).
+  forall g p, hungry g p -> ~ exists s, matches g p s (Success s).
 Proof.
   intros * H1 H2.
   induction H1;
@@ -415,8 +416,8 @@ Proof.
   inversion H2; subst;
   try (eapply string_not_infinite; eauto; fail);
   try match goal with [
-    Hx1: matches _ s (Success ?saux),
-    Hx2: matches _ ?saux (Success s) |- _
+    Hx1: matches _ _ s (Success ?saux),
+    Hx2: matches _ _ ?saux (Success s) |- _
   ] =>
     assert (s = saux) by (eauto using suffix_antisymmetric, matches_suffix);
     subst
@@ -425,40 +426,40 @@ Proof.
 Qed.
 
 Theorem matches_hungry_proper_suffix :
-  forall p s s',
-  hungry p ->
-  matches p s (Success s') ->
+  forall g p s s',
+  hungry g p ->
+  matches g p s (Success s') ->
   proper_suffix s' s.
 Proof.
   intros * H1 H2.
-  specialize (matches_suffix _ _ _ H2) as H3.
+  specialize (matches_suffix _ _ _ _ H2) as H3.
   induction H3 as [|s s' a H3 IHsuffix].
   - (* SuffixRefl *)
     exfalso.
-    eauto using (hungry_correct _ H1).
+    eauto using (hungry_correct _ _ H1).
   - (* SuffixChar *)
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
-Fixpoint hungry_comp p :=
+Fixpoint hungry_comp (g : list pat) p :=
   match p with
   | PChar _ => true
   | PAnyChar => true
-  | PSequence p1 p2 => hungry_comp p1 || hungry_comp p2
-  | PChoice p1 p2 => hungry_comp p1 && hungry_comp p2
+  | PSequence p1 p2 => hungry_comp g p1 || hungry_comp g p2
+  | PChoice p1 p2 => hungry_comp g p1 && hungry_comp g p2
   | _ => false
   end.
 
 Theorem hungry_comp_correct :
-  forall p, hungry p <-> hungry_comp p = true.
+  forall g p, hungry g p <-> hungry_comp g p = true.
 Proof.
-  intro.
+  intros.
   split; intro H.
   - (* -> *)
     induction H;
     simpl;
     repeat match goal with
-      [ IH: hungry_comp _ = true |- _ ] =>
+      [ IH: hungry_comp _ _ = true |- _ ] =>
         rewrite IH
     end;
     auto using orb_true_r.

@@ -162,7 +162,7 @@ Qed.
 
 (** Match function with gas **)
 
-Fixpoint matches_comp p s gas {struct gas} :=
+Fixpoint matches_comp (g : list pat) p s gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
@@ -177,33 +177,35 @@ Fixpoint matches_comp p s gas {struct gas} :=
                             | EmptyString => Some Failure
                             | String _ s' => Some (Success s')
                             end
-              | PSequence p1 p2 => match matches_comp p1 s gas' with
-                                   | Some (Success s') => matches_comp p2 s' gas'
+              | PSequence p1 p2 => match matches_comp g p1 s gas' with
+                                   | Some (Success s') => matches_comp g p2 s' gas'
                                    | res => res
                                    end
-              | PChoice p1 p2 => match matches_comp p1 s gas' with
-                                 | Some Failure => matches_comp p2 s gas'
+              | PChoice p1 p2 => match matches_comp g p1 s gas' with
+                                 | Some Failure => matches_comp g p2 s gas'
                                  | res => res
                                  end
-              | PRepetition p' => match matches_comp p' s gas' with
+              | PRepetition p' => match matches_comp g p' s gas' with
                                  | Some Failure => Some (Success s)
-                                 | Some (Success s') => matches_comp p s' gas'
+                                 | Some (Success s') => matches_comp g p s' gas'
                                  | None => None
                                  end
-              | PNot p' => match matches_comp p' s gas' with
+              | PNot p' => match matches_comp g p' s gas' with
                            | Some Failure => Some (Success s)
                            | Some (Success _) => Some Failure
                            | None => None
                            end
+              | _ => None
               end
   end.
 
 Theorem matches_comp_correct :
-  forall p s gas res,
-  matches_comp p s gas = Some res ->
-  matches p s res.
+  forall g p s gas res,
+  matches_comp g p s gas = Some res ->
+  matches g p s res.
 Proof with eauto using matches.
-  intros p s gas.
+  intros *.
+  generalize dependent res.
   generalize dependent s.
   generalize dependent p.
   induction gas; intros; try discriminate.
@@ -220,7 +222,7 @@ Proof with eauto using matches.
     destruct1;
     eauto using matches.
   - (* PSequence p1 p2 *)
-    destruct (matches_comp p1 s gas) as [res1|] eqn:H1; try discriminate.
+    destruct (matches_comp g p1 s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.
     destruct res1 as [|s1].
     -- (* Failure *)
@@ -228,7 +230,7 @@ Proof with eauto using matches.
     -- (* Success s1 *)
        apply IHgas in H...
   - (* PChoice p1 p2 *)
-    destruct (matches_comp p1 s gas) as [res1|] eqn:H1; try discriminate.
+    destruct (matches_comp g p1 s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.
     destruct res1 as [|s1].
     -- (* Failure *)
@@ -236,7 +238,7 @@ Proof with eauto using matches.
     -- (* Success s1 *)
        destruct1...
   - (* PRepetition p *)
-    destruct (matches_comp p s gas) as [res1|] eqn:H1; try discriminate.
+    destruct (matches_comp g p s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.
     destruct res1 as [|s1].
     -- (* Failure *)
@@ -244,35 +246,40 @@ Proof with eauto using matches.
     -- (* Success s1 *)
        apply IHgas in H...
   - (* PNot p *)
-    destruct (matches_comp p s gas) as [res1|] eqn:H1; try discriminate.
+    destruct (matches_comp g p s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.
     destruct res1 as [|s1];
     destruct1;
     eauto using matches.
+  - (* PRule n *)
+    discriminate.
+  - (* PGrammar l *)
+    discriminate.
 Qed.
 
 Corollary matches_comp_det :
-  forall p s gas1 gas2 res1 res2,
-  matches_comp p s gas1 = Some res1 ->
-  matches_comp p s gas2 = Some res2 ->
+  forall g p s gas1 gas2 res1 res2,
+  matches_comp g p s gas1 = Some res1 ->
+  matches_comp g p s gas2 = Some res2 ->
   res1 = res2.
 Proof.
   eauto using matches_comp_correct, matches_det.
 Qed.
 
 Lemma matches_comp_S_gas_some :
-  forall p s gas res,
-  matches_comp p s gas = Some res ->
-  matches_comp p s (S gas) = Some res.
+  forall g p s gas res,
+  matches_comp g p s gas = Some res ->
+  matches_comp g p s (S gas) = Some res.
 Proof.
-  intros p s gas.
+  intros *.
+  generalize dependent res.
   generalize dependent s.
   generalize dependent p.
   induction gas; intros; try discriminate.
   destruct p; simpl in H;
   try match goal with
-    [ Hx: match matches_comp ?px ?sx ?gasx with _ => _ end = _ |- _ ] =>
-      destruct (matches_comp px sx gasx) as [[]|] eqn:H1;
+    [ Hx: match matches_comp ?g ?px ?sx ?gasx with _ => _ end = _ |- _ ] =>
+      destruct (matches_comp g px sx gasx) as [[]|] eqn:H1;
       try discriminate;
       apply IHgas in H1;
       remember (S gasx);
@@ -293,25 +300,29 @@ Proof.
     destruct s;
     destruct1;
     auto.
+  - (* PRule n *)
+    discriminate.
+  - (* PGrammar l *)
+    discriminate.
 Qed.
 
 Lemma matches_comp_S_gas_none :
-  forall p s gas,
-  matches_comp p s (S gas) = None ->
-  matches_comp p s gas = None.
+  forall g p s gas,
+  matches_comp g p s (S gas) = None ->
+  matches_comp g p s gas = None.
 Proof.
   intros.
-  destruct (matches_comp p s gas) eqn:H'; trivial.
+  destruct (matches_comp g p s gas) eqn:H'; trivial.
   apply matches_comp_S_gas_some in H'.
   rewrite H' in H.
   discriminate.
 Qed.
 
 Lemma matches_comp_gas_some_le :
-  forall p s gas gas' res,
-  matches_comp p s gas = Some res ->
+  forall g p s gas gas' res,
+  matches_comp g p s gas = Some res ->
   gas <= gas' ->
-  matches_comp p s gas' = Some res.
+  matches_comp g p s gas' = Some res.
 Proof.
   intros * H1 Hle.
   induction Hle; auto.
@@ -319,10 +330,10 @@ Proof.
 Qed.
 
 Lemma matches_comp_gas_none_le :
-  forall p s gas gas',
-  matches_comp p s gas' = None ->
+  forall g p s gas gas',
+  matches_comp g p s gas' = None ->
   gas <= gas' ->
-  matches_comp p s gas = None.
+  matches_comp g p s gas = None.
 Proof.
   intros * H1 Hle.
   induction Hle; auto.
@@ -330,9 +341,9 @@ Proof.
 Qed.
 
 Theorem matches_comp_complete :
-  forall p s res,
-  matches p s res ->
-  (exists gas, matches_comp p s gas = Some res).
+  forall g p s res,
+  matches g p s res ->
+  (exists gas, matches_comp g p s gas = Some res).
 Proof.
   intros * H.
   induction H;
@@ -353,7 +364,7 @@ Proof.
     exists (1 + gas1 + gas2);
     simpl;
     specialize (Nat.le_add_r gas1 gas2) as Hle1;
-    rewrite (matches_comp_gas_some_le _ _ _ _ _ H1 Hle1);
+    rewrite (matches_comp_gas_some_le _ _ _ _ _ _ H1 Hle1);
     specialize (Plus.le_plus_r gas1 gas2) as Hle2;
     eauto using matches_comp_gas_some_le
   ).

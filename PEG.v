@@ -492,13 +492,21 @@ Fixpoint hungry_comp g p gas {struct gas} :=
   | S gas' => match p with
               | PChar _ => Some true
               | PAnyChar => Some true
-              | PSequence p1 p2 => match hungry_comp g p1 gas' with
-                                   | Some false => hungry_comp g p2 gas'
-                                   | other => other
+              | PSequence p1 p2 => let b1 := hungry_comp g p1 gas' in
+                                   let b2 := hungry_comp g p2 gas' in
+                                   match b1, b2 with
+                                   | Some true, _ => Some true
+                                   | _, Some true => Some true
+                                   | Some false, Some false => Some false
+                                   | _, _ => None
                                    end
-              | PChoice p1 p2 => match hungry_comp g p1 gas' with
-                                 | Some true => hungry_comp g p2 gas'
-                                 | other => other
+              | PChoice p1 p2 => let b1 := hungry_comp g p1 gas' in
+                                 let b2 := hungry_comp g p2 gas' in
+                                 match b1, b2 with
+                                 | Some true, Some true => Some true
+                                 | Some false, _ => Some false
+                                 | _, Some false => Some false
+                                 | _, _ => None
                                  end
               | PRule i => match nth_error g i with
                            | Some p' => hungry_comp g p' gas'
@@ -518,19 +526,17 @@ Proof.
   generalize dependent g.
   induction gas; intros; try discriminate;
   destruct p; simpl in H; try discriminate;
-  eauto using hungry.
-  - (* PSequence p1 p2 *)
-    remember (hungry_comp g p1 gas) as ores1 eqn:H1.
-    symmetry in H1.
+  eauto using hungry;
+  try (
+    remember (hungry_comp g p1 gas) as ores1 eqn:H1;
+    remember (hungry_comp g p2 gas) as ores2 eqn:H2;
+    symmetry in H1;
+    symmetry in H2;
     destruct ores1 as [[]|];
+    destruct ores2 as [[]|];
     try discriminate;
-    eauto using hungry.
-  - (* PChoice p1 p2 *)
-    remember (hungry_comp g p1 gas) as ores1 eqn:H1.
-    symmetry in H1.
-    destruct ores1 as [[]|];
-    try discriminate;
-    eauto using hungry.
+    eauto using hungry
+  ).
   - (* PRule n *)
     destruct (nth_error g n) eqn:Hnth; try discriminate.
     eauto using hungry.
@@ -548,7 +554,8 @@ Proof.
   destruct p; simpl in H; try discriminate;
   inversion Hcontra; subst;
   try (
-    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux;
+    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1;
+    destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2;
     try discriminate;
     eauto;
     fail
@@ -593,12 +600,16 @@ Proof.
   destruct p; simpl in H;
   try (injection H as H; subst; auto);
   try (
-    destruct (hungry_comp g p1 gas) as [[]|] eqn:H1;
+    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1;
+    destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2;
     try discriminate;
-    apply IHgas in H1;
-    remember (S gas);
+    try apply IHgas in Haux1;
+    try apply IHgas in Haux2;
+    remember (S gas) as gas';
     simpl;
-    rewrite H1;
+    try rewrite Haux1;
+    try rewrite Haux2;
+    destruct (hungry_comp g p1 gas') as [[]|];
     auto;
     fail
   ).

@@ -434,6 +434,11 @@ Inductive hungry : list pat -> pat -> Prop :=
       hungry g p1 ->
       hungry g p2 ->
       hungry g (PChoice p1 p2)
+  | HRule :
+      forall g i p,
+      nth_error g i = Some p ->
+      hungry g p ->
+      hungry g (PRule i)
   .
 
 Lemma string_not_infinite :
@@ -452,6 +457,7 @@ Proof.
   destruct H2 as [s H2];
   inversion H2; subst;
   try (eapply string_not_infinite; eauto; fail);
+  try eq_nth_error;
   try match goal with [
     Hx1: matches _ _ s (Success ?saux),
     Hx2: matches _ _ ?saux (Success s) |- _

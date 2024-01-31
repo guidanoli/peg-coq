@@ -535,10 +535,8 @@ Proof.
     try discriminate;
     eauto using hungry.
   - (* PRule n *)
-    remember (in_dec Nat.eq_dec n k) as n_in_k.
-    destruct n_in_k; try discriminate.
-    remember (nth_error g n) as orule.
-    destruct orule; try discriminate.
+    destruct (in_dec Nat.eq_dec n k) eqn:Hin; try discriminate.
+    destruct (nth_error g n) eqn:Hnth; try discriminate.
     eauto using hungry.
 Qed.
 

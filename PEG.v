@@ -508,7 +508,7 @@ Fixpoint hungry_comp g p gas {struct gas} :=
               end
   end.
 
-Theorem hungry_comp_correct :
+Theorem hungry_comp_correct_true :
   forall g p gas,
   hungry_comp g p gas = Some true ->
   hungry g p.

@@ -486,24 +486,24 @@ Qed.
 
 (** Hungry function with gas and call stack **)
 
-Fixpoint hungry_comp g p gas k {struct gas} :=
+Fixpoint hungry_comp g p k gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PChar _ => Some true
               | PAnyChar => Some true
-              | PSequence p1 p2 => match hungry_comp g p1 gas' k with
-                                   | Some false => hungry_comp g p2 gas' k
+              | PSequence p1 p2 => match hungry_comp g p1 k gas' with
+                                   | Some false => hungry_comp g p2 k gas'
                                    | other => other
                                    end
-              | PChoice p1 p2 => match hungry_comp g p1 gas' k with
-                                 | Some true => hungry_comp g p2 gas' k
+              | PChoice p1 p2 => match hungry_comp g p1 k gas' with
+                                 | Some true => hungry_comp g p2 k gas'
                                  | other => other
                                  end
               | PRule i => if in_dec Nat.eq_dec i k
                            then Some false
                            else match nth_error g i with
-                                | Some p' => hungry_comp g p' gas' (cons i k)
+                                | Some p' => hungry_comp g p' (cons i k) gas'
                                 | None => Some false
                                 end
               | _ => Some false
@@ -511,8 +511,8 @@ Fixpoint hungry_comp g p gas k {struct gas} :=
   end.
 
 Theorem hungry_comp_correct :
-  forall g p gas k,
-  hungry_comp g p gas k = Some true ->
+  forall g p k gas,
+  hungry_comp g p k gas = Some true ->
   hungry g p.
 Proof.
   intros * H.
@@ -523,13 +523,13 @@ Proof.
   destruct p; simpl in H; try discriminate;
   eauto using hungry.
   - (* PSequence p1 p2 *)
-    remember (hungry_comp g p1 gas k) as ores1 eqn:H1.
+    remember (hungry_comp g p1 k gas) as ores1 eqn:H1.
     symmetry in H1.
     destruct ores1 as [[]|];
     try discriminate;
     eauto using hungry.
   - (* PChoice p1 p2 *)
-    remember (hungry_comp g p1 gas k) as ores1 eqn:H1.
+    remember (hungry_comp g p1 k gas) as ores1 eqn:H1.
     symmetry in H1.
     destruct ores1 as [[]|];
     try discriminate;

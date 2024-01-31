@@ -91,10 +91,6 @@ Inductive matches : list pat -> pat -> string -> MatchResult -> Prop :=
       nth_error g i = Some p ->
       matches g p s res ->
       matches g (PRule i) s res
-  | MRuleNone :
-      forall g i s,
-      nth_error g i = None ->
-      matches g (PRule i) s Failure
   .
 
 Ltac destruct1 :=
@@ -217,7 +213,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                            end
               | PRule i => match nth_error g i with
                            | Some p' => matches_comp g p' s gas'
-                           | None => Some Failure
+                           | None => None
                            end
               | _ => None
               end
@@ -280,8 +276,7 @@ Proof with eauto using matches.
     + (* Some p *)
       eauto using matches.
     + (* None *)
-      injection H as H;
-      subst...
+      discriminate.
   - (* PGrammar l *)
     discriminate.
 Qed.
@@ -414,8 +409,6 @@ Proof.
     exists 1. simpl. destruct (ascii_dec a a); auto; contradiction.
   - (* MCharFailureString *)
     exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
-  - (* MRuleNone *)
-    exists 1. simpl. rewrite_match_subject_in_goal. auto.
 Qed.
 
 (** Hungry predicate **)

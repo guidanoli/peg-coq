@@ -611,6 +611,18 @@ Proof.
     auto.
 Qed.
 
+Lemma hungry_comp_S_gas_none :
+  forall g p gas,
+  hungry_comp g p (S gas) = None ->
+  hungry_comp g p gas = None.
+Proof.
+  intros.
+  destruct (hungry_comp g p gas) eqn:H'; trivial.
+  apply hungry_comp_S_gas_some in H'.
+  rewrite H' in H.
+  discriminate.
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

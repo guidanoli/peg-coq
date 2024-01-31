@@ -484,13 +484,28 @@ Proof.
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
-Fixpoint hungry_comp (g : list pat) p :=
-  match p with
-  | PChar _ => true
-  | PAnyChar => true
-  | PSequence p1 p2 => hungry_comp g p1 || hungry_comp g p2
-  | PChoice p1 p2 => hungry_comp g p1 && hungry_comp g p2
-  | _ => false
+(** Hungry function with gas **)
+
+Fixpoint hungry_comp g p gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PChar _ => Some true
+              | PAnyChar => Some true
+              | PSequence p1 p2 => match hungry_comp g p1 gas' with
+                                   | Some false => hungry_comp g p2 gas'
+                                   | other => other
+                                   end
+              | PChoice p1 p2 => match hungry_comp g p1 gas' with
+                                 | Some true => hungry_comp g p2 gas'
+                                 | other => other
+                                 end
+              | PRule i => match nth_error g i with
+                           | Some p' => hungry_comp g p' gas'
+                           | None => None
+                           end
+              | _ => Some false
+              end
   end.
 
 Theorem hungry_comp_correct :

@@ -484,55 +484,61 @@ Proof.
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
-(** Hungry function with gas **)
+(** Hungry function with gas and call stack **)
 
-Fixpoint hungry_comp g p gas {struct gas} :=
+Fixpoint hungry_comp g p gas k {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PChar _ => Some true
               | PAnyChar => Some true
-              | PSequence p1 p2 => match hungry_comp g p1 gas' with
-                                   | Some false => hungry_comp g p2 gas'
+              | PSequence p1 p2 => match hungry_comp g p1 gas' k with
+                                   | Some false => hungry_comp g p2 gas' k
                                    | other => other
                                    end
-              | PChoice p1 p2 => match hungry_comp g p1 gas' with
-                                 | Some true => hungry_comp g p2 gas'
+              | PChoice p1 p2 => match hungry_comp g p1 gas' k with
+                                 | Some true => hungry_comp g p2 gas' k
                                  | other => other
                                  end
-              | PRule i => match nth_error g i with
-                           | Some p' => hungry_comp g p' gas'
-                           | None => None
-                           end
+              | PRule i => if in_dec Nat.eq_dec i k
+                           then Some false
+                           else match nth_error g i with
+                                | Some p' => hungry_comp g p' gas' (cons i k)
+                                | None => Some false
+                                end
               | _ => Some false
               end
   end.
 
 Theorem hungry_comp_correct :
-  forall g p, hungry g p <-> hungry_comp g p = true.
+  forall g p gas k,
+  hungry_comp g p gas k = Some true ->
+  hungry g p.
 Proof.
-  intros.
-  split; intro H.
-  - (* -> *)
-    induction H;
-    simpl;
-    repeat match goal with
-      [ IH: hungry_comp _ _ = true |- _ ] =>
-        rewrite IH
-    end;
-    auto using orb_true_r.
-  - (* <- *)
-    induction p;
-    simpl in H;
+  intros * H.
+  generalize dependent k.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate;
+  destruct p; simpl in H; try discriminate;
+  eauto using hungry.
+  - (* PSequence p1 p2 *)
+    remember (hungry_comp g p1 gas k) as ores1 eqn:H1.
+    symmetry in H1.
+    destruct ores1 as [[]|];
     try discriminate;
-    try match goal with
-      [ Hx: _ && _ = true |- _ ] =>
-        destruct (andb_prop _ _ Hx)
-    end;
-    try match goal with
-      [ Hx: _ || _ = true |- _ ] =>
-        destruct (orb_prop _ _ Hx)
-    end;
+    eauto using hungry.
+  - (* PChoice p1 p2 *)
+    remember (hungry_comp g p1 gas k) as ores1 eqn:H1.
+    symmetry in H1.
+    destruct ores1 as [[]|];
+    try discriminate;
+    eauto using hungry.
+  - (* PRule n *)
+    remember (in_dec Nat.eq_dec n k) as n_in_k.
+    destruct n_in_k; try discriminate.
+    remember (nth_error g n) as orule.
+    destruct orule; try discriminate.
     eauto using hungry.
 Qed.
 

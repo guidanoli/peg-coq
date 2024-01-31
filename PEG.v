@@ -486,56 +486,52 @@ Qed.
 
 (** Hungry function with gas and call stack **)
 
-Fixpoint hungry_comp g p k gas {struct gas} :=
+Fixpoint hungry_comp g p gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PChar _ => Some true
               | PAnyChar => Some true
-              | PSequence p1 p2 => match hungry_comp g p1 k gas' with
-                                   | Some false => hungry_comp g p2 k gas'
+              | PSequence p1 p2 => match hungry_comp g p1 gas' with
+                                   | Some false => hungry_comp g p2 gas'
                                    | other => other
                                    end
-              | PChoice p1 p2 => match hungry_comp g p1 k gas' with
-                                 | Some true => hungry_comp g p2 k gas'
+              | PChoice p1 p2 => match hungry_comp g p1 gas' with
+                                 | Some true => hungry_comp g p2 gas'
                                  | other => other
                                  end
-              | PRule i => if in_dec Nat.eq_dec i k
-                           then Some false
-                           else match nth_error g i with
-                                | Some p' => hungry_comp g p' (cons i k) gas'
-                                | None => Some false
-                                end
+              | PRule i => match nth_error g i with
+                           | Some p' => hungry_comp g p' gas'
+                           | None => Some false
+                           end
               | _ => Some false
               end
   end.
 
 Theorem hungry_comp_correct :
-  forall g p k gas,
-  hungry_comp g p k gas = Some true ->
+  forall g p gas,
+  hungry_comp g p gas = Some true ->
   hungry g p.
 Proof.
   intros * H.
-  generalize dependent k.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros; try discriminate;
   destruct p; simpl in H; try discriminate;
   eauto using hungry.
   - (* PSequence p1 p2 *)
-    remember (hungry_comp g p1 k gas) as ores1 eqn:H1.
+    remember (hungry_comp g p1 gas) as ores1 eqn:H1.
     symmetry in H1.
     destruct ores1 as [[]|];
     try discriminate;
     eauto using hungry.
   - (* PChoice p1 p2 *)
-    remember (hungry_comp g p1 k gas) as ores1 eqn:H1.
+    remember (hungry_comp g p1 gas) as ores1 eqn:H1.
     symmetry in H1.
     destruct ores1 as [[]|];
     try discriminate;
     eauto using hungry.
   - (* PRule n *)
-    destruct (in_dec Nat.eq_dec n k) eqn:Hin; try discriminate.
     destruct (nth_error g n) eqn:Hnth; try discriminate.
     eauto using hungry.
 Qed.

@@ -536,6 +536,81 @@ Proof.
     eauto using hungry.
 Qed.
 
+Theorem hungry_comp_correct_false :
+  forall g p gas,
+  hungry_comp g p gas = Some false ->
+  ~ hungry g p.
+Proof.
+  intros * H Hcontra.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate;
+  destruct p; simpl in H; try discriminate;
+  inversion Hcontra; subst;
+  try (
+    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux;
+    try discriminate;
+    eauto;
+    fail
+  ).
+  - (* PRule n *)
+    destruct (nth_error g n) eqn:Haux; try discriminate.
+    injection H1 as H1; subst.
+    eauto.
+Qed.
+
+Theorem hungry_comp_det :
+  forall g p gas1 gas2 b1 b2,
+  hungry_comp g p gas1 = Some b1 ->
+  hungry_comp g p gas2 = Some b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  destruct b1;
+  destruct b2;
+  try match goal with
+  [ Hx: hungry_comp _ _ _ = Some true |- _ ] =>
+    apply hungry_comp_correct_true in Hx
+  end;
+  try match goal with
+  [ Hx: hungry_comp _ _ _ = Some false |- _ ] =>
+    apply hungry_comp_correct_false in Hx
+  end;
+  try contradiction;
+  eauto.
+Qed.
+
+Lemma hungry_comp_S_gas_some :
+  forall g p gas b,
+  hungry_comp g p gas = Some b ->
+  hungry_comp g p (S gas) = Some b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate.
+  destruct p; simpl in H;
+  try (injection H as H; subst; auto);
+  try (
+    destruct (hungry_comp g p1 gas) as [[]|] eqn:H1;
+    try discriminate;
+    apply IHgas in H1;
+    remember (S gas);
+    simpl;
+    rewrite H1;
+    auto;
+    fail
+  ).
+  - (* PRule n *)
+    destruct (nth_error g n) eqn:H1;
+    try apply IHgas in H;
+    remember (S gas);
+    simpl;
+    rewrite H1;
+    auto.
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

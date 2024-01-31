@@ -625,6 +625,8 @@ Proof with eauto using matches.
     destruct (IHwell_formed s) as [[|]]...
 Qed.
 
+(** Well-formed function with gas **)
+
 Fixpoint well_formed_comp g p :=
   match p with
   | PEmpty => true

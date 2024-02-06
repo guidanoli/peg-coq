@@ -91,6 +91,10 @@ Inductive matches : list pat -> pat -> string -> MatchResult -> Prop :=
       nth_error g i = Some p ->
       matches g p s res ->
       matches g (PRule i) s res
+  | MGrammar :
+      forall g g' p s res,
+      matches g' p s res ->
+      matches g (PGrammar p g') s res
   .
 
 Ltac destruct1 :=

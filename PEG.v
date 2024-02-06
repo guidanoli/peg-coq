@@ -787,16 +787,41 @@ Qed.
 
 (** Well-formed function with gas **)
 
-Fixpoint well_formed_comp g p :=
-  match p with
-  | PEmpty => true
-  | PChar _ => true
-  | PAnyChar => true
-  | PSequence p1 p2 => well_formed_comp g p1 && well_formed_comp g p2
-  | PChoice p1 p2 => well_formed_comp g p1 && well_formed_comp g p2
-  | PRepetition p => well_formed_comp g p && hungry_comp g p
-  | PNot p => well_formed_comp g p
-  | _ => false
+Fixpoint well_formed_comp g p gas :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some true
+              | PChar _ => Some true
+              | PAnyChar => Some true
+              | PSequence p1 p2 => let b1 := well_formed_comp g p1 gas' in
+                                   let b2 := well_formed_comp g p2 gas' in
+                                   match b1, b2 with
+                                   | Some true, Some true => Some true
+                                   | None, None => None
+                                   | _, _ => Some false
+                                   end
+              | PChoice p1 p2 => let b1 := well_formed_comp g p1 gas' in
+                                 let b2 := well_formed_comp g p2 gas' in
+                                 match b1, b2 with
+                                 | Some true, Some true => Some true
+                                 | None, None => None
+                                 | _, _ => Some false
+                                 end
+              | PRepetition p => let b1 := well_formed_comp g p gas' in
+                                 let b2 := hungry_comp g p gas' in
+                                 match b1, b2 with
+                                 | Some true, Some true => Some true
+                                 | None, None => None
+                                 | _, _ => Some false
+                                 end
+              | PNot p => well_formed_comp g p gas'
+              | PRule i => match nth_error g i with
+                           | Some p => well_formed_comp g p gas'
+                           | None => Some false
+                           end
+              | _ => Some false
+              end
   end.
 
 Theorem well_formed_comp_correct :

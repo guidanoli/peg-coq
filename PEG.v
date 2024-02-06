@@ -434,6 +434,10 @@ Inductive hungry : list pat -> pat -> Prop :=
       nth_error g i = Some p ->
       hungry g p ->
       hungry g (PRule i)
+  | HGrammar :
+      forall g g' p,
+      hungry g' p ->
+      hungry g (PGrammar p g')
   .
 
 Lemma string_not_infinite :

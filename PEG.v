@@ -484,7 +484,7 @@ Proof.
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
-(** Hungry function with gas and call stack **)
+(** Hungry function with gas **)
 
 Fixpoint hungry_comp g p gas {struct gas} :=
   match gas with

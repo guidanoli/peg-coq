@@ -219,7 +219,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                            | Some p' => matches_comp g p' s gas'
                            | None => None
                            end
-              | _ => None
+              | PGrammar p' g' => matches_comp g' p' s gas'
               end
   end.
 

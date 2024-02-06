@@ -10,15 +10,15 @@ From Peg Require Import Suffix.
 (************)
 
 Inductive pat : Type :=
-  | PEmpty : pat                   (* ε        *)
-  | PChar : ascii -> pat           (* a        *)
-  | PAnyChar : pat                 (* .        *)
-  | PSequence : pat -> pat -> pat  (* p1 p2    *)
-  | PChoice : pat -> pat -> pat    (* p1 / p2  *)
-  | PRepetition : pat -> pat       (* p*       *)
-  | PNot : pat -> pat              (* p!       *)
-  | PRule : nat -> pat             (* R_i      *)
-  | PGrammar : list pat -> pat     (* [R...]   *)
+  | PEmpty : pat                          (* ε            *)
+  | PChar : ascii -> pat                  (* a            *)
+  | PAnyChar : pat                        (* .            *)
+  | PSequence : pat -> pat -> pat         (* p1 p2        *)
+  | PChoice : pat -> pat -> pat           (* p1 / p2      *)
+  | PRepetition : pat -> pat              (* p*           *)
+  | PNot : pat -> pat                     (* p!           *)
+  | PRule : nat -> pat                    (* R_i          *)
+  | PGrammar : pat -> list pat -> pat     (* p @ [R...]   *)
   .
 
 (** Semantics **)

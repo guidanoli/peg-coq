@@ -232,8 +232,9 @@ Proof with eauto using matches.
   generalize dependent res.
   generalize dependent s.
   generalize dependent p.
+  generalize dependent g.
   induction gas; intros; try discriminate.
-  destruct p; simpl in H.
+  destruct p; simpl in H; eauto using matches.
   - (* PEmpty *)
     destruct1...
   - (* PChar a *)
@@ -281,8 +282,6 @@ Proof with eauto using matches.
       eauto using matches.
     + (* None *)
       discriminate.
-  - (* PGrammar l *)
-    discriminate.
 Qed.
 
 Corollary matches_comp_det :
@@ -303,6 +302,7 @@ Proof.
   generalize dependent res.
   generalize dependent s.
   generalize dependent p.
+  generalize dependent g.
   induction gas; intros; try discriminate.
   destruct p; simpl in H;
   try match goal with
@@ -323,22 +323,13 @@ Proof.
       simpl;
       rewrite H1;
       auto
-  end.
-  - (* PEmpty *)
-    destruct1.
-    auto.
-  - (* PChar a *)
-    simpl.
-    destruct s as [|a' s'];
-    try destruct (ascii_dec a a');
-    destruct1;
-    auto.
-  - (* PAnyChar *)
-    destruct s;
-    destruct1;
-    auto.
-  - (* PGrammar l *)
-    discriminate.
+  end;
+  try (
+    remember (S gas);
+    simpl;
+    auto;
+    fail
+  ).
 Qed.
 
 Lemma matches_comp_S_gas_none :
@@ -395,7 +386,7 @@ Proof.
     destruct IHmatches as [gas1 H1];
     exists (1 + gas1);
     simpl;
-    rewrite_match_subject_in_goal;
+    try rewrite_match_subject_in_goal;
     trivial
   );
   (* Cases with two recursive calls *)

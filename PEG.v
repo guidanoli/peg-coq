@@ -761,7 +761,7 @@ Proof with eauto using matches.
     destruct (IHwell_formed2 s).
     destruct (IHwell_formed1 s) as [[|]]...
   - (* PRepetition p *)
-    remember (length s) as n.
+    remember (String.length s) as n.
     generalize dependent s.
     induction n as [n IHn] using strong_induction; intros.
     destruct (IHwell_formed s) as [[|s1]].
@@ -775,7 +775,7 @@ Proof with eauto using matches.
       ] =>
         specialize (matches_hungry_proper_suffix _ _ _ _ Hx Hy) as Hps;
         specialize (proper_suffix_length_lt _ _ Hps) as Hlt;
-        specialize (eq_refl (length s)) as Hlen;
+        specialize (eq_refl (String.length s)) as Hlen;
         destruct (IHn _ Hlt _ Hlen)
       end.
       eauto using matches.

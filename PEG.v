@@ -727,6 +727,11 @@ Inductive well_formed : list pat -> pat -> Prop :=
       forall g p,
       well_formed g p ->
       well_formed g (PNot p)
+  | WFRule :
+      forall g p i,
+      nth_error g i = Some p ->
+      well_formed g p ->
+      well_formed g (PRule i)
   .
 
 Theorem well_formed_correct :

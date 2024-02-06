@@ -634,6 +634,28 @@ Proof.
   discriminate.
 Qed.
 
+Lemma hungry_comp_gas_some_le :
+  forall g p gas gas' b,
+  hungry_comp g p gas = Some b ->
+  gas <= gas' ->
+  hungry_comp g p gas' = Some b.
+Proof.
+  intros * H1 Hle.
+  induction Hle; auto.
+  eauto using hungry_comp_S_gas_some.
+Qed.
+
+Lemma hungry_comp_gas_none_le :
+  forall g p gas gas',
+  hungry_comp g p gas' = None ->
+  gas <= gas' ->
+  hungry_comp g p gas = None.
+Proof.
+  intros * H1 Hle.
+  induction Hle; auto.
+  eauto using hungry_comp_S_gas_none.
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

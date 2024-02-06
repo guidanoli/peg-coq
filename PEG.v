@@ -824,34 +824,43 @@ Fixpoint well_formed_comp g p gas :=
               end
   end.
 
-Theorem well_formed_comp_correct :
-  forall g p, well_formed g p <-> well_formed_comp g p = true.
+Theorem well_formed_comp_correct_true :
+  forall g p gas,
+  (forall p', In p' g -> well_formed g p') ->
+  well_formed_comp g p gas = Some true ->
+  well_formed g p.
 Proof.
-  intro.
-  split; intro H.
-  - (* -> *)
-    induction H;
-    simpl;
-    repeat match goal with
-      [ IH: well_formed_comp _ _ = true |- _ ] =>
-        rewrite IH
-    end;
-    try match goal with
-      [ Hx: hungry _ _ |- _ ] =>
-        rewrite hungry_comp_correct in Hx
-    end;
-    auto.
-  - (* <- *)
-    induction p;
-    simpl in H;
-    try match goal with
-      [ Hx: _ && _ = true |- _ ] =>
-        destruct (andb_prop _ _ Hx)
-    end;
-    try match goal with
-      [ Hx: hungry_comp _ _ = true |- _ ] =>
-        rewrite <- hungry_comp_correct in Hx
-    end;
+  intros g p.
+  generalize dependent g.
+  induction p; intros * Hg H;
+  eauto using well_formed;
+  try (
+    destruct gas;
     try discriminate;
+    simpl in H;
+    destruct (well_formed_comp g p1 gas) as [[]|] eqn:H1;
+    destruct (well_formed_comp g p2 gas) as [[]|] eqn:H2;
+    try discriminate;
+    eauto using well_formed
+  ).
+  - (* PRepetition p *)
+    destruct gas; try discriminate.
+    simpl in H.
+    destruct (well_formed_comp g p gas) as [[]|] eqn:H1;
+    destruct (hungry_comp g p gas) as [[]|] eqn:H2;
+    try discriminate.
+    eauto using well_formed, hungry_comp_correct_true.
+  - (* PNot p *)
+    destruct gas; try discriminate.
+    simpl in H.
+    destruct (well_formed_comp g p gas) as [[]|] eqn:H1;
+    try discriminate.
     eauto using well_formed.
+  - (* PRule n *)
+    destruct gas; try discriminate.
+    simpl in H.
+    destruct (nth_error g n) eqn:H1; try discriminate;
+    destruct (well_formed_comp g p gas) as [[]|] eqn:H2;
+    try discriminate.
+    eauto using well_formed, nth_error_In.
 Qed.

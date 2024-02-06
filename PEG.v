@@ -18,7 +18,7 @@ Inductive pat : Type :=
   | PRepetition : pat -> pat              (* p*           *)
   | PNot : pat -> pat                     (* p!           *)
   | PRule : nat -> pat                    (* R_i          *)
-  | PGrammar : pat -> list pat -> pat     (* p @ [R...]   *)
+  | PGrammar : pat -> list pat -> pat     (* {R} |= p     *)
   .
 
 (** Semantics **)

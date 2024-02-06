@@ -656,6 +656,45 @@ Proof.
   eauto using hungry_comp_S_gas_none.
 Qed.
 
+Theorem hungry_comp_complete_true :
+  forall g p,
+  hungry g p ->
+  (exists gas, hungry_comp g p gas = Some true).
+Proof.
+  intros * H.
+  induction H;
+  (* Cases with no recursive calls *)
+  try (exists 1; auto; fail);
+  (* Cases with one recursive call *)
+  try (
+    destruct IHhungry as [gas IH];
+    exists (1 + gas);
+    simpl;
+    rewrite_match_subject_in_goal;
+    trivial
+  );
+  (* Cases with two recursive calls *)
+  try (
+    destruct IHhungry as [gas IH];
+    exists (1 + gas);
+    simpl;
+    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1; auto;
+    destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2; auto;
+    try discriminate
+  );
+  try (
+    destruct IHhungry1 as [gas1 IH1];
+    destruct IHhungry2 as [gas2 IH2];
+    exists (1 + gas1 + gas2);
+    simpl;
+    specialize (Nat.le_add_r gas1 gas2) as Hle1;
+    rewrite (hungry_comp_gas_some_le _ _ _ _ _ IH1 Hle1);
+    specialize (Plus.le_plus_r gas1 gas2) as Hle2;
+    rewrite (hungry_comp_gas_some_le _ _ _ _ _ IH2 Hle2);
+    trivial
+  ).
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

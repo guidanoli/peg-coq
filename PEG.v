@@ -781,6 +781,8 @@ Proof with eauto using matches.
       eauto using matches.
   - (* PNot p *)
     destruct (IHwell_formed s) as [[|]]...
+  - (* PRule i *)
+    destruct (IHwell_formed s) as [[|]]...
 Qed.
 
 (** Well-formed function with gas **)

@@ -511,6 +511,7 @@ Fixpoint hungry_comp g p gas {struct gas} :=
                            | Some p' => hungry_comp g p' gas'
                            | None => Some false
                            end
+              | PGrammar p' g' => hungry_comp g' p' gas'
               | _ => Some false
               end
   end.
@@ -552,6 +553,7 @@ Proof.
   induction gas; intros; try discriminate;
   destruct p; simpl in H; try discriminate;
   inversion Hcontra; subst;
+  eauto;
   try (
     destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1;
     destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2;
@@ -609,6 +611,12 @@ Proof.
     try rewrite Haux1;
     try rewrite Haux2;
     destruct (hungry_comp g p1 gas') as [[]|];
+    auto;
+    fail
+  );
+  try (
+    remember (S gas);
+    simpl;
     auto;
     fail
   ).
@@ -669,8 +677,9 @@ Proof.
     destruct IHhungry as [gas IH];
     exists (1 + gas);
     simpl;
-    rewrite_match_subject_in_goal;
-    trivial
+    try rewrite_match_subject_in_goal;
+    eauto;
+    fail
   );
   (* Cases with two recursive calls *)
   try (

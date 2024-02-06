@@ -18,7 +18,7 @@ Inductive pat : Type :=
   | PRepetition : pat -> pat              (* p*           *)
   | PNot : pat -> pat                     (* p!           *)
   | PRule : nat -> pat                    (* R_i          *)
-  | PGrammar : pat -> list pat -> pat     (* {R} |= p     *)
+  | PGrammar : list pat -> pat -> pat     (* {R} |= p     *)
   .
 
 (** Semantics **)
@@ -94,7 +94,7 @@ Inductive matches : list pat -> pat -> string -> MatchResult -> Prop :=
   | MGrammar :
       forall g g' p s res,
       matches g' p s res ->
-      matches g (PGrammar p g') s res
+      matches g (PGrammar g' p) s res
   .
 
 Ltac destruct1 :=
@@ -219,7 +219,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                            | Some p' => matches_comp g p' s gas'
                            | None => None
                            end
-              | PGrammar p' g' => matches_comp g' p' s gas'
+              | PGrammar g' p' => matches_comp g' p' s gas'
               end
   end.
 
@@ -437,7 +437,7 @@ Inductive hungry : list pat -> pat -> Prop :=
   | HGrammar :
       forall g g' p,
       hungry g' p ->
-      hungry g (PGrammar p g')
+      hungry g (PGrammar g' p)
   .
 
 Lemma string_not_infinite :
@@ -511,7 +511,7 @@ Fixpoint hungry_comp g p gas {struct gas} :=
                            | Some p' => hungry_comp g p' gas'
                            | None => Some false
                            end
-              | PGrammar p' g' => hungry_comp g' p' gas'
+              | PGrammar g' p' => hungry_comp g' p' gas'
               | _ => Some false
               end
   end.

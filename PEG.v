@@ -838,6 +838,11 @@ Inductive well_formed : list pat -> pat -> Prop :=
       nth_error g i = Some p ->
       well_formed g p ->
       well_formed g (PRule i)
+  | WFGrammar :
+      forall g g' p,
+      well_formed g' p ->
+      (forall i p', nth_error g i = Some p' -> well_formed g' p' /\ ~ lr g i p') ->
+      well_formed g (PGrammar g' p)
   .
 
 Theorem well_formed_correct :

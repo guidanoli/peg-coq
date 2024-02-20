@@ -742,6 +742,29 @@ Inductive empty : list pat -> pat -> Prop :=
       empty g (PGrammar g' p)
   .
 
+Lemma empty_correct :
+  forall g p s,
+  matches g p s (Success s) ->
+  empty g p.
+Proof.
+  intros * H.
+  remember (Success s) as res.
+  induction H;
+  eauto using empty;
+  try discriminate;
+  try match goal with
+  [ Hx: Success _ = Success _ |- _ ] =>
+      injection Hx as Hx
+  end;
+  try (exfalso; eapply string_not_infinite; eauto; fail);
+  try (subst; match goal with [
+    Hx1: matches _ _ ?s1 (Success ?s2),
+    Hx2: matches _ _ ?s2 (Success ?s1) |- _ ] =>
+        assert (s1 = s2) by (eauto using suffix_antisymmetric, matches_suffix);
+        subst
+  end; eauto using empty).
+Qed.
+
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

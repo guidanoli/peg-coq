@@ -16,7 +16,7 @@ Inductive pat : Type :=
   | PSequence : pat -> pat -> pat         (* p1 p2        *)
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
-  | PNot : pat -> pat                     (* p!           *)
+  | PNot : pat -> pat                     (* !p           *)
   | PRule : nat -> pat                    (* R_i          *)
   | PGrammar : list pat -> pat -> pat     (* {R} |= p     *)
   .

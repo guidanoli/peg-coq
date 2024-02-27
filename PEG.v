@@ -409,35 +409,57 @@ Qed.
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 
-Inductive hungry : list pat -> pat -> Prop :=
+Inductive hungry : list pat -> pat -> bool -> Prop :=
+  | HEmpty :
+      forall g,
+      hungry g PEmpty false
   | HChar :
       forall g a,
-      hungry g (PChar a)
+      hungry g (PChar a) true
   | HAnyChar :
       forall g,
-      hungry g PAnyChar
-  | HSequence1 :
+      hungry g PAnyChar true
+  | HSequenceTrue1 :
       forall g p1 p2,
-      hungry g p1 ->
-      hungry g (PSequence p1 p2)
-  | HSequence2 :
+      hungry g p1 true ->
+      hungry g (PSequence p1 p2) true
+  | HSequenceTrue2 :
       forall g p1 p2,
-      hungry g p2 ->
-      hungry g (PSequence p1 p2)
-  | HChoice :
+      hungry g p2 true ->
+      hungry g (PSequence p1 p2) true
+  | HSequenceFalse :
       forall g p1 p2,
-      hungry g p1 ->
-      hungry g p2 ->
-      hungry g (PChoice p1 p2)
+      hungry g p1 false ->
+      hungry g p2 false ->
+      hungry g (PSequence p1 p2) false
+  | HChoiceTrue :
+      forall g p1 p2,
+      hungry g p1 true ->
+      hungry g p2 true ->
+      hungry g (PChoice p1 p2) true
+  | HChoiceFalse1 :
+      forall g p1 p2,
+      hungry g p1 false ->
+      hungry g (PChoice p1 p2) false
+  | HChoiceFalse2 :
+      forall g p1 p2,
+      hungry g p2 false ->
+      hungry g (PChoice p1 p2) false
+  | HRepetition :
+      forall g p,
+      hungry g (PRepetition p) false
+  | HNot :
+      forall g p,
+      hungry g (PNot p) false
   | HRule :
-      forall g i p,
+      forall g i p b,
       nth_error g i = Some p ->
-      hungry g p ->
-      hungry g (PRule i)
+      hungry g p b ->
+      hungry g (PRule i) b
   | HGrammar :
-      forall g g' p,
-      hungry g' p ->
-      hungry g (PGrammar g' p)
+      forall g g' p b,
+      hungry g' p b ->
+      hungry g (PGrammar g' p) b
   .
 
 Lemma string_not_infinite :
@@ -449,10 +471,12 @@ Proof.
 Qed.
 
 Theorem hungry_correct :
-  forall g p, hungry g p -> ~ exists s, matches g p s (Success s).
+  forall g p, hungry g p true -> ~ exists s, matches g p s (Success s).
 Proof.
   intros * H1 H2.
+  remember true as b.
   induction H1;
+  try discriminate;
   destruct H2 as [s H2];
   inversion H2; subst;
   try (eapply string_not_infinite; eauto; fail);
@@ -467,9 +491,22 @@ Proof.
   eauto.
 Qed.
 
+Lemma hungry_det :
+  forall g p b1 b2,
+  hungry g p b1 ->
+  hungry g p b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  induction H1; intros;
+  inversion H2; subst;
+  try eq_nth_error;
+  eauto.
+Qed.
+
 Theorem matches_hungry_proper_suffix :
   forall g p s s',
-  hungry g p ->
+  hungry g p true ->
   matches g p s (Success s') ->
   proper_suffix s' s.
 Proof.
@@ -509,24 +546,24 @@ Fixpoint hungry_comp g p gas {struct gas} :=
                                  end
               | PRule i => match nth_error g i with
                            | Some p' => hungry_comp g p' gas'
-                           | None => Some false
+                           | None => None
                            end
               | PGrammar g' p' => hungry_comp g' p' gas'
               | _ => Some false
               end
   end.
 
-Theorem hungry_comp_correct_true :
-  forall g p gas,
-  hungry_comp g p gas = Some true ->
-  hungry g p.
+Theorem hungry_comp_correct :
+  forall g p gas b,
+  hungry_comp g p gas = Some b ->
+  hungry g p b.
 Proof.
   intros * H.
+  generalize dependent b.
   generalize dependent p.
   generalize dependent g.
-  induction gas; intros; try discriminate;
-  destruct p; simpl in H; try discriminate;
-  eauto using hungry;
+  induction gas; intros;
+  destruct p; simpl in H;
   try (
     remember (hungry_comp g p1 gas) as ores1 eqn:H1;
     remember (hungry_comp g p2 gas) as ores2 eqn:H2;
@@ -536,35 +573,16 @@ Proof.
     destruct ores2 as [[]|];
     try discriminate;
     eauto using hungry
+  );
+  try (
+    destruct b;
+    try discriminate;
+    eauto using hungry;
+    fail
   ).
   - (* PRule n *)
     destruct (nth_error g n) eqn:Hnth; try discriminate.
     eauto using hungry.
-Qed.
-
-Theorem hungry_comp_correct_false :
-  forall g p gas,
-  hungry_comp g p gas = Some false ->
-  ~ hungry g p.
-Proof.
-  intros * H Hcontra.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros; try discriminate;
-  destruct p; simpl in H; try discriminate;
-  inversion Hcontra; subst;
-  eauto;
-  try (
-    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1;
-    destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2;
-    try discriminate;
-    eauto;
-    fail
-  ).
-  - (* PRule n *)
-    destruct (nth_error g n) eqn:Haux; try discriminate.
-    injection H1 as H1; subst.
-    eauto.
 Qed.
 
 Theorem hungry_comp_det :
@@ -573,19 +591,7 @@ Theorem hungry_comp_det :
   hungry_comp g p gas2 = Some b2 ->
   b1 = b2.
 Proof.
-  intros * H1 H2.
-  destruct b1;
-  destruct b2;
-  try match goal with
-  [ Hx: hungry_comp _ _ _ = Some true |- _ ] =>
-    apply hungry_comp_correct_true in Hx
-  end;
-  try match goal with
-  [ Hx: hungry_comp _ _ _ = Some false |- _ ] =>
-    apply hungry_comp_correct_false in Hx
-  end;
-  try contradiction;
-  eauto.
+  eauto using hungry_comp_correct, hungry_det.
 Qed.
 
 Lemma hungry_comp_S_gas_some :
@@ -664,9 +670,9 @@ Proof.
 Qed.
 
 Theorem hungry_comp_complete_true :
-  forall g p,
-  hungry g p ->
-  (exists gas, hungry_comp g p gas = Some true).
+  forall g p b,
+  hungry g p b ->
+  (exists gas, hungry_comp g p gas = Some b).
 Proof.
   intros * H.
   induction H;

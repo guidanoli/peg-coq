@@ -709,68 +709,6 @@ Proof.
   ).
 Qed.
 
-(** Empty predicate **)
-(** A pattern is empty if it might match without consuming any input **)
-(** This pattern is conservative, as it will be true for all patterns
-    satisfy this condition, but may also be true for patterns that don't. **)
-
-Inductive empty : list pat -> pat -> Prop :=
-  | EEmpty :
-      forall g,
-      empty g PEmpty
-  | ESequence :
-      forall g p1 p2,
-      empty g p1 ->
-      empty g p2 ->
-      empty g (PSequence p1 p2)
-  | EChoice1 :
-      forall g p1 p2,
-      empty g p1 ->
-      empty g (PChoice p1 p2)
-  | EChoice2 :
-      forall g p1 p2,
-      empty g p2 ->
-      empty g (PChoice p1 p2)
-  | ERepetition :
-      forall g p,
-      empty g (PRepetition p)
-  | ENot :
-      forall g p,
-      empty g (PNot p)
-  | ERule :
-      forall g i p,
-      nth_error g i = Some p ->
-      empty g p ->
-      empty g (PRule i)
-  | EGrammar :
-      forall g g' p,
-      empty g' p ->
-      empty g (PGrammar g' p)
-  .
-
-Lemma empty_correct :
-  forall g p s,
-  matches g p s (Success s) ->
-  empty g p.
-Proof.
-  intros * H.
-  remember (Success s) as res.
-  induction H;
-  eauto using empty;
-  try discriminate;
-  try match goal with
-  [ Hx: Success _ = Success _ |- _ ] =>
-      injection Hx as Hx
-  end;
-  try (exfalso; eapply string_not_infinite; eauto; fail);
-  try (subst; match goal with [
-    Hx1: matches _ _ ?s1 (Success ?s2),
-    Hx2: matches _ _ ?s2 (Success ?s1) |- _ ] =>
-        assert (s1 = s2) by (eauto using suffix_antisymmetric, matches_suffix);
-        subst
-  end; eauto using empty).
-Qed.
-
 (** Left-Recursive predicate **)
 (** A left-recursive rule winds up in itself without consuming any input **)
 (** This pattern is conservative, as it will be true for all patterns

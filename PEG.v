@@ -568,6 +568,51 @@ Proof.
   ).
 Qed.
 
+Ltac destruct_match_subject :=
+  match goal with
+    [ |- match ?x with _ => _ end = _ ] =>
+      destruct x
+  end.
+
+Lemma nullable_comp_S_gas :
+  forall g p gas b,
+  nullable_comp g p gas = Some b ->
+  nullable_comp g p (S gas) = Some b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate;
+  destruct p; simpl in H;
+  try destruct1;
+  auto;
+  try (
+    destruct (nullable_comp g p1 gas) as [[|]|] eqn:Hn1;
+    destruct (nullable_comp g p2 gas) as [[|]|] eqn:Hn2;
+    try discriminate;
+    destruct1;
+    try apply IHgas in Hn1;
+    try apply IHgas in Hn2;
+    remember (S gas);
+    simpl;
+    repeat destruct_match_subject;
+    try destruct1;
+    try discriminate;
+    auto
+  );
+  try (
+    destruct (nth_error g n) eqn:Hn;
+    try discriminate;
+    remember (S gas);
+    simpl;
+    destruct_match_subject;
+    try destruct1;
+    try discriminate;
+    auto
+  ).
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

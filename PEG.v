@@ -402,6 +402,63 @@ Proof.
     exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
 Qed.
 
+(** Nullable predicate **)
+(** A "nullable" pattern may match successfully without consuming any characters **)
+
+Inductive nullable : grammar -> pat -> Prop :=
+  | NEmpty :
+      forall g,
+      nullable g PEmpty
+  | NSequence :
+      forall g p1 p2,
+      nullable g p1 ->
+      nullable g p2 ->
+      nullable g (PSequence p1 p2)
+  | NChoice1 :
+      forall g p1 p2,
+      nullable g p1 ->
+      nullable g (PChoice p1 p2)
+  | NChoice2 :
+      forall g p1 p2,
+      nullable g p2 ->
+      nullable g (PChoice p1 p2)
+  | NRepetition :
+      forall g p,
+      nullable g (PRepetition p)
+  | NNot :
+      forall g p,
+      nullable g (PNot p)
+  | NRule :
+      forall g i p,
+      nth_error g i = Some p ->
+      nullable g p ->
+      nullable g (PRule i)
+  .
+
+Lemma nullable_approx :
+  forall g p s,
+  matches g p s (Success s) ->
+  nullable g p.
+Proof.
+  intros * H.
+  remember (Success s).
+  induction H;
+  try discriminate;
+  try destruct1;
+  try (exfalso; induction s; congruence; fail);
+  try (
+    subst;
+    match goal with
+    [ Hm1: matches _ _ ?s1 (Success ?s2),
+      Hm2: matches _ _ ?s2 (Success ?s1) |- _ ] =>
+          assert (s1 = s2) by
+          (eauto using matches_suffix, suffix_antisymmetric)
+    end;
+    subst
+  );
+  eauto using nullable.
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

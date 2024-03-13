@@ -17,7 +17,7 @@ Inductive pat : Type :=
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
   | PNot : pat -> pat                     (* !p           *)
-  | PRule : nat -> pat                    (* R_i          *)
+  | PNonTerminal : nat -> pat             (* R_i          *)
   .
 
 Definition grammar : Type := list pat.
@@ -87,11 +87,11 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g p s,
       matches g p s Failure ->
       matches g (PNot p) s (Success s)
-  | MRuleSome :
+  | MNonTerminalSome :
       forall g i p s res,
       nth_error g i = Some p ->
       matches g p s res ->
-      matches g (PRule i) s res
+      matches g (PNonTerminal i) s res
   .
 
 Ltac destruct1 :=
@@ -212,7 +212,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                            | Some (Success _) => Some Failure
                            | None => None
                            end
-              | PRule i => match nth_error g i with
+              | PNonTerminal i => match nth_error g i with
                            | Some p' => matches_comp g p' s gas'
                            | None => None
                            end
@@ -272,7 +272,7 @@ Proof with eauto using matches.
     destruct res1 as [|s1];
     destruct1;
     eauto using matches.
-  - (* PRule n *)
+  - (* PNonTerminal n *)
     destruct (nth_error g n) as [p|] eqn:H1.
     + (* Some p *)
       eauto using matches.
@@ -428,11 +428,11 @@ Inductive nullable : grammar -> pat -> Prop :=
   | NNot :
       forall g p,
       nullable g (PNot p)
-  | NRule :
+  | NNonTerminal :
       forall g i p,
       nth_error g i = Some p ->
       nullable g p ->
-      nullable g (PRule i)
+      nullable g (PNonTerminal i)
   .
 
 Lemma nullable_approx :
@@ -502,7 +502,7 @@ Fixpoint nullable_comp (g : grammar) p gas {struct gas} :=
                                  end
               | PRepetition p => Some true
               | PNot p => Some true
-              | PRule i => match nth_error g i with
+              | PNonTerminal i => match nth_error g i with
                            | Some p' => nullable_comp g p' gas'
                            | None => None
                            end
@@ -716,11 +716,11 @@ Inductive hungry : grammar -> pat -> bool -> Prop :=
   | HNot :
       forall g p,
       hungry g (PNot p) false
-  | HRule :
+  | HNonTerminal :
       forall g i p b,
       nth_error g i = Some p ->
       hungry g p b ->
-      hungry g (PRule i) b
+      hungry g (PNonTerminal i) b
   | HGrammar :
       forall g g' p b,
       hungry g' p b ->
@@ -809,7 +809,7 @@ Fixpoint hungry_comp g p gas {struct gas} :=
                                  | _, Some false => Some false
                                  | _, _ => None
                                  end
-              | PRule i => match nth_error g i with
+              | PNonTerminal i => match nth_error g i with
                            | Some p' => hungry_comp g p' gas'
                            | None => None
                            end
@@ -844,7 +844,7 @@ Proof.
     eauto using hungry;
     fail
   ).
-  - (* PRule n *)
+  - (* PNonTerminal n *)
     destruct (nth_error g n) eqn:Hnth; try discriminate.
     eauto using hungry.
 Qed.
@@ -890,7 +890,7 @@ Proof.
     auto;
     fail
   ).
-  - (* PRule n *)
+  - (* PNonTerminal n *)
     destruct (nth_error g n) eqn:H1;
     try apply IHgas in H;
     remember (S gas);
@@ -1004,9 +1004,9 @@ Inductive lr : list pat -> nat -> pat -> Prop :=
       forall g i p,
       lr g i p ->
       lr g i (PNot p)
-  | LRule :
+  | LNonTerminal :
       forall g i,
-      lr g i (PRule i)
+      lr g i (PNonTerminal i)
   .
 
 (** Well-formed predicate **)
@@ -1041,11 +1041,11 @@ Inductive well_formed : list pat -> pat -> Prop :=
       forall g p,
       well_formed g p ->
       well_formed g (PNot p)
-  | WFRule :
+  | WFNonTerminal :
       forall g p i,
       nth_error g i = Some p ->
       well_formed g p ->
-      well_formed g (PRule i)
+      well_formed g (PNonTerminal i)
   | WFGrammar :
       forall g g' p,
       well_formed g' p ->
@@ -1100,7 +1100,7 @@ Proof with eauto using matches.
       eauto using matches.
   - (* PNot p *)
     destruct (IHwell_formed s) as [[|]]...
-  - (* PRule i *)
+  - (* PNonTerminal i *)
     destruct (IHwell_formed s)...
   - (* PGrammar g' p' *)
     destruct (IHwell_formed s)...
@@ -1137,7 +1137,7 @@ Fixpoint well_formed_comp g p gas :=
                                  | _, _ => Some false
                                  end
               | PNot p => well_formed_comp g p gas'
-              | PRule i => match nth_error g i with
+              | PNonTerminal i => match nth_error g i with
                            | Some p => well_formed_comp g p gas'
                            | None => Some false
                            end
@@ -1177,7 +1177,7 @@ Proof.
     destruct (well_formed_comp g p gas) as [[]|] eqn:H1;
     try discriminate.
     eauto using well_formed.
-  - (* PRule n *)
+  - (* PNonTerminal n *)
     destruct gas; try discriminate.
     simpl in H.
     destruct (nth_error g n) eqn:H1; try discriminate;

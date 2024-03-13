@@ -522,6 +522,36 @@ Proof.
   ).
 Qed.
 
+Lemma not_nullable_comp_is_not_nullable :
+  forall g p gas,
+  nullable_comp g p gas = Some false ->
+  ~ nullable g p.
+Proof.
+  intros * H Hcontra.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas;
+  intros;
+  try discriminate;
+  destruct p;
+  simpl in H;
+  try destruct1;
+  try inversion Hcontra;
+  subst;
+  try (
+    destruct (nullable_comp g p1 gas) as [[|]|] eqn:Hn1;
+    destruct (nullable_comp g p2 gas) as [[|]|] eqn:Hn2;
+    try discriminate;
+    eauto
+  ).
+  try (
+    destruct (nth_error g n) eqn:Hn;
+    try discriminate;
+    destruct1;
+    eauto using nullable
+  ).
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

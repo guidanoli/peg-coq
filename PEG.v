@@ -659,6 +659,18 @@ Proof.
   ).
 Qed.
 
+Lemma not_nullable_is_not_nullable_comp :
+  forall g p,
+  ~ nullable g p ->
+  (exists gas, nullable_comp g p gas = Some false).
+Proof.
+  intros * H.
+  induction p;
+  (* Cases with contradictions *)
+  try (exfalso; eauto using nullable; fail);
+  (* Cases with 0 recursive calls *)
+  try (exists 1; auto; fail).
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

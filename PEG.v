@@ -459,6 +459,22 @@ Proof.
   eauto using nullable.
 Qed.
 
+Theorem proper_suffix_if_not_nullable :
+  forall g p s s',
+  ~ nullable g p ->
+  matches g p s (Success s') ->
+  proper_suffix s' s.
+Proof.
+  intros * H1 H2.
+  specialize (matches_suffix _ _ _ _ H2) as H3.
+  induction H3 as [|s s' a H3 IHsuffix].
+  - (* SuffixRefl *)
+    exfalso.
+    eauto using nullable_approx.
+  - (* SuffixChar *)
+    eauto using suffix_is_proper_suffix_with_char.
+Qed.
+
 (** Nullable function with gas **)
 
 Fixpoint nullable_comp (g : grammar) p gas {struct gas} :=

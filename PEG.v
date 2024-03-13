@@ -459,6 +459,69 @@ Proof.
   eauto using nullable.
 Qed.
 
+(** Nullable function with gas **)
+
+Fixpoint nullable_comp (g : grammar) p gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some true
+              | PChar _ => Some false
+              | PAnyChar => Some false
+              | PSequence p1 p2 => let b1 := nullable_comp g p1 gas' in
+                                   let b2 := nullable_comp g p2 gas' in
+                                   match b1, b2 with
+                                   | Some true, Some true => Some true
+                                   | Some false, _ => Some false
+                                   | _, Some false => Some false
+                                   | _, _ => None
+                                   end
+              | PChoice p1 p2 => let b1 := nullable_comp g p1 gas' in
+                                 let b2 := nullable_comp g p2 gas' in
+                                 match b1, b2 with
+                                 | Some false, Some false => Some false
+                                 | Some true, _ => Some true
+                                 | _, Some true => Some true
+                                 | _, _ => None
+                                 end
+              | PRepetition p => Some true
+              | PNot p => Some true
+              | PRule i => match nth_error g i with
+                           | Some p' => nullable_comp g p' gas'
+                           | None => None
+                           end
+              end
+  end.
+
+Lemma nullable_comp_is_nullable :
+  forall g p gas,
+  nullable_comp g p gas = Some true ->
+  nullable g p.
+Proof.
+  intros * H.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas;
+  intros;
+  try discriminate;
+  destruct p;
+  simpl in H;
+  try destruct1;
+  eauto using nullable;
+  try (
+    destruct (nullable_comp g p1 gas) as [[|]|] eqn:H1;
+    destruct (nullable_comp g p2 gas) as [[|]|] eqn:H2;
+    try discriminate;
+    destruct1;
+    eauto using nullable
+  ).
+  try (
+    destruct (nth_error g n) eqn:Hn;
+    try discriminate;
+    eauto using nullable
+  ).
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

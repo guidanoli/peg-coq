@@ -664,7 +664,6 @@ Fixpoint hungry_comp g p gas {struct gas} :=
                            | Some p' => hungry_comp g p' gas'
                            | None => None
                            end
-              | PGrammar g' p' => hungry_comp g' p' gas'
               | _ => Some false
               end
   end.

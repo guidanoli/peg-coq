@@ -613,6 +613,17 @@ Proof.
   ).
 Qed.
 
+Lemma nullable_comp_le_gas :
+  forall g p gas1 gas2 b,
+  nullable_comp g p gas1 = Some b ->
+  gas1 <= gas2 ->
+  nullable_comp g p gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  auto using nullable_comp_S_gas.
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

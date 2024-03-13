@@ -20,6 +20,8 @@ Inductive pat : Type :=
   | PRule : nat -> pat                    (* R_i          *)
   .
 
+Definition grammar : Type := list pat.
+
 (** Semantics **)
 (***************)
 
@@ -30,7 +32,7 @@ Inductive MatchResult : Type :=
   | Success : string -> MatchResult  (* Pattern matched and left string s.  *)
   .
 
-Inductive matches : list pat -> pat -> string -> MatchResult -> Prop :=
+Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
   | MEmptySuccess :
       forall g s,
       matches g PEmpty s (Success s)
@@ -403,7 +405,7 @@ Qed.
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 
-Inductive hungry : list pat -> pat -> bool -> Prop :=
+Inductive hungry : grammar -> pat -> bool -> Prop :=
   | HEmpty :
       forall g,
       hungry g PEmpty false

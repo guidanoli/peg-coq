@@ -624,6 +624,41 @@ Proof.
   auto using nullable_comp_S_gas.
 Qed.
 
+Lemma nullable_is_nullable_comp :
+  forall g p,
+  nullable g p ->
+  (exists gas, nullable_comp g p gas = Some true).
+Proof.
+  intros * H.
+  induction H;
+  (* Cases with 0 recursive calls *)
+  try (exists 1; auto; fail);
+  (* Cases with 1 recursive call *)
+  try (
+    destruct IHnullable as [gas1 IH1];
+    exists (1 + gas1);
+    simpl;
+    repeat destruct_match_subject;
+    try destruct1;
+    try discriminate;
+    trivial;
+    fail
+  );
+  (* Cases with 2 recursive calls *)
+  try (
+    destruct IHnullable1 as [gas1 IH1];
+    destruct IHnullable2 as [gas2 IH2];
+    exists (1 + gas1 + gas2);
+    simpl;
+    specialize (Nat.le_add_r gas1 gas2) as Hle1;
+    rewrite (nullable_comp_le_gas _ _ _ _ _ IH1 Hle1);
+    specialize (Plus.le_plus_r gas1 gas2) as Hle2;
+    rewrite (nullable_comp_le_gas _ _ _ _ _ IH2 Hle2);
+    trivial;
+    fail
+  ).
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

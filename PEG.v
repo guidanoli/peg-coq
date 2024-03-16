@@ -976,42 +976,6 @@ Proof.
   ).
 Qed.
 
-(** Left-Recursive predicate **)
-(** A left-recursive rule winds up in itself without consuming any input **)
-(** This pattern is conservative, as it will be true for all patterns
-    satisfy this condition, but may also be true for patterns that don't. **)
-
-Inductive lr : list pat -> nat -> pat -> Prop :=
-  | LRSequence1 :
-      forall g i p1 p2,
-      lr g i p1 ->
-      lr g i (PSequence p1 p2)
-  | LRSequence2 :
-      forall g i p1 p2,
-      empty g p1 ->
-      lr g i p2 ->
-      lr g i (PSequence p1 p2)
-  | LChoice1 :
-      forall g i p1 p2,
-      lr g i p1 ->
-      lr g i (PChoice p1 p2)
-  | LChoice2 :
-      forall g i p1 p2,
-      lr g i p2 ->
-      lr g i (PChoice p1 p2)
-  | LRepetition :
-      forall g i p,
-      lr g i p ->
-      lr g i (PRepetition p)
-  | LNot :
-      forall g i p,
-      lr g i p ->
-      lr g i (PNot p)
-  | LNonTerminal :
-      forall g i,
-      lr g i (PNonTerminal i)
-  .
-
 (** Well-formed predicate **)
 (** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
 

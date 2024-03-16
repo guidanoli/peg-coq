@@ -661,7 +661,7 @@ Qed.
 
 (** Nullable function with gas **)
 
-Fixpoint nullable_comp (g : grammar) p gas {struct gas} :=
+Fixpoint nullable_comp g p gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with

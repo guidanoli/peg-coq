@@ -698,11 +698,12 @@ Fixpoint nullable_comp g p v gas {struct gas} :=
   end.
 
 Lemma nullable_comp_is_nullable :
-  forall g p gas,
-  nullable_comp g p gas = Some true ->
+  forall g p v gas,
+  nullable_comp g p v gas = Some true ->
   nullable g p.
 Proof.
   intros * H.
+  generalize dependent v.
   generalize dependent p.
   generalize dependent g.
   induction gas;
@@ -713,16 +714,18 @@ Proof.
   try destruct1;
   eauto using nullable;
   try (
-    destruct (nullable_comp g p1 gas) as [[|]|] eqn:H1;
-    destruct (nullable_comp g p2 gas) as [[|]|] eqn:H2;
+    destruct (nullable_comp g p1 v gas) as [[|]|] eqn:H1;
     try discriminate;
-    destruct1;
-    eauto using nullable
-  ).
+    eauto using nullable;
+    fail
+  );
   try (
     destruct (nth_error g n) eqn:Hn;
     try discriminate;
-    eauto using nullable
+    destruct (existsb (Nat.eqb n) v) eqn:Hexistsb;
+    try discriminate;
+    eauto using nullable;
+    fail
   ).
 Qed.
 

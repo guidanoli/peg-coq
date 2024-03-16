@@ -1011,7 +1011,6 @@ Inductive well_formed : list pat -> pat -> Prop :=
   | WFNonTerminal :
       forall g p i,
       nth_error g i = Some p ->
-      well_formed g p ->
       well_formed g (PNonTerminal i)
   .
 

@@ -17,7 +17,7 @@ Inductive pat : Type :=
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
   | PNot : pat -> pat                     (* !p           *)
-  | PNonTerminal : nat -> pat             (* R_i          *)
+  | PNonTerminal : nat -> pat             (* G[i]         *)
   .
 
 Definition grammar : Type := list pat.

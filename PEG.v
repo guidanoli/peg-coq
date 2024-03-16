@@ -619,6 +619,16 @@ Proof.
   eauto using nullable.
 Qed.
 
+(* {} |= A *)
+Example nullable_ex17 :
+  ~ nullable [] (PNonTerminal 0).
+Proof.
+  intros * H.
+  inversion H; subst.
+  simpl in *.
+  discriminate.
+Qed.
+
 Lemma nullable_approx :
   forall g p s,
   matches g p s (Success s) ->

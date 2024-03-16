@@ -671,35 +671,29 @@ Qed.
 
 (** Nullable function with gas **)
 
-Fixpoint nullable_comp g p gas {struct gas} :=
+Fixpoint nullable_comp g p v gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PEmpty => Some true
               | PChar _ => Some false
               | PAnyChar => Some false
-              | PSequence p1 p2 => let b1 := nullable_comp g p1 gas' in
-                                   let b2 := nullable_comp g p2 gas' in
-                                   match b1, b2 with
-                                   | Some true, Some true => Some true
-                                   | Some false, _ => Some false
-                                   | _, Some false => Some false
-                                   | _, _ => None
+              | PSequence p1 p2 => match nullable_comp g p1 v gas' with
+                                   | Some true => nullable_comp g p2 v gas'
+                                   | ob => ob
                                    end
-              | PChoice p1 p2 => let b1 := nullable_comp g p1 gas' in
-                                 let b2 := nullable_comp g p2 gas' in
-                                 match b1, b2 with
-                                 | Some false, Some false => Some false
-                                 | Some true, _ => Some true
-                                 | _, Some true => Some true
-                                 | _, _ => None
+              | PChoice p1 p2 => match nullable_comp g p1 v gas' with
+                                 | Some false => nullable_comp g p2 v gas'
+                                 | ob => ob
                                  end
-              | PRepetition p => Some true
-              | PNot p => Some true
+              | PRepetition _ => Some true
+              | PNot _ => Some true
               | PNonTerminal i => match nth_error g i with
-                           | Some p' => nullable_comp g p' gas'
-                           | None => None
-                           end
+                                  | Some p' => if existsb (Nat.eqb i) v
+                                               then Some false
+                                               else nullable_comp g p' (i :: v) gas'
+                                  | None => Some false
+                                  end
               end
   end.
 

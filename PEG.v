@@ -11,7 +11,7 @@ From Peg Require Import Suffix.
 
 Inductive pat : Type :=
   | PEmpty : pat                          (* ε            *)
-  | PChar : ascii -> pat                  (* a            *)
+  | PChar : ascii -> pat                  (* 'a'          *)
   | PAnyChar : pat                        (* .            *)
   | PSequence : pat -> pat -> pat         (* p1 p2        *)
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)

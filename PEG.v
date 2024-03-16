@@ -676,6 +676,7 @@ Proof.
   try (exfalso; eauto using nullable; fail);
   (* Cases with 0 recursive calls *)
   try (exists 1; auto; fail).
+Abort.
 
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)

@@ -1002,7 +1002,7 @@ Inductive well_formed : list pat -> pat -> Prop :=
   | WFRepetition :
       forall g p,
       well_formed g p ->
-      hungry g p ->
+      ~ nullable g p ->
       well_formed g (PRepetition p)
   | WFNot :
       forall g p,

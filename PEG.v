@@ -728,10 +728,6 @@ Inductive hungry : grammar -> pat -> bool -> Prop :=
       nth_error g i = Some p ->
       hungry g p b ->
       hungry g (PNonTerminal i) b
-  | HGrammar :
-      forall g g' p b,
-      hungry g' p b ->
-      hungry g (PGrammar g' p) b
   .
 
 Lemma string_not_infinite :

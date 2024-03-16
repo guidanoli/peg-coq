@@ -1050,10 +1050,10 @@ Proof with eauto using matches.
     + (* Success s1 *)
       subst.
       match goal with [
-        Hx: hungry ?g ?p,
+        Hx: ~ nullable ?g ?p,
         Hy: matches ?g ?p _ (Success ?s) |- _
       ] =>
-        specialize (matches_hungry_proper_suffix _ _ _ _ Hx Hy) as Hps;
+        specialize (proper_suffix_if_not_nullable _ _ _ _ Hx Hy) as Hps;
         specialize (proper_suffix_length_lt _ _ Hps) as Hlt;
         specialize (eq_refl (String.length s)) as Hlen;
         destruct (IHn _ Hlt _ Hlen)
@@ -1062,10 +1062,7 @@ Proof with eauto using matches.
   - (* PNot p *)
     destruct (IHwell_formed s) as [[|]]...
   - (* PNonTerminal i *)
-    destruct (IHwell_formed s)...
-  - (* PGrammar g' p' *)
-    destruct (IHwell_formed s)...
-Qed.
+Abort.
 
 (** Well-formed function with gas **)
 
@@ -1099,10 +1096,9 @@ Fixpoint well_formed_comp g p gas :=
                                  end
               | PNot p => well_formed_comp g p gas'
               | PNonTerminal i => match nth_error g i with
-                           | Some p => well_formed_comp g p gas'
+                           | Some p => Some true
                            | None => Some false
                            end
-              | _ => Some false
               end
   end.
 

@@ -624,40 +624,46 @@ Proof.
   auto using nullable_comp_S_gas.
 Qed.
 
-Lemma nullable_is_nullable_comp :
-  forall g p,
-  nullable g p ->
-  (exists gas, nullable_comp g p gas = Some true).
+Fixpoint nullable_cost (g : grammar) p {struct p} :=
+  match p with
+  | PSequence p1 p2 => 1 + nullable_cost g p1 + nullable_cost g p2
+  | PChoice p1 p2 => 1 + nullable_cost g p1 + nullable_cost g p2
+  | PRepetition p => 1 + nullable_cost g p
+  | PNot p => 1 + nullable_cost g p
+  | PNonTerminal i => 1
+  | _ => 1
+  end.
+
+Lemma nullable_comp_complete :
+  forall g p gas,
+  nullable_cost g p <= gas ->
+  exists b, nullable_comp g p gas = Some b.
 Proof.
   intros * H.
-  induction H;
-  (* Cases with 0 recursive calls *)
-  try (exists 1; auto; fail);
-  (* Cases with 1 recursive call *)
-  try (
-    destruct IHnullable as [gas1 IH1];
-    exists (1 + gas1);
-    simpl;
-    repeat destruct_match_subject;
-    try destruct1;
-    try discriminate;
-    trivial;
-    fail
-  );
-  (* Cases with 2 recursive calls *)
-  try (
-    destruct IHnullable1 as [gas1 IH1];
-    destruct IHnullable2 as [gas2 IH2];
-    exists (1 + gas1 + gas2);
-    simpl;
-    specialize (Nat.le_add_r gas1 gas2) as Hle1;
-    rewrite (nullable_comp_le_gas _ _ _ _ _ IH1 Hle1);
-    specialize (Plus.le_plus_r gas1 gas2) as Hle2;
-    rewrite (nullable_comp_le_gas _ _ _ _ _ IH2 Hle2);
-    trivial;
-    fail
-  ).
-Qed.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros.
+  - destruct p; simpl in H; inversion H.
+  - destruct p;
+    (* 0-1 recursive calls *)
+    try (simpl; eauto; fail);
+    (* 2 recursive calls *)
+    try (
+      simpl in H;
+      apply le_S_n in H;
+      specialize (Nat.le_trans _ _ _ (Plus.le_plus_l _ _) H) as Hle1;
+      specialize (Nat.le_trans _ _ _ (Plus.le_plus_r _ _) H) as Hle2;
+      simpl;
+      destruct (IHgas _ _ Hle1) as [[] Hn1];
+      destruct (IHgas _ _ Hle2) as [[] Hn2];
+      try rewrite Hn1;
+      try rewrite Hn2;
+      eauto;
+      fail
+    ).
+    + simpl in H.
+      simpl.
+Abort.
 
 Lemma not_nullable_is_not_nullable_comp :
   forall g p,

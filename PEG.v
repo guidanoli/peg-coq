@@ -6,6 +6,8 @@ From Coq Require Import Lists.List.
 From Peg Require Import Strong.
 From Peg Require Import Suffix.
 
+Import ListNotations.
+
 (** Syntax **)
 (************)
 
@@ -97,6 +99,12 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
 Ltac destruct1 :=
   match goal with
   [ H: ?C _ = ?C _ |- _ ] =>
+      inversion H; clear H; subst
+  end.
+
+Ltac destruct2 :=
+  match goal with
+  [ H: ?C _ _ = ?C _ _ |- _ ] =>
       inversion H; clear H; subst
   end.
 
@@ -434,6 +442,182 @@ Inductive nullable : grammar -> pat -> Prop :=
       nullable g p ->
       nullable g (PNonTerminal i)
   .
+
+Ltac invert_nullable_and_clear :=
+  match goal with
+    [ Hx: nullable _ _ |- _ ] =>
+        inversion Hx;
+        clear Hx;
+        subst
+  end.
+
+Ltac simpl_nth_error :=
+  match goal with
+    [ Hx: nth_error _ _ = _ |- _ ] =>
+        simpl in Hx
+  end.
+
+(* {A <- A} |= A *)
+Example nullable_ex1 :
+  ~ nullable
+    [PNonTerminal 0]
+    (PNonTerminal 0).
+Proof.
+  intro.
+  remember (PNonTerminal 0) as p.
+  remember ([p]) as g.
+  induction H;
+  try discriminate;
+  subst;
+  destruct1;
+  simpl in H;
+  destruct1;
+  auto.
+Qed.
+
+(* G |= ε *)
+Example nullable_ex2 :
+  forall g,
+  nullable g PEmpty.
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= 'a' *)
+Example nullable_ex3 :
+  forall g a,
+  ~ nullable g (PChar a).
+Proof.
+  intros * H.
+  inversion H.
+Qed.
+
+(* G |= . *)
+Example nullable_ex4 :
+  forall g,
+  ~ nullable g PAnyChar.
+Proof.
+  intros * H.
+  inversion H.
+Qed.
+
+(* G |= ε ε *)
+Example nullable_ex5 :
+  forall g,
+  nullable g (PSequence PEmpty PEmpty).
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= . ε *)
+Example nullable_ex6 :
+  forall g,
+  ~ nullable g (PSequence PAnyChar PEmpty).
+Proof.
+  intros * H.
+  repeat invert_nullable_and_clear.
+Qed.
+
+(* G |= ε . *)
+Example nullable_ex7 :
+  forall g,
+  ~ nullable g (PSequence PEmpty PAnyChar).
+Proof.
+  intros * H.
+  repeat invert_nullable_and_clear.
+Qed.
+
+(* G |= . . *)
+Example nullable_ex8 :
+  forall g,
+  ~ nullable g (PSequence PAnyChar PAnyChar).
+Proof.
+  intros * H.
+  repeat invert_nullable_and_clear.
+Qed.
+
+(* G |= ε / ε *)
+Example nullable_ex9 :
+  forall g,
+  nullable g (PChoice PEmpty PEmpty).
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= . / ε *)
+Example nullable_ex10 :
+  forall g,
+  nullable g (PChoice PAnyChar PEmpty).
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= ε / . *)
+Example nullable_ex11 :
+  forall g,
+  nullable g (PChoice PEmpty PAnyChar).
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= . / . *)
+Example nullable_ex12 :
+  forall g,
+  ~ nullable g (PChoice PAnyChar PAnyChar).
+Proof.
+  intros * H.
+  repeat invert_nullable_and_clear.
+Qed.
+
+(* G |= p* *)
+Example nullable_ex13 :
+  forall g p,
+  nullable g (PRepetition p).
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= !p *)
+Example nullable_ex14 :
+  forall g p,
+  nullable g (PNot p).
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* { P <- . P } |= P *)
+Example nullable_ex15 :
+  ~ nullable
+    [PSequence PAnyChar (PNonTerminal 0)]
+    (PNonTerminal 0).
+Proof.
+  intros * H.
+  invert_nullable_and_clear.
+  simpl_nth_error.
+  destruct1.
+  invert_nullable_and_clear.
+  match goal with
+    [ Hx: nullable _ PAnyChar |- _ ] =>
+      inversion Hx
+  end.
+Qed.
+
+(* { P <- . P / ε } |= P *)
+Example nullable_ex16 :
+  nullable
+    [PChoice (PSequence PAnyChar (PNonTerminal 0)) PEmpty]
+    (PNonTerminal 0).
+Proof.
+  econstructor; simpl; eauto.
+  eauto using nullable.
+Qed.
 
 Lemma nullable_approx :
   forall g p s,

@@ -669,32 +669,33 @@ Proof.
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
-(** Nullable function with gas **)
+(** Nullable function with gas
+    "rr" standas for "remaining rules" **)
 
-Fixpoint nullable_comp g p d gas {struct gas} :=
+Fixpoint nullable_comp g p rr gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PEmpty => Some true
               | PChar _ => Some false
               | PAnyChar => Some false
-              | PSequence p1 p2 => match nullable_comp g p1 d gas' with
-                                   | Some true => nullable_comp g p2 d gas'
+              | PSequence p1 p2 => match nullable_comp g p1 rr gas' with
+                                   | Some true => nullable_comp g p2 rr gas'
                                    | ob => ob
                                    end
-              | PChoice p1 p2 => match nullable_comp g p1 d gas' with
-                                 | Some false => nullable_comp g p2 d gas'
+              | PChoice p1 p2 => match nullable_comp g p1 rr gas' with
+                                 | Some false => nullable_comp g p2 rr gas'
                                  | ob => ob
                                  end
               | PRepetition _ => Some true
               | PNot _ => Some true
-              | PNonTerminal i => match nth_error g i with
-                                  | Some p' => match d with
-                                               | O => Some false
-                                               | S d' => nullable_comp g p' d' gas'
-                                               end
-                                  | None => Some false
-                                  end
+              | PNT i => match nth_error g i with
+                         | Some p' => match rr with
+                                      | O => Some false
+                                      | S rr' => nullable_comp g p' rr' gas'
+                                      end
+                         | None => Some false
+                         end
               end
   end.
 

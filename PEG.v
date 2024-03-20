@@ -671,39 +671,40 @@ Qed.
 
 (** Nullable function with gas **)
 
-Fixpoint nullable_comp g p v gas {struct gas} :=
+Fixpoint nullable_comp g p d gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PEmpty => Some true
               | PChar _ => Some false
               | PAnyChar => Some false
-              | PSequence p1 p2 => match nullable_comp g p1 v gas' with
-                                   | Some true => nullable_comp g p2 v gas'
+              | PSequence p1 p2 => match nullable_comp g p1 d gas' with
+                                   | Some true => nullable_comp g p2 d gas'
                                    | ob => ob
                                    end
-              | PChoice p1 p2 => match nullable_comp g p1 v gas' with
-                                 | Some false => nullable_comp g p2 v gas'
+              | PChoice p1 p2 => match nullable_comp g p1 d gas' with
+                                 | Some false => nullable_comp g p2 d gas'
                                  | ob => ob
                                  end
               | PRepetition _ => Some true
               | PNot _ => Some true
               | PNonTerminal i => match nth_error g i with
-                                  | Some p' => if existsb (Nat.eqb i) v
-                                               then Some false
-                                               else nullable_comp g p' (i :: v) gas'
+                                  | Some p' => match d with
+                                               | O => Some false
+                                               | S d' => nullable_comp g p' d' gas'
+                                               end
                                   | None => Some false
                                   end
               end
   end.
 
 Lemma nullable_comp_is_nullable :
-  forall g p v gas,
-  nullable_comp g p v gas = Some true ->
+  forall g p d gas,
+  nullable_comp g p d gas = Some true ->
   nullable g p.
 Proof.
   intros * H.
-  generalize dependent v.
+  generalize dependent d.
   generalize dependent p.
   generalize dependent g.
   induction gas;
@@ -714,7 +715,7 @@ Proof.
   try destruct1;
   eauto using nullable;
   try (
-    destruct (nullable_comp g p1 v gas) as [[|]|] eqn:H1;
+    destruct (nullable_comp g p1 d gas) as [[|]|] eqn:H1;
     try discriminate;
     eauto using nullable;
     fail
@@ -722,7 +723,7 @@ Proof.
   try (
     destruct (nth_error g n) eqn:Hn;
     try discriminate;
-    destruct (existsb (Nat.eqb n) v) eqn:Hexistsb;
+    destruct d eqn:Hd;
     try discriminate;
     eauto using nullable;
     fail

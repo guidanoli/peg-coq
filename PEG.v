@@ -457,7 +457,7 @@ Ltac simpl_nth_error :=
         simpl in Hx
   end.
 
-(* {A <- A} |= A *)
+(* ! {A <- A} |= A *)
 Example nullable_ex1 :
   ~ nullable
     [PNT 0]
@@ -484,7 +484,7 @@ Proof.
   eauto using nullable.
 Qed.
 
-(* G |= 'a' *)
+(* ! G |= 'a' *)
 Example nullable_ex3 :
   forall g a,
   ~ nullable g (PChar a).
@@ -493,7 +493,7 @@ Proof.
   inversion H.
 Qed.
 
-(* G |= . *)
+(* ! G |= . *)
 Example nullable_ex4 :
   forall g,
   ~ nullable g PAnyChar.
@@ -511,7 +511,7 @@ Proof.
   eauto using nullable.
 Qed.
 
-(* G |= . ε *)
+(* ! G |= . ε *)
 Example nullable_ex6 :
   forall g,
   ~ nullable g (PSequence PAnyChar PEmpty).
@@ -520,7 +520,7 @@ Proof.
   repeat invert_nullable_and_clear.
 Qed.
 
-(* G |= ε . *)
+(* ! G |= ε . *)
 Example nullable_ex7 :
   forall g,
   ~ nullable g (PSequence PEmpty PAnyChar).
@@ -529,7 +529,7 @@ Proof.
   repeat invert_nullable_and_clear.
 Qed.
 
-(* G |= . . *)
+(* ! G |= . . *)
 Example nullable_ex8 :
   forall g,
   ~ nullable g (PSequence PAnyChar PAnyChar).
@@ -565,7 +565,7 @@ Proof.
   eauto using nullable.
 Qed.
 
-(* G |= . / . *)
+(* ! G |= . / . *)
 Example nullable_ex12 :
   forall g,
   ~ nullable g (PChoice PAnyChar PAnyChar).
@@ -592,7 +592,7 @@ Proof.
   eauto using nullable.
 Qed.
 
-(* { P <- . P } |= P *)
+(* ! { P <- . P } |= P *)
 Example nullable_ex15 :
   ~ nullable
     [PSequence PAnyChar (PNT 0)]
@@ -619,7 +619,7 @@ Proof.
   eauto using nullable.
 Qed.
 
-(* {} |= A *)
+(* ! {} |= A *)
 Example nullable_ex17 :
   ~ nullable [] (PNT 0).
 Proof.

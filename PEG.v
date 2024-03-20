@@ -3,6 +3,7 @@ From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.PeanoNat.
 From Coq Require Import Lists.List.
+From Coq Require Import Lia.
 From Peg Require Import Strong.
 From Peg Require Import Suffix.
 
@@ -755,6 +756,45 @@ Proof.
   intros * H Hle.
   induction Hle;
   auto using nullable_comp_S_gas.
+Qed.
+
+Fixpoint pat_size p :=
+  match p with
+  | PEmpty => 1
+  | PChar _ => 1
+  | PAnyChar => 1
+  | PSequence p1 p2 => 1 + pat_size p1 + pat_size p2
+  | PChoice p1 p2 => 1 + pat_size p1 + pat_size p2
+  | PRepetition p => 1 + pat_size p
+  | PNot p => 1 + pat_size p
+  | PNT _ => 1
+  end.
+
+Fixpoint grammar_size g :=
+  match g with
+  | cons p g' => pat_size p + grammar_size g'
+  | nil => 0
+  end.
+
+Lemma pat_size_le_grammar_size :
+  forall p g,
+  In p g ->
+  pat_size p <= grammar_size g.
+Proof.
+  intros * H.
+  generalize dependent p.
+  induction g as [|p' g' IHg]; intros.
+  + (* nil *)
+    inversion H.
+  + (* cons p' g' *)
+    inversion H as [|H']; subst.
+    - (* p = p' *)
+      simpl.
+      lia.
+    - (* In p (p' :: g') *)
+      simpl.
+      specialize (IHg _ H').
+      lia.
 Qed.
 
 Lemma nullable_comp_complete :

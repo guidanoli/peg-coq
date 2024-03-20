@@ -685,7 +685,7 @@ Proof.
 Qed.
 
 (** Nullable function with gas
-    "rr" standas for "remaining rules" **)
+    "rr" stands for "remaining rules" **)
 
 Fixpoint nullable_comp g p rr gas {struct gas} :=
   match gas with

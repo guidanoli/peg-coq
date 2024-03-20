@@ -736,12 +736,13 @@ Ltac destruct_match_subject :=
   end.
 
 Lemma nullable_comp_S_gas :
-  forall g p gas b,
-  nullable_comp g p gas = Some b ->
-  nullable_comp g p (S gas) = Some b.
+  forall g p v gas b,
+  nullable_comp g p v gas = Some b ->
+  nullable_comp g p v (S gas) = Some b.
 Proof.
   intros * H.
   generalize dependent b.
+  generalize dependent v.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros; try discriminate;
@@ -749,8 +750,8 @@ Proof.
   try destruct1;
   auto;
   try (
-    destruct (nullable_comp g p1 gas) as [[|]|] eqn:Hn1;
-    destruct (nullable_comp g p2 gas) as [[|]|] eqn:Hn2;
+    destruct (nullable_comp g p1 v gas) as [[|]|] eqn:Hn1;
+    destruct (nullable_comp g p2 v gas) as [[|]|] eqn:Hn2;
     try discriminate;
     destruct1;
     try apply IHgas in Hn1;
@@ -770,15 +771,17 @@ Proof.
     destruct_match_subject;
     try destruct1;
     try discriminate;
+    auto;
+    destruct (existsb (Nat.eqb n) v);
     auto
   ).
 Qed.
 
 Lemma nullable_comp_le_gas :
-  forall g p gas1 gas2 b,
-  nullable_comp g p gas1 = Some b ->
+  forall g p v gas1 gas2 b,
+  nullable_comp g p v gas1 = Some b ->
   gas1 <= gas2 ->
-  nullable_comp g p gas2 = Some b.
+  nullable_comp g p v gas2 = Some b.
 Proof.
   intros * H Hle.
   induction Hle;

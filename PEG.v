@@ -19,7 +19,7 @@ Inductive pat : Type :=
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
   | PNot : pat -> pat                     (* !p           *)
-  | PNonTerminal : nat -> pat             (* G[i]         *)
+  | PNT : nat -> pat                      (* G[i]         *)
   .
 
 Definition grammar : Type := list pat.
@@ -93,7 +93,7 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g i p s res,
       nth_error g i = Some p ->
       matches g p s res ->
-      matches g (PNonTerminal i) s res
+      matches g (PNT i) s res
   .
 
 Ltac destruct1 :=
@@ -220,10 +220,10 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                            | Some (Success _) => Some Failure
                            | None => None
                            end
-              | PNonTerminal i => match nth_error g i with
-                           | Some p' => matches_comp g p' s gas'
-                           | None => None
-                           end
+              | PNT i => match nth_error g i with
+                         | Some p' => matches_comp g p' s gas'
+                         | None => None
+                         end
               end
   end.
 
@@ -280,7 +280,7 @@ Proof with eauto using matches.
     destruct res1 as [|s1];
     destruct1;
     eauto using matches.
-  - (* PNonTerminal n *)
+  - (* PNT n *)
     destruct (nth_error g n) as [p|] eqn:H1.
     + (* Some p *)
       eauto using matches.
@@ -440,7 +440,7 @@ Inductive nullable : grammar -> pat -> Prop :=
       forall g i p,
       nth_error g i = Some p ->
       nullable g p ->
-      nullable g (PNonTerminal i)
+      nullable g (PNT i)
   .
 
 Ltac invert_nullable_and_clear :=
@@ -460,11 +460,11 @@ Ltac simpl_nth_error :=
 (* {A <- A} |= A *)
 Example nullable_ex1 :
   ~ nullable
-    [PNonTerminal 0]
-    (PNonTerminal 0).
+    [PNT 0]
+    (PNT 0).
 Proof.
   intro.
-  remember (PNonTerminal 0) as p.
+  remember (PNT 0) as p.
   remember ([p]) as g.
   induction H;
   try discriminate;
@@ -595,8 +595,8 @@ Qed.
 (* { P <- . P } |= P *)
 Example nullable_ex15 :
   ~ nullable
-    [PSequence PAnyChar (PNonTerminal 0)]
-    (PNonTerminal 0).
+    [PSequence PAnyChar (PNT 0)]
+    (PNT 0).
 Proof.
   intros * H.
   invert_nullable_and_clear.
@@ -612,8 +612,8 @@ Qed.
 (* { P <- . P / ε } |= P *)
 Example nullable_ex16 :
   nullable
-    [PChoice (PSequence PAnyChar (PNonTerminal 0)) PEmpty]
-    (PNonTerminal 0).
+    [PChoice (PSequence PAnyChar (PNT 0)) PEmpty]
+    (PNT 0).
 Proof.
   econstructor; simpl; eauto.
   eauto using nullable.
@@ -621,7 +621,7 @@ Qed.
 
 (* {} |= A *)
 Example nullable_ex17 :
-  ~ nullable [] (PNonTerminal 0).
+  ~ nullable [] (PNT 0).
 Proof.
   intros * H.
   inversion H; subst.
@@ -904,7 +904,7 @@ Inductive hungry : grammar -> pat -> bool -> Prop :=
       forall g i p b,
       nth_error g i = Some p ->
       hungry g p b ->
-      hungry g (PNonTerminal i) b
+      hungry g (PNT i) b
   .
 
 Lemma string_not_infinite :
@@ -989,10 +989,10 @@ Fixpoint hungry_comp g p gas {struct gas} :=
                                  | _, Some false => Some false
                                  | _, _ => None
                                  end
-              | PNonTerminal i => match nth_error g i with
-                           | Some p' => hungry_comp g p' gas'
-                           | None => None
-                           end
+              | PNT i => match nth_error g i with
+                         | Some p' => hungry_comp g p' gas'
+                         | None => None
+                         end
               | _ => Some false
               end
   end.
@@ -1024,7 +1024,7 @@ Proof.
     eauto using hungry;
     fail
   ).
-  - (* PNonTerminal n *)
+  - (* PNT n *)
     destruct (nth_error g n) eqn:Hnth; try discriminate.
     eauto using hungry.
 Qed.
@@ -1070,7 +1070,7 @@ Proof.
     auto;
     fail
   ).
-  - (* PNonTerminal n *)
+  - (* PNT n *)
     destruct (nth_error g n) eqn:H1;
     try apply IHgas in H;
     remember (S gas);
@@ -1188,7 +1188,7 @@ Inductive well_formed : list pat -> pat -> Prop :=
   | WFNonTerminal :
       forall g p i,
       nth_error g i = Some p ->
-      well_formed g (PNonTerminal i)
+      well_formed g (PNT i)
   .
 
 Theorem well_formed_correct :
@@ -1238,7 +1238,7 @@ Proof with eauto using matches.
       eauto using matches.
   - (* PNot p *)
     destruct (IHwell_formed s) as [[|]]...
-  - (* PNonTerminal i *)
+  - (* PNT i *)
 Abort.
 
 (** Well-formed function with gas **)
@@ -1272,10 +1272,10 @@ Fixpoint well_formed_comp g p gas :=
                                  | _, _ => Some false
                                  end
               | PNot p => well_formed_comp g p gas'
-              | PNonTerminal i => match nth_error g i with
-                           | Some p => Some true
-                           | None => Some false
-                           end
+              | PNT i => match nth_error g i with
+                         | Some p => Some true
+                         | None => Some false
+                         end
               end
   end.
 
@@ -1311,7 +1311,7 @@ Proof.
     destruct (well_formed_comp g p gas) as [[]|] eqn:H1;
     try discriminate.
     eauto using well_formed.
-  - (* PNonTerminal n *)
+  - (* PNT n *)
     destruct gas; try discriminate.
     simpl in H.
     destruct (nth_error g n) eqn:H1; try discriminate;

@@ -630,6 +630,20 @@ Proof.
   discriminate.
 Qed.
 
+(* { A <- 'a' A | ε ; B <- A A } |= A B *)
+Example nullable_ex18 :
+  nullable
+  [PChoice (PSequence (PChar "a") (PNT 0)) PEmpty; PSequence (PNT 0) (PNT 0)]
+  (PSequence (PNT 0) (PNT 1)).
+Proof.
+  repeat match goal with
+         | [ |- nullable _ (PSequence _ _) ] => econstructor
+         | [ |- nullable _ (PNT _) ] => econstructor; simpl; eauto
+         | [ |- nullable _ (PChoice _ _) ] => eauto using nullable
+         | _ => fail
+         end.
+Qed.
+
 Lemma nullable_approx :
   forall g p s,
   matches g p s (Success s) ->

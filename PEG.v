@@ -699,50 +699,6 @@ Fixpoint nullable_comp g p rr gas {struct gas} :=
               end
   end.
 
-Lemma nullable_comp_is_nullable :
-  forall g p d gas,
-  nullable_comp g p d gas = Some true ->
-  nullable g p.
-Proof.
-  intros * H.
-  generalize dependent d.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas;
-  intros;
-  try discriminate;
-  destruct p;
-  simpl in H;
-  try destruct1;
-  eauto using nullable;
-  try (
-    destruct (nullable_comp g p1 d gas) as [[|]|] eqn:H1;
-    try discriminate;
-    eauto using nullable;
-    fail
-  );
-  try (
-    destruct (nth_error g n) eqn:Hn;
-    try discriminate;
-    destruct d eqn:Hd;
-    try discriminate;
-    eauto using nullable;
-    fail
-  ).
-Qed.
-
-Lemma not_nullable_comp_is_not_nullable :
-  forall g p gas,
-  (forall d, nullable_comp g p d gas = Some false) ->
-  ~ nullable g p.
-Proof.
-  intros * H Hcontra.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros;
-  try (specialize (H 0); discriminate; fail).
-Abort.
-
 Ltac destruct_match_subject :=
   match goal with
     [ |- match ?x with _ => _ end = _ ] =>

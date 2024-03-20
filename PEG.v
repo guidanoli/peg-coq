@@ -730,6 +730,18 @@ Proof.
   ).
 Qed.
 
+Lemma not_nullable_comp_is_not_nullable :
+  forall g p gas,
+  (forall d, nullable_comp g p d gas = Some false) ->
+  ~ nullable g p.
+Proof.
+  intros * H Hcontra.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  try (specialize (H 0); discriminate; fail).
+Abort.
+
 Ltac destruct_match_subject :=
   match goal with
     [ |- match ?x with _ => _ end = _ ] =>

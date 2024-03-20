@@ -851,6 +851,33 @@ Proof.
   ).
 Qed.
 
+Lemma nullable_comp_some_true_is_nullable :
+  forall g p rr gas,
+  nullable_comp g p rr gas = Some true ->
+  nullable g p.
+Proof.
+  intros * H.
+  generalize dependent rr.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate.
+  destruct p; eauto using nullable;
+  try (simpl in H; discriminate; fail);
+  try (
+    simpl in H;
+    destruct (nullable_comp g p1 rr gas) as [[|]|] eqn:H1; try discriminate;
+    eauto using nullable;
+    fail
+  );
+  try (
+    simpl in H;
+    destruct (nth_error g n) eqn:Hnth; try discriminate;
+    destruct rr; try discriminate;
+    eauto using nullable;
+    fail
+  ).
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

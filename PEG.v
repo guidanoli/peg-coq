@@ -781,19 +781,19 @@ Lemma pat_size_le_grammar_size :
   In p g ->
   pat_size p <= grammar_size g.
 Proof.
-  intros * H.
+  intros * HIn.
   generalize dependent p.
   induction g as [|p' g' IHg]; intros.
   + (* nil *)
-    inversion H.
+    inversion HIn.
   + (* cons p' g' *)
-    inversion H as [|H']; subst.
+    inversion HIn as [|HIn']; subst.
     - (* p = p' *)
       simpl.
       lia.
     - (* In p (p' :: g') *)
       simpl.
-      specialize (IHg _ H').
+      specialize (IHg _ HIn').
       lia.
 Qed.
 

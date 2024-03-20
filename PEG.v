@@ -797,6 +797,46 @@ Proof.
       lia.
 Qed.
 
+Lemma nullable_comp_complete :
+  forall g p rr gas,
+  gas >= pat_size p + rr * (grammar_size g) ->
+  exists b, nullable_comp g p rr gas = Some b.
+Proof.
+  intros * Hge.
+  generalize dependent rr.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  try (destruct p; inversion Hge; fail);
+  destruct p;
+  try (simpl; eauto; fail);
+  try (
+    simpl in Hge;
+    assert (gas >= pat_size p1 + rr * grammar_size g) as Hge1 by lia;
+    assert (gas >= pat_size p2 + rr * grammar_size g) as Hge2 by lia;
+    clear Hge;
+    specialize (IHgas _ _ _ Hge1) as H1;
+    destruct H1 as [n1 H1];
+    specialize (IHgas _ _ _ Hge2) as H2;
+    simpl;
+    simpl in H1;
+    rewrite H1;
+    destruct n1;
+    eauto;
+    fail
+  );
+  try (
+    simpl in Hge;
+    simpl;
+    destruct (nth_error g n) as [p|] eqn:Hnth; eauto;
+    assert (In p g) as HIn by (eauto using nth_error_In);
+    destruct rr; eauto;
+    specialize (pat_size_le_grammar_size _ _ HIn) as Hle;
+    assert (gas >= pat_size p + rr * grammar_size g) by lia;
+    auto
+  ).
+Qed.
+
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

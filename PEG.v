@@ -797,50 +797,6 @@ Proof.
       lia.
 Qed.
 
-Lemma nullable_comp_complete :
-  forall g p gas,
-  nullable_cost g p <= gas ->
-  exists b, nullable_comp g p gas = Some b.
-Proof.
-  intros * H.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros.
-  - destruct p; simpl in H; inversion H.
-  - destruct p;
-    (* 0-1 recursive calls *)
-    try (simpl; eauto; fail);
-    (* 2 recursive calls *)
-    try (
-      simpl in H;
-      apply le_S_n in H;
-      specialize (Nat.le_trans _ _ _ (Plus.le_plus_l _ _) H) as Hle1;
-      specialize (Nat.le_trans _ _ _ (Plus.le_plus_r _ _) H) as Hle2;
-      simpl;
-      destruct (IHgas _ _ Hle1) as [[] Hn1];
-      destruct (IHgas _ _ Hle2) as [[] Hn2];
-      try rewrite Hn1;
-      try rewrite Hn2;
-      eauto;
-      fail
-    ).
-    + simpl in H.
-      simpl.
-Abort.
-
-Lemma not_nullable_is_not_nullable_comp :
-  forall g p,
-  ~ nullable g p ->
-  (exists gas, nullable_comp g p gas = Some false).
-Proof.
-  intros * H.
-  induction p;
-  (* Cases with contradictions *)
-  try (exfalso; eauto using nullable; fail);
-  (* Cases with 0 recursive calls *)
-  try (exists 1; auto; fail).
-Abort.
-
 (** Hungry predicate **)
 (** A "hungry" pattern always consumes a character on a successful match **)
 

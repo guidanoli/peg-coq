@@ -757,16 +757,6 @@ Proof.
   auto using nullable_comp_S_gas.
 Qed.
 
-Fixpoint nullable_cost (g : grammar) p {struct p} :=
-  match p with
-  | PSequence p1 p2 => 1 + nullable_cost g p1 + nullable_cost g p2
-  | PChoice p1 p2 => 1 + nullable_cost g p1 + nullable_cost g p2
-  | PRepetition p => 1 + nullable_cost g p
-  | PNot p => 1 + nullable_cost g p
-  | PNonTerminal i => 1
-  | _ => 1
-  end.
-
 Lemma nullable_comp_complete :
   forall g p gas,
   nullable_cost g p <= gas ->

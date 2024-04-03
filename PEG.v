@@ -811,6 +811,9 @@ Proof.
       lia.
 Qed.
 
+(* Here, we could have used the max pat_size of the grammar
+   instead of summing up the pat_size of each rule of the grammar,
+   but the sum makes the proof of lower bound easier *)
 Lemma nullable_comp_complete :
   forall g p rr gas,
   gas >= pat_size p + rr * (grammar_size g) ->

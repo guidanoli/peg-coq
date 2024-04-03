@@ -854,6 +854,17 @@ Proof.
   ).
 Qed.
 
+(* Here, we don't care about any particular lower bound value.
+   We just know there exists SOME gas for which nullable_comp
+   gives SOME result. :-) *)
+Lemma nullable_comp_exists_gas :
+  forall g p rr,
+  exists gas b,
+  nullable_comp g p rr gas = Some b.
+Proof.
+  eauto using nullable_comp_complete.
+Qed.
+
 Lemma nullable_comp_some_true_is_nullable :
   forall g p rr gas,
   nullable_comp g p rr gas = Some true ->

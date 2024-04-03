@@ -463,42 +463,29 @@ Inductive nullable : grammar -> pat -> bool -> Prop :=
       nullable g (PNT i) b
   .
 
-Ltac invert_nullable_and_clear :=
-  match goal with
-    [ Hx: nullable _ _ |- _ ] =>
-        inversion Hx;
-        clear Hx;
-        subst
-  end.
-
-Ltac simpl_nth_error :=
-  match goal with
-    [ Hx: nth_error _ _ = _ |- _ ] =>
-        simpl in Hx
-  end.
-
 (* ! {A <- A} |= A *)
 Example nullable_ex1 :
-  ~ nullable
+  ~ exists b,
+    nullable
     [PNT 0]
-    (PNT 0).
+    (PNT 0)
+    b.
 Proof.
-  intro.
+  intro H.
+  destruct H as [b H].
   remember (PNT 0) as p.
-  remember ([p]) as g.
-  induction H;
-  try discriminate;
-  subst;
-  destruct1;
-  simpl in H;
-  destruct1;
+  remember [p] as g.
+  induction H; try discriminate.
+  destruct1.
+  simpl in H.
+  destruct1.
   auto.
 Qed.
 
 (* G |= ε *)
 Example nullable_ex2 :
   forall g,
-  nullable g PEmpty.
+  nullable g PEmpty true.
 Proof.
   intros.
   eauto using nullable.
@@ -507,25 +494,25 @@ Qed.
 (* ! G |= 'a' *)
 Example nullable_ex3 :
   forall g a,
-  ~ nullable g (PChar a).
+  nullable g (PChar a) false.
 Proof.
-  intros * H.
-  inversion H.
+  intros.
+  eauto using nullable.
 Qed.
 
 (* ! G |= . *)
 Example nullable_ex4 :
   forall g,
-  ~ nullable g PAnyChar.
+  nullable g PAnyChar false.
 Proof.
-  intros * H.
-  inversion H.
+  intros.
+  eauto using nullable.
 Qed.
 
 (* G |= ε ε *)
 Example nullable_ex5 :
   forall g,
-  nullable g (PSequence PEmpty PEmpty).
+  nullable g (PSequence PEmpty PEmpty) true.
 Proof.
   intros.
   eauto using nullable.
@@ -534,34 +521,34 @@ Qed.
 (* ! G |= . ε *)
 Example nullable_ex6 :
   forall g,
-  ~ nullable g (PSequence PAnyChar PEmpty).
+  nullable g (PSequence PAnyChar PEmpty) false.
 Proof.
-  intros * H.
-  repeat invert_nullable_and_clear.
+  intros.
+  eauto using nullable.
 Qed.
 
 (* ! G |= ε . *)
 Example nullable_ex7 :
   forall g,
-  ~ nullable g (PSequence PEmpty PAnyChar).
+  nullable g (PSequence PEmpty PAnyChar) false.
 Proof.
-  intros * H.
-  repeat invert_nullable_and_clear.
+  intros.
+  eauto using nullable.
 Qed.
 
 (* ! G |= . . *)
 Example nullable_ex8 :
   forall g,
-  ~ nullable g (PSequence PAnyChar PAnyChar).
+  nullable g (PSequence PAnyChar PAnyChar) false.
 Proof.
-  intros * H.
-  repeat invert_nullable_and_clear.
+  intros.
+  eauto using nullable.
 Qed.
 
 (* G |= ε / ε *)
 Example nullable_ex9 :
   forall g,
-  nullable g (PChoice PEmpty PEmpty).
+  nullable g (PChoice PEmpty PEmpty) true.
 Proof.
   intros.
   eauto using nullable.
@@ -570,7 +557,7 @@ Qed.
 (* G |= . / ε *)
 Example nullable_ex10 :
   forall g,
-  nullable g (PChoice PAnyChar PEmpty).
+  nullable g (PChoice PAnyChar PEmpty) true.
 Proof.
   intros.
   eauto using nullable.
@@ -579,7 +566,7 @@ Qed.
 (* G |= ε / . *)
 Example nullable_ex11 :
   forall g,
-  nullable g (PChoice PEmpty PAnyChar).
+  nullable g (PChoice PEmpty PAnyChar) true.
 Proof.
   intros.
   eauto using nullable.
@@ -588,16 +575,16 @@ Qed.
 (* ! G |= . / . *)
 Example nullable_ex12 :
   forall g,
-  ~ nullable g (PChoice PAnyChar PAnyChar).
+  nullable g (PChoice PAnyChar PAnyChar) false.
 Proof.
-  intros * H.
-  repeat invert_nullable_and_clear.
+  intros.
+  eauto using nullable.
 Qed.
 
 (* G |= p* *)
 Example nullable_ex13 :
   forall g p,
-  nullable g (PRepetition p).
+  nullable g (PRepetition p) true.
 Proof.
   intros.
   eauto using nullable.
@@ -606,7 +593,7 @@ Qed.
 (* G |= !p *)
 Example nullable_ex14 :
   forall g p,
-  nullable g (PNot p).
+  nullable g (PNot p) true.
 Proof.
   intros.
   eauto using nullable.
@@ -614,26 +601,21 @@ Qed.
 
 (* ! { P <- . P } |= P *)
 Example nullable_ex15 :
-  ~ nullable
+  nullable
     [PSequence PAnyChar (PNT 0)]
-    (PNT 0).
+    (PNT 0)
+    false.
 Proof.
-  intros * H.
-  invert_nullable_and_clear.
-  simpl_nth_error.
-  destruct1.
-  invert_nullable_and_clear.
-  match goal with
-    [ Hx: nullable _ PAnyChar |- _ ] =>
-      inversion Hx
-  end.
+  econstructor; simpl; eauto.
+  eauto using nullable.
 Qed.
 
 (* { P <- . P / ε } |= P *)
 Example nullable_ex16 :
   nullable
     [PChoice (PSequence PAnyChar (PNT 0)) PEmpty]
-    (PNT 0).
+    (PNT 0)
+    true.
 Proof.
   econstructor; simpl; eauto.
   eauto using nullable.
@@ -641,11 +623,13 @@ Qed.
 
 (* ! {} |= A *)
 Example nullable_ex17 :
-  ~ nullable [] (PNT 0).
+  ~ exists b,
+  nullable [] (PNT 0) b.
 Proof.
-  intros * H.
-  inversion H; subst.
-  simpl in *.
+  intro H.
+  destruct H as [b H].
+  inversion H;
+  subst.
   discriminate.
 Qed.
 
@@ -653,20 +637,36 @@ Qed.
 Example nullable_ex18 :
   nullable
   [PChoice (PSequence (PChar "a") (PNT 0)) PEmpty; PSequence (PNT 0) (PNT 0)]
-  (PSequence (PNT 0) (PNT 1)).
+  (PSequence (PNT 0) (PNT 1))
+  true.
 Proof.
   repeat match goal with
-         | [ |- nullable _ (PSequence _ _) ] => econstructor
-         | [ |- nullable _ (PNT _) ] => econstructor; simpl; eauto
-         | [ |- nullable _ (PChoice _ _) ] => eauto using nullable
+         | [ |- nullable _ (PSequence _ _) _ ] => econstructor
+         | [ |- nullable _ (PNT _) _ ] => econstructor; simpl; eauto
+         | [ |- nullable _ (PChoice _ _) _ ] => eauto using nullable
          | _ => fail
          end.
+Qed.
+
+Lemma nullable_det :
+  forall g p b1 b2,
+  nullable g p b1 ->
+  nullable g p b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1;
+  intros;
+  inversion H2; subst;
+  try eq_nth_error;
+  auto.
 Qed.
 
 Lemma nullable_approx :
   forall g p s,
   matches g p s (Success s) ->
-  nullable g p.
+  nullable g p true.
 Proof.
   intros * H.
   remember (Success s).
@@ -689,7 +689,7 @@ Qed.
 
 Theorem proper_suffix_if_not_nullable :
   forall g p s s',
-  ~ nullable g p ->
+  nullable g p false ->
   matches g p s (Success s') ->
   proper_suffix s' s.
 Proof.
@@ -698,7 +698,9 @@ Proof.
   induction H3 as [|s s' a H3 IHsuffix].
   - (* SuffixRefl *)
     exfalso.
-    eauto using nullable_approx.
+    specialize (nullable_approx _ _ _ H2) as H3.
+    specialize (nullable_det _ _ _ _ H1 H3) as H4.
+    discriminate.
   - (* SuffixChar *)
     eauto using suffix_is_proper_suffix_with_char.
 Qed.

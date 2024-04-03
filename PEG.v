@@ -414,34 +414,53 @@ Qed.
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 
-Inductive nullable : grammar -> pat -> Prop :=
+Inductive nullable : grammar -> pat -> bool -> Prop :=
   | NEmpty :
       forall g,
-      nullable g PEmpty
-  | NSequence :
+      nullable g PEmpty true
+  | NChar :
+      forall g a,
+      nullable g (PChar a) false
+  | NAnyChar :
+      forall g,
+      nullable g PAnyChar false
+  | NSequenceTrue :
       forall g p1 p2,
-      nullable g p1 ->
-      nullable g p2 ->
-      nullable g (PSequence p1 p2)
-  | NChoice1 :
+      nullable g p1 true ->
+      nullable g p2 true ->
+      nullable g (PSequence p1 p2) true
+  | NSequenceFalse1 :
       forall g p1 p2,
-      nullable g p1 ->
-      nullable g (PChoice p1 p2)
-  | NChoice2 :
+      nullable g p1 false ->
+      nullable g (PSequence p1 p2) false
+  | NSequenceFalse2 :
       forall g p1 p2,
-      nullable g p2 ->
-      nullable g (PChoice p1 p2)
+      nullable g p2 false ->
+      nullable g (PSequence p1 p2) false
+  | NChoiceTrue1 :
+      forall g p1 p2,
+      nullable g p1 true ->
+      nullable g (PChoice p1 p2) true
+  | NChoiceTrue2 :
+      forall g p1 p2,
+      nullable g p2 true ->
+      nullable g (PChoice p1 p2) true
+  | NChoiceFalse :
+      forall g p1 p2,
+      nullable g p1 false ->
+      nullable g p2 false ->
+      nullable g (PChoice p1 p2) false
   | NRepetition :
       forall g p,
-      nullable g (PRepetition p)
+      nullable g (PRepetition p) true
   | NNot :
       forall g p,
-      nullable g (PNot p)
-  | NNonTerminal :
-      forall g i p,
+      nullable g (PNot p) true
+  | NNT :
+      forall g i p b,
       nth_error g i = Some p ->
-      nullable g p ->
-      nullable g (PNT i)
+      nullable g p b ->
+      nullable g (PNT i) b
   .
 
 Ltac invert_nullable_and_clear :=

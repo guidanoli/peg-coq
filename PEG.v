@@ -711,6 +711,33 @@ Inductive verifyrule : grammar -> pat -> nat -> bool -> option bool -> Prop :=
       verifyrule g (PNT i) npassed nb res
   .
 
+Lemma verifyrule_det :
+  forall g p npassed nb res1 res2,
+  verifyrule g p npassed nb res1 ->
+  verifyrule g p npassed nb res2 ->
+  res1 = res2.
+Proof.
+  intros * H1 H2.
+  generalize dependent res2.
+  induction H1; intros;
+  inversion H2; subst;
+  try eq_nth_error;
+  try lia;
+  try match goal with
+  [ IHx: forall res, verifyrule ?g ?p ?npassed ?nb res -> Some _ = res,
+    Hx: verifyrule ?g ?p ?npassed ?nb (Some _) |- _ ] =>
+      apply IHx in Hx;
+      destruct1
+  end;
+  try match goal with
+  [ IHx: forall res, verifyrule ?g ?p ?npassed ?nb res -> _ = res,
+    Hx: verifyrule ?g ?p ?npassed ?nb _ |- _ ] =>
+        apply IHx in Hx
+  end;
+  try discriminate;
+  auto.
+Qed.
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

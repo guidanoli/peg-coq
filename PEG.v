@@ -460,6 +460,65 @@ Inductive dangling : grammar -> pat -> bool -> Prop :=
       dangling g (PNT i) true
   .
 
+(** VerifyRule predicate **)
+(** Checks whether a pattern is nullable (or not), or contains left recursion **)
+(** The nb parameter is used for tail calls in choices **)
+(** res = None -> has left recursion **)
+(** res = Some true -> nullable **)
+(** res = Some false -> not nullable **)
+
+Inductive verifyrule : grammar -> pat -> nat -> bool -> option bool -> Prop :=
+  | VREmpty :
+      forall g npassed nb,
+      verifyrule g PEmpty npassed nb (Some true)
+  | VRChar :
+      forall g a npassed nb,
+      verifyrule g (PChar a) npassed nb (Some nb)
+  | VRAnyChar :
+      forall g npassed nb,
+      verifyrule g PAnyChar npassed nb (Some nb)
+  | VRSequenceNone :
+      forall g p1 p2 npassed nb,
+      verifyrule g p1 npassed false None ->
+      verifyrule g (PSequence p1 p2) npassed nb None
+  | VRSequenceSomeTrue :
+      forall g p1 p2 npassed nb res,
+      verifyrule g p1 npassed false (Some true) ->
+      verifyrule g p2 npassed nb res ->
+      verifyrule g (PSequence p1 p2) npassed nb res
+  | VRSequenceSomeFalse :
+      forall g p1 p2 npassed nb,
+      verifyrule g p1 npassed false (Some false) ->
+      verifyrule g (PSequence p1 p2) npassed nb (Some nb)
+  | VRChoiceNone :
+      forall g p1 p2 npassed nb,
+      verifyrule g p1 npassed nb None ->
+      verifyrule g (PChoice p1 p2) npassed nb None
+  | VRChoiceSome :
+      forall g p1 p2 npassed nb nb' res,
+      verifyrule g p1 npassed nb (Some nb') ->
+      verifyrule g p2 npassed nb' res ->
+      verifyrule g (PChoice p1 p2) npassed nb res
+  | VRRepetition :
+      forall g p npassed nb res,
+      verifyrule g p npassed true res ->
+      verifyrule g (PRepetition p) npassed nb res
+  | VRNot :
+      forall g p npassed nb res,
+      verifyrule g p npassed true res ->
+      verifyrule g (PNot p) npassed nb res
+  | VRNTGe :
+      forall g i npassed nb,
+      npassed >= length g ->
+      verifyrule g (PNT i) npassed nb None
+  | VRNTLt :
+      forall g i p npassed nb res,
+      npassed < length g ->
+      nth_error g i = Some p ->
+      verifyrule g p (S npassed) nb res ->
+      verifyrule g (PNT i) npassed nb res
+  .
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

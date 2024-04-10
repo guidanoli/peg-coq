@@ -540,6 +540,118 @@ Fixpoint dangling_comp (g : grammar) p gas {struct gas} :=
               end
   end.
 
+Lemma dangling_comp_correct :
+  forall g p gas res,
+  dangling_comp g p gas = Some res ->
+  dangling g p res.
+Proof.
+  intros * H.
+  generalize dependent res.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  try discriminate;
+  simpl in H;
+  destruct p;
+  try match goal with
+    [ |- dangling _ (_ ?p1 _) _ ] =>
+      let H1 := fresh in
+        destruct (dangling_comp g p1 gas) as [[]|] eqn:H1;
+        try discriminate
+  end;
+  try match goal with
+    [ |- dangling _ (PNT _) _ ] =>
+      let H1 := fresh in
+        destruct (nth_error g n) as [|] eqn:H1;
+        try destruct1;
+        eauto using dangling
+  end;
+  try destruct1;
+  eauto using dangling.
+Qed.
+
+Lemma dangling_comp_S_gas :
+  forall g p gas res,
+  dangling_comp g p gas = Some res ->
+  dangling_comp g p (S gas) = Some res.
+Proof.
+  intros.
+  generalize dependent res.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  try discriminate;
+  destruct p; simpl in H;
+  remember (S gas) as gas';
+  simpl;
+  auto;
+  try match goal with
+    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+      let H1 := fresh in
+        destruct x as [[]|] eqn:H1;
+        try discriminate;
+        try destruct1;
+        apply IHgas in H1;
+        rewrite H1;
+        auto
+  end.
+Qed.
+
+Lemma dangling_comp_le_gas :
+  forall g p gas1 gas2 res,
+  dangling_comp g p gas1 = Some res ->
+  gas1 <= gas2 ->
+  dangling_comp g p gas2 = Some res.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  auto using dangling_comp_S_gas.
+Qed.
+
+Lemma dangling_comp_complete :
+  forall g p,
+  exists gas res,
+  dangling_comp g p gas = Some res.
+Proof.
+  intros.
+  generalize dependent g.
+  induction p; intros;
+  repeat match goal with
+  [ IHx: forall (_: grammar), exists (_ : nat) (_ : bool), _
+    |- exists _ _, dangling_comp ?g _ _ = _ ] =>
+        specialize (IHx g);
+        let gas := fresh "gas" in
+        let res := fresh "res" in
+        destruct IHx as [gas [res IHx]]
+  end;
+  (* 0 recursions *)
+  try (
+    exists 1;
+    simpl;
+    try match goal with
+      [ |- exists _, match ?x with | _ => _ end = _ ] =>
+        destruct x
+    end;
+    eauto;
+    fail
+  );
+  (* 1 recursion *)
+  try (exists (1 + gas); simpl; eauto; fail);
+  (* 2 recursions *)
+  try match goal with
+  [ Hx1: dangling_comp ?g ?p1 ?gas1 = Some ?res1,
+    Hx2: dangling_comp ?g ?p2 ?gas2 = Some ?res2
+  |- exists _ _, dangling_comp ?g (_ ?p1 ?p2) _ = _ ] =>
+      exists (1 + gas1 + gas2);
+      simpl;
+      specialize (Nat.le_add_r gas1 gas2) as Hle1;
+      rewrite (dangling_comp_le_gas _ _ _ _ _ Hx1 Hle1);
+      specialize (Plus.le_plus_r gas1 gas2) as Hle2;
+      rewrite (dangling_comp_le_gas _ _ _ _ _ Hx2 Hle2);
+      destruct res1; eauto
+  end.
+Qed.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

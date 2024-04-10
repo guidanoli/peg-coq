@@ -460,6 +460,60 @@ Inductive dangling : grammar -> pat -> bool -> Prop :=
       dangling g (PNT i) true
   .
 
+Lemma dangling_det :
+  forall g p res1 res2,
+  dangling g p res1 ->
+  dangling g p res2 ->
+  res1 = res2.
+Proof.
+  intros * H1 H2.
+  generalize dependent res2.
+  induction H1; intros;
+  inversion H2; subst;
+  try eq_nth_error;
+  auto;
+  try (
+    apply IHdangling;
+    destruct res2; auto;
+    fail
+  );
+  try match goal with
+    [ IHx: forall resx, dangling ?g ?p resx -> false = resx,
+      Hx: dangling ?g ?p true |- _ ] =>
+        apply IHx in Hx;
+        discriminate
+  end.
+Qed.
+
+Lemma dangling_complete :
+  forall g p,
+  exists res,
+  dangling g p res.
+Proof.
+  intros.
+  generalize dependent g.
+  induction p; intros;
+  repeat match goal with
+    [ IHx: forall gx, exists resx, _ |-
+      exists resy, dangling ?g _ resy ] =>
+        specialize (IHx g);
+        destruct IHx
+  end;
+  try match goal with
+    [ |- exists res, dangling _ (PNT ?i) res ] =>
+        let H := fresh in
+        destruct (nth_error g i) eqn:H
+  end;
+  try match goal with
+    [ |- exists res, dangling _ (_ (?p1 : pat) _) res ] =>
+      try match goal with
+        [ Hx: dangling _ p1 ?res |- _ ] =>
+            destruct res
+      end
+  end;
+  eauto using dangling.
+Qed.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

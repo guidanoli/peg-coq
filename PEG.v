@@ -514,6 +514,32 @@ Proof.
   eauto using dangling.
 Qed.
 
+(** Dangling function with gas **)
+
+Fixpoint dangling_comp (g : grammar) p gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some false
+              | PChar _ => Some false
+              | PAnyChar => Some false
+              | PSequence p1 p2 => match dangling_comp g p1 gas' with
+                                   | Some false => dangling_comp g p2 gas'
+                                   | res => res
+                                   end
+              | PChoice p1 p2 => match dangling_comp g p1 gas' with
+                                 | Some false => dangling_comp g p2 gas'
+                                 | res => res
+                                 end
+              | PRepetition p => dangling_comp g p gas'
+              | PNot p => dangling_comp g p gas'
+              | PNT i => match nth_error g i with
+                         | None => Some true
+                         | Some _ => Some false
+                         end
+              end
+  end.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

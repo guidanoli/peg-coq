@@ -428,16 +428,11 @@ Inductive nullable : grammar -> pat -> bool -> Prop :=
       forall g p1 p2,
       nullable g p1 false ->
       nullable g (PSequence p1 p2) false
-  | NSequenceTrueTrue :
-      forall g p1 p2,
+  | NSequenceTrue :
+      forall g p1 p2 b,
       nullable g p1 true ->
-      nullable g p2 true ->
-      nullable g (PSequence p1 p2) true
-  | NSequenceTrueFalse :
-      forall g p1 p2,
-      nullable g p1 true ->
-      nullable g p2 false ->
-      nullable g (PSequence p1 p2) false
+      nullable g p2 b ->
+      nullable g (PSequence p1 p2) b
   | NChoiceTrue1 :
       forall g p1 p2,
       nullable g p1 true ->
@@ -661,6 +656,12 @@ Proof.
   intros;
   inversion H2; subst;
   try eq_nth_error;
+  try match goal with
+  [ IHx: forall bx, nullable ?g ?p bx -> ?b1 = bx,
+    Hx: nullable ?g ?p ?b2 |- _ ] =>
+        apply IHx in Hx;
+        discriminate
+  end;
   auto.
 Qed.
 

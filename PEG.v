@@ -738,6 +738,35 @@ Proof.
   auto.
 Qed.
 
+(** VerifyRule function with gas **)
+
+Fixpoint verifyrule_comp g p npassed nb gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some (Some true)
+              | PChar _ => Some (Some nb)
+              | PAnyChar => Some (Some nb)
+              | PSequence p1 p2 => match verifyrule_comp g p1 npassed false gas' with
+                                   | Some (Some true) => verifyrule_comp g p2 npassed nb gas'
+                                   | Some (Some false) => Some (Some nb)
+                                   | res => res
+                                   end
+              | PChoice p1 p2 => match verifyrule_comp g p1 npassed nb gas' with
+                                 | Some (Some nb') => verifyrule_comp g p2 npassed nb' gas'
+                                 | res => res
+                                 end
+              | PRepetition p' => verifyrule_comp g p' npassed true gas'
+              | PNot p' => verifyrule_comp g p' npassed true gas'
+              | PNT i => if length g <=? npassed
+                         then Some None
+                         else match nth_error g i with
+                              | None => None
+                              | Some p' => verifyrule_comp g p' (S npassed) nb gas'
+                              end
+              end
+  end.
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

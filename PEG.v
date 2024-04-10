@@ -790,9 +790,9 @@ Proof.
   try destruct1;
   eauto using verifyrule;
   try match goal with
-    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+    [ Hx: match verifyrule_comp ?g ?p ?npassed ?nb ?gas with | _ => _ end = _ |- _ ] =>
         let H := fresh in
-        destruct x as [[[]|]|] eqn:H;
+        destruct (verifyrule_comp g p npassed nb gas) as [[[]|]|] eqn:H;
         try discriminate;
         try destruct1;
         eauto using verifyrule;

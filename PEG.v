@@ -655,71 +655,69 @@ Qed.
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)
-(** res = None -> has left recursion **)
-(** res = Some true -> nullable **)
-(** res = Some false -> not nullable **)
+(** res = None -> has LR **)
+(** res = Some true -> no LR, nullable **)
+(** res = Some false -> no LR, not nullable **)
 
 Inductive verifyrule : grammar -> pat -> nat -> bool -> option bool -> Prop :=
   | VREmpty :
-      forall g npassed nb,
-      verifyrule g PEmpty npassed nb (Some true)
+      forall g nleft nb,
+      verifyrule g PEmpty nleft nb (Some true)
   | VRChar :
-      forall g a npassed nb,
-      verifyrule g (PChar a) npassed nb (Some nb)
+      forall g a nleft nb,
+      verifyrule g (PChar a) nleft nb (Some nb)
   | VRAnyChar :
-      forall g npassed nb,
-      verifyrule g PAnyChar npassed nb (Some nb)
+      forall g nleft nb,
+      verifyrule g PAnyChar nleft nb (Some nb)
   | VRSequenceNone :
-      forall g p1 p2 npassed nb,
-      verifyrule g p1 npassed false None ->
-      verifyrule g (PSequence p1 p2) npassed nb None
+      forall g p1 p2 nleft nb,
+      verifyrule g p1 nleft false None ->
+      verifyrule g (PSequence p1 p2) nleft nb None
   | VRSequenceSomeTrue :
-      forall g p1 p2 npassed nb res,
-      verifyrule g p1 npassed false (Some true) ->
-      verifyrule g p2 npassed nb res ->
-      verifyrule g (PSequence p1 p2) npassed nb res
+      forall g p1 p2 nleft nb res,
+      verifyrule g p1 nleft false (Some true) ->
+      verifyrule g p2 nleft nb res ->
+      verifyrule g (PSequence p1 p2) nleft nb res
   | VRSequenceSomeFalse :
-      forall g p1 p2 npassed nb,
-      verifyrule g p1 npassed false (Some false) ->
-      verifyrule g (PSequence p1 p2) npassed nb (Some nb)
+      forall g p1 p2 nleft nb,
+      verifyrule g p1 nleft false (Some false) ->
+      verifyrule g (PSequence p1 p2) nleft nb (Some nb)
   | VRChoiceNone :
-      forall g p1 p2 npassed nb,
-      verifyrule g p1 npassed nb None ->
-      verifyrule g (PChoice p1 p2) npassed nb None
+      forall g p1 p2 nleft nb,
+      verifyrule g p1 nleft nb None ->
+      verifyrule g (PChoice p1 p2) nleft nb None
   | VRChoiceSome :
-      forall g p1 p2 npassed nb nb' res,
-      verifyrule g p1 npassed nb (Some nb') ->
-      verifyrule g p2 npassed nb' res ->
-      verifyrule g (PChoice p1 p2) npassed nb res
+      forall g p1 p2 nleft nb nb' res,
+      verifyrule g p1 nleft nb (Some nb') ->
+      verifyrule g p2 nleft nb' res ->
+      verifyrule g (PChoice p1 p2) nleft nb res
   | VRRepetition :
-      forall g p npassed nb res,
-      verifyrule g p npassed true res ->
-      verifyrule g (PRepetition p) npassed nb res
+      forall g p nleft nb res,
+      verifyrule g p nleft true res ->
+      verifyrule g (PRepetition p) nleft nb res
   | VRNot :
-      forall g p npassed nb res,
-      verifyrule g p npassed true res ->
-      verifyrule g (PNot p) npassed nb res
-  | VRNTGe :
-      forall g i npassed nb,
-      npassed >= length g ->
-      verifyrule g (PNT i) npassed nb None
-  | VRNTLtNone :
-      forall g i npassed nb,
-      npassed < length g ->
+      forall g p nleft nb res,
+      verifyrule g p nleft true res ->
+      verifyrule g (PNot p) nleft nb res
+  | VRNTNone :
+      forall g i nleft nb,
       nth_error g i = None ->
-      verifyrule g (PNT i) npassed nb None
-   | VRNTLtSome :
-      forall g i p npassed nb res,
-      npassed < length g ->
+      verifyrule g (PNT i) nleft nb None
+  | VRNTSomeZero :
+      forall g i p nb,
       nth_error g i = Some p ->
-      verifyrule g p (S npassed) nb res ->
-      verifyrule g (PNT i) npassed nb res
+      verifyrule g (PNT i) O nb None
+   | VRNTLtSomeNonZero :
+      forall g i p nleft nb res,
+      nth_error g i = Some p ->
+      verifyrule g p nleft nb res ->
+      verifyrule g (PNT i) (S nleft) nb res
   .
 
 Lemma verifyrule_det :
-  forall g p npassed nb res1 res2,
-  verifyrule g p npassed nb res1 ->
-  verifyrule g p npassed nb res2 ->
+  forall g p nleft nb res1 res2,
+  verifyrule g p nleft nb res1 ->
+  verifyrule g p nleft nb res2 ->
   res1 = res2.
 Proof.
   intros * H1 H2.
@@ -729,14 +727,14 @@ Proof.
   try eq_nth_error;
   try lia;
   try match goal with
-  [ IHx: forall res, verifyrule ?g ?p ?npassed ?nb res -> Some _ = res,
-    Hx: verifyrule ?g ?p ?npassed ?nb (Some _) |- _ ] =>
+  [ IHx: forall res, verifyrule ?g ?p ?nleft ?nb res -> Some _ = res,
+    Hx: verifyrule ?g ?p ?nleft ?nb (Some _) |- _ ] =>
       apply IHx in Hx;
       destruct1
   end;
   try match goal with
-  [ IHx: forall res, verifyrule ?g ?p ?npassed ?nb res -> _ = res,
-    Hx: verifyrule ?g ?p ?npassed ?nb _ |- _ ] =>
+  [ IHx: forall res, verifyrule ?g ?p ?nleft ?nb res -> _ = res,
+    Hx: verifyrule ?g ?p ?nleft ?nb _ |- _ ] =>
         apply IHx in Hx
   end;
   try discriminate;
@@ -745,42 +743,43 @@ Qed.
 
 (** VerifyRule function with gas **)
 
-Fixpoint verifyrule_comp g p npassed nb gas {struct gas} :=
+Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
               | PEmpty => Some (Some true)
               | PChar _ => Some (Some nb)
               | PAnyChar => Some (Some nb)
-              | PSequence p1 p2 => match verifyrule_comp g p1 npassed false gas' with
-                                   | Some (Some true) => verifyrule_comp g p2 npassed nb gas'
+              | PSequence p1 p2 => match verifyrule_comp g p1 nleft false gas' with
+                                   | Some (Some true) => verifyrule_comp g p2 nleft nb gas'
                                    | Some (Some false) => Some (Some nb)
                                    | res => res
                                    end
-              | PChoice p1 p2 => match verifyrule_comp g p1 npassed nb gas' with
-                                 | Some (Some nb') => verifyrule_comp g p2 npassed nb' gas'
+              | PChoice p1 p2 => match verifyrule_comp g p1 nleft nb gas' with
+                                 | Some (Some nb') => verifyrule_comp g p2 nleft nb' gas'
                                  | res => res
                                  end
-              | PRepetition p' => verifyrule_comp g p' npassed true gas'
-              | PNot p' => verifyrule_comp g p' npassed true gas'
-              | PNT i => if length g <=? npassed
-                         then Some None
-                         else match nth_error g i with
-                              | None => Some None
-                              | Some p' => verifyrule_comp g p' (S npassed) nb gas'
-                              end
+              | PRepetition p' => verifyrule_comp g p' nleft true gas'
+              | PNot p' => verifyrule_comp g p' nleft true gas'
+              | PNT i => match nth_error g i with
+                         | None => Some None
+                         | Some p' => match nleft with
+                                      | O => Some None
+                                      | S nleft' => verifyrule_comp g p' nleft' nb gas'
+                                      end
+                         end
               end
   end.
 
 Lemma verifyrule_comp_correct :
-  forall g p npassed nb gas res,
-  verifyrule_comp g p npassed nb gas = Some res ->
-  verifyrule g p npassed nb res.
+  forall g p nleft nb gas res,
+  verifyrule_comp g p nleft nb gas = Some res ->
+  verifyrule g p nleft nb res.
 Proof.
   intros * H.
   generalize dependent res.
   generalize dependent nb.
-  generalize dependent npassed.
+  generalize dependent nleft.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros;
@@ -790,47 +789,39 @@ Proof.
   try destruct1;
   eauto using verifyrule;
   try match goal with
-    [ Hx: match verifyrule_comp ?g ?p ?npassed ?nb ?gas with | _ => _ end = _ |- _ ] =>
+    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb ?gas with | _ => _ end = _ |- _ ] =>
         let H := fresh in
-        destruct (verifyrule_comp g p npassed nb gas) as [[[]|]|] eqn:H;
+        destruct (verifyrule_comp g p nleft nb gas) as [[[]|]|] eqn:H;
         try discriminate;
         try destruct1;
         eauto using verifyrule;
         fail
   end;
   try match goal with
-    [ Hx: match length ?g <=? ?npassed with | _ => _ end = _ |- _ ] =>
-      let H := fresh in
-      destruct (length g <=? npassed) eqn:H;
-      try destruct1;
-      try match goal with
-        [ Hx: (?a <=? ?b) = true |- _ ] =>
-            rewrite Nat.leb_le in Hx
-      end;
-      try match goal with
-        [ Hx: (?a <=? ?b) = false |- _ ] =>
-            rewrite Nat.leb_gt in Hx
-      end;
-      try match goal with
-        [ Hx: match nth_error g ?i with | _ => _ end = _ |- _ ] =>
-            let H' := fresh in
-            destruct (nth_error g i) eqn:H';
-            try destruct1;
-            try discriminate
-      end;
-      eauto using verifyrule
-  end.
+      [ Hx: match nth_error ?g ?i with | _ => _ end = _ |- _ ] =>
+          let H' := fresh in
+          destruct (nth_error g i) eqn:H';
+          try destruct1;
+          eauto using verifyrule;
+          match goal with
+            [ Hx: match ?nleft with | _ => _ end = _ |- _ ] =>
+                let H' := fresh in
+                destruct nleft eqn:H';
+                try destruct1;
+                eauto using verifyrule
+          end
+    end.
 Qed.
 
 Lemma verifyrule_comp_S_gas :
-  forall g p npassed nb res gas,
-  verifyrule_comp g p npassed nb gas = Some res ->
-  verifyrule_comp g p npassed nb (S gas) = Some res.
+  forall g p nleft nb res gas,
+  verifyrule_comp g p nleft nb gas = Some res ->
+  verifyrule_comp g p nleft nb (S gas) = Some res.
 Proof.
   intros.
   generalize dependent res.
   generalize dependent nb.
-  generalize dependent npassed.
+  generalize dependent nleft.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros;
@@ -842,9 +833,9 @@ Proof.
   simpl;
   auto;
   try match goal with
-    [ Hx: match verifyrule_comp ?g ?p ?npassed ?nb ?gas with | _ => _ end = _ |- _ ] =>
+    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb ?gas with | _ => _ end = _ |- _ ] =>
         let H := fresh in
-        destruct (verifyrule_comp g p npassed nb gas) as [[[|]|]|] eqn:H;
+        destruct (verifyrule_comp g p nleft nb gas) as [[[|]|]|] eqn:H;
         try discriminate;
         try destruct1;
         apply IHgas in H;
@@ -852,26 +843,110 @@ Proof.
         auto
   end;
   try match goal with
-    [ |- match length ?g <=? ?npassed with | _ => _ end = _ ] =>
-      let H := fresh in
-      destruct (length g <=? npassed) eqn:H; auto;
-      match goal with
-        [ |- match nth_error g ?i with | _ => _ end = _ ] =>
-          let H' := fresh in
-          destruct (nth_error g i) eqn:H'; auto
-      end
+      [ |- match nth_error ?g ?i with | _ => _ end = _ ] =>
+        let H' := fresh in
+        destruct (nth_error g i) eqn:H'; auto;
+        match goal with
+          [ |- match ?nleft with | _ => _ end = _ ] =>
+            destruct nleft; auto
+        end
   end.
 Qed.
 
 Lemma verifyrule_comp_le_gas :
-  forall g p npassed nb gas1 gas2 res,
-  verifyrule_comp g p npassed nb gas1 = Some res ->
+  forall g p nleft nb gas1 gas2 res,
+  verifyrule_comp g p nleft nb gas1 = Some res ->
   gas1 <= gas2 ->
-  verifyrule_comp g p npassed nb gas2 = Some res.
+  verifyrule_comp g p nleft nb gas2 = Some res.
 Proof.
   intros * H Hle.
   induction Hle;
   auto using verifyrule_comp_S_gas.
+Qed.
+
+Lemma verifyrule_comp_complete :
+  forall g p nleft nb,
+  exists gas res,
+  verifyrule_comp g p nleft nb gas = Some res.
+Proof.
+  intros.
+  generalize dependent nb.
+  generalize dependent p.
+  generalize dependent g.
+  induction nleft using strong_induction.
+  intros.
+  generalize dependent nb.
+  generalize dependent nleft.
+  generalize dependent g.
+  induction p; intros;
+  try (exists 1; simpl; eauto; fail).
+  - (* PSequence p1 p2 *)
+    destruct (IHp1 g nleft H false) as [gas1 [res1 H1]].
+    destruct res1 as [[|]|].
+    + (* Some true *)
+      destruct (IHp2 g nleft H nb) as [gas2 [res2 H2]].
+      exists (1 + gas1 + gas2).
+      simpl.
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
+      eauto.
+    + (* Some false *)
+      exists (1 + gas1).
+      simpl.
+      rewrite H1.
+      eauto.
+    + (* None *)
+      exists (1 + gas1).
+      simpl.
+      rewrite H1.
+      eauto.
+  - (* PChoice p1 p2 *)
+    destruct (IHp1 g nleft H nb) as [gas1 [res1 H1]].
+    destruct res1 as [nb'|].
+    + (* Some nb' *)
+      destruct (IHp2 g nleft H nb') as [gas2 [res2 H2]].
+      exists (1 + gas1 + gas2).
+      simpl.
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
+      eauto.
+    + (* None *)
+      exists (1 + gas1).
+      simpl.
+      rewrite H1.
+      eauto.
+  - (* PRepetition p *)
+    destruct (IHp g nleft H true) as [gas [res H1]].
+    exists (1 + gas).
+    simpl.
+    eauto.
+  - (* PNot p *)
+    destruct (IHp g nleft H true) as [gas [res H1]].
+    exists (1 + gas).
+    simpl.
+    eauto.
+  - (* PNT n *)
+    destruct nleft.
+    + (* O *)
+      exists 1. simpl.
+      match goal with
+        [ |- exists _, match ?x with | _ => _ end = _ ] =>
+          destruct x; eauto
+      end.
+    + (* S nleft *)
+      destruct (nth_error g n) as [p|] eqn:Hnth.
+      -- (* Some p *)
+         specialize (H nleft (Nat.lt_succ_diag_r nleft) g p nb).
+         destruct H as [gas [res H]].
+         exists (1 + gas).
+         simpl.
+         rewrite Hnth.
+         eauto.
+      -- (* None *)
+         exists 1.
+         simpl.
+         rewrite Hnth.
+         eauto.
 Qed.
 
 (** Nullable predicate **)

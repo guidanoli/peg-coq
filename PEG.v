@@ -411,6 +411,55 @@ Proof.
     exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
 Qed.
 
+(** Dangling predicate **)
+(** A "dangling" pattern is one that has references to nonexisting rules **)
+
+Inductive dangling : grammar -> pat -> bool -> Prop :=
+  | DEmpty :
+      forall g,
+      dangling g PEmpty false
+  | DChar :
+      forall g a,
+      dangling g (PChar a) false
+  | DAnyChar :
+      forall g,
+      dangling g PAnyChar false
+  | DSequenceTrue :
+      forall g p1 p2,
+      dangling g p1 true ->
+      dangling g (PSequence p1 p2) true
+  | DSequenceFalse :
+      forall g p1 p2 b,
+      dangling g p1 false ->
+      dangling g p2 b ->
+      dangling g (PSequence p1 p2) b
+  | DChoiceTrue :
+      forall g p1 p2,
+      dangling g p1 true ->
+      dangling g (PChoice p1 p2) true
+  | DChoiceFalse :
+      forall g p1 p2 b,
+      dangling g p1 false ->
+      dangling g p2 b ->
+      dangling g (PChoice p1 p2) b
+  | DRepetition :
+      forall g p b,
+      dangling g p b ->
+      dangling g (PRepetition p) b
+  | DNot :
+      forall g p b,
+      dangling g p b ->
+      dangling g (PNot p) b
+  | DNTTrue :
+      forall g i p,
+      nth_error g i = Some p ->
+      dangling g (PNT i) false
+  | DDNTFalse :
+      forall g i,
+      nth_error g i = None ->
+      dangling g (PNT i) true
+  .
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

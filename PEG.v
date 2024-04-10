@@ -703,7 +703,12 @@ Inductive verifyrule : grammar -> pat -> nat -> bool -> option bool -> Prop :=
       forall g i npassed nb,
       npassed >= length g ->
       verifyrule g (PNT i) npassed nb None
-  | VRNTLt :
+  | VRNTLtNone :
+      forall g i npassed nb,
+      npassed < length g ->
+      nth_error g i = None ->
+      verifyrule g (PNT i) npassed nb None
+   | VRNTLtSome :
       forall g i p npassed nb res,
       npassed < length g ->
       nth_error g i = Some p ->
@@ -761,7 +766,7 @@ Fixpoint verifyrule_comp g p npassed nb gas {struct gas} :=
               | PNT i => if length g <=? npassed
                          then Some None
                          else match nth_error g i with
-                              | None => None
+                              | None => Some None
                               | Some p' => verifyrule_comp g p' (S npassed) nb gas'
                               end
               end
@@ -810,6 +815,7 @@ Proof.
         [ Hx: match nth_error g ?i with | _ => _ end = _ |- _ ] =>
             let H' := fresh in
             destruct (nth_error g i) eqn:H';
+            try destruct1;
             try discriminate
       end;
       eauto using verifyrule

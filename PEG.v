@@ -424,17 +424,18 @@ Inductive nullable : grammar -> pat -> bool -> Prop :=
   | NAnyChar :
       forall g,
       nullable g PAnyChar false
-  | NSequenceTrue :
+  | NSequenceFalse :
+      forall g p1 p2,
+      nullable g p1 false ->
+      nullable g (PSequence p1 p2) false
+  | NSequenceTrueTrue :
       forall g p1 p2,
       nullable g p1 true ->
       nullable g p2 true ->
       nullable g (PSequence p1 p2) true
-  | NSequenceFalse1 :
+  | NSequenceTrueFalse :
       forall g p1 p2,
-      nullable g p1 false ->
-      nullable g (PSequence p1 p2) false
-  | NSequenceFalse2 :
-      forall g p1 p2,
+      nullable g p1 true ->
       nullable g p2 false ->
       nullable g (PSequence p1 p2) false
   | NChoiceTrue1 :

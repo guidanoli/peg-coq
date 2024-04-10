@@ -822,6 +822,58 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_comp_S_gas :
+  forall g p npassed nb res gas,
+  verifyrule_comp g p npassed nb gas = Some res ->
+  verifyrule_comp g p npassed nb (S gas) = Some res.
+Proof.
+  intros.
+  generalize dependent res.
+  generalize dependent nb.
+  generalize dependent npassed.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  try discriminate;
+  simpl in H;
+  destruct p;
+  try destruct1;
+  remember (S gas) as gas';
+  simpl;
+  auto;
+  try match goal with
+    [ Hx: match verifyrule_comp ?g ?p ?npassed ?nb ?gas with | _ => _ end = _ |- _ ] =>
+        let H := fresh in
+        destruct (verifyrule_comp g p npassed nb gas) as [[[|]|]|] eqn:H;
+        try discriminate;
+        try destruct1;
+        apply IHgas in H;
+        rewrite H;
+        auto
+  end;
+  try match goal with
+    [ |- match length ?g <=? ?npassed with | _ => _ end = _ ] =>
+      let H := fresh in
+      destruct (length g <=? npassed) eqn:H; auto;
+      match goal with
+        [ |- match nth_error g ?i with | _ => _ end = _ ] =>
+          let H' := fresh in
+          destruct (nth_error g i) eqn:H'; auto
+      end
+  end.
+Qed.
+
+Lemma verifyrule_comp_le_gas :
+  forall g p npassed nb gas1 gas2 res,
+  verifyrule_comp g p npassed nb gas1 = Some res ->
+  gas1 <= gas2 ->
+  verifyrule_comp g p npassed nb gas2 = Some res.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  auto using verifyrule_comp_S_gas.
+Qed.
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

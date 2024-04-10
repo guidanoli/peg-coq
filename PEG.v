@@ -767,6 +767,55 @@ Fixpoint verifyrule_comp g p npassed nb gas {struct gas} :=
               end
   end.
 
+Lemma verifyrule_comp_correct :
+  forall g p npassed nb gas res,
+  verifyrule_comp g p npassed nb gas = Some res ->
+  verifyrule g p npassed nb res.
+Proof.
+  intros * H.
+  generalize dependent res.
+  generalize dependent nb.
+  generalize dependent npassed.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  try discriminate;
+  simpl in H;
+  destruct p;
+  try destruct1;
+  eauto using verifyrule;
+  try match goal with
+    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+        let H := fresh in
+        destruct x as [[[]|]|] eqn:H;
+        try discriminate;
+        try destruct1;
+        eauto using verifyrule;
+        fail
+  end;
+  try match goal with
+    [ Hx: match length ?g <=? ?npassed with | _ => _ end = _ |- _ ] =>
+      let H := fresh in
+      destruct (length g <=? npassed) eqn:H;
+      try destruct1;
+      try match goal with
+        [ Hx: (?a <=? ?b) = true |- _ ] =>
+            rewrite Nat.leb_le in Hx
+      end;
+      try match goal with
+        [ Hx: (?a <=? ?b) = false |- _ ] =>
+            rewrite Nat.leb_gt in Hx
+      end;
+      try match goal with
+        [ Hx: match nth_error g ?i with | _ => _ end = _ |- _ ] =>
+            let H' := fresh in
+            destruct (nth_error g i) eqn:H';
+            try discriminate
+      end;
+      eauto using verifyrule
+  end.
+Qed.
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

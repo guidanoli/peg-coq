@@ -949,6 +949,45 @@ Proof.
          eauto.
 Qed.
 
+Lemma verifyrule_comp_S_nleft :
+  forall g p nleft nb nb' gas,
+  verifyrule_comp g p nleft nb gas = Some (Some nb') ->
+  verifyrule_comp g p (S nleft) nb gas = Some (Some nb').
+Proof.
+  intros * H.
+  generalize dependent gas.
+  generalize dependent nb'.
+  generalize dependent nb.
+  generalize dependent p.
+  generalize dependent g.
+  induction nleft using strong_induction.
+  intros.
+  generalize dependent nb'.
+  generalize dependent nb.
+  generalize dependent nleft.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate.
+  destruct p; simpl in *; auto;
+  try match goal with
+    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb gas with | _ => _ end = _ |- _ ] =>
+      let Hy := fresh in
+      destruct (verifyrule_comp g p nleft nb gas) as [[[|]|]|] eqn:Hy;
+      try discriminate;
+      apply IHgas in Hy; auto;
+      rewrite Hy;
+      auto
+  end;
+  try match goal with
+  [ Hx: match nth_error ?g ?n with | _ => _ end = _ |- _ ] =>
+      destruct (nth_error g n) as [p|] eqn:Hnth;
+      try discriminate;
+      destruct nleft;
+      try discriminate;
+      auto
+  end.
+Qed.
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

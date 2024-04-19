@@ -949,6 +949,18 @@ Proof.
          eauto.
 Qed.
 
+Corollary verifyrule_comp_sound :
+  forall g p nleft nb res,
+  verifyrule g p nleft nb res ->
+  exists gas, verifyrule_comp g p nleft nb gas = Some res.
+Proof.
+  intros * H.
+  destruct (verifyrule_comp_complete g p nleft nb) as [gas [res' H']].
+  assert (res = res') by (eauto using verifyrule_comp_correct, verifyrule_det).
+  subst.
+  eauto.
+Qed.
+
 Lemma verifyrule_comp_S_nleft :
   forall g p nleft nb nb' gas,
   verifyrule_comp g p nleft nb gas = Some (Some nb') ->

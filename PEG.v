@@ -716,6 +716,232 @@ Inductive verifyrule :
       verifyrule g (PNT i) (S nleft) nb res (i :: v)
   .
 
+Goal
+  forall g nb nleft,
+  verifyrule g PEmpty nleft nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g a nb nleft,
+  verifyrule g (PChar a) nleft nb (Some nb) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g PAnyChar nleft nb (Some nb) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PSequence PEmpty PEmpty) nleft nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PSequence PAnyChar PEmpty) nleft nb (Some nb) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PSequence PEmpty PAnyChar) nleft nb (Some nb) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PSequence (PNT 0) PEmpty) 0 nb None nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PSequence PEmpty (PNT 0)) 0 nb None nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule [PNT 1; g] (PSequence (PNT 0) PEmpty) 1 nb None [0].
+Proof.
+  intros.
+  eapply VRSequenceNone; eauto using verifyrule.
+  eapply VRNTLtSomeNonZero; eauto using verifyrule.
+  simpl.
+  eauto.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule [PNT 1; g] (PSequence PEmpty (PNT 0)) 1 nb None [0].
+Proof.
+  intros.
+  eapply VRSequenceSomeTrue; eauto using verifyrule.
+  eapply VRNTLtSomeNonZero; eauto using verifyrule.
+  simpl.
+  eauto.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PChoice PEmpty PEmpty) nleft nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PChoice PAnyChar PEmpty) nleft nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PChoice PEmpty PAnyChar) nleft nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb nleft,
+  verifyrule g (PChoice PAnyChar PAnyChar) nleft nb (Some nb) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PChoice (PNT 0) PEmpty) 0 nb None nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PChoice PEmpty (PNT 0)) 0 nb None nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule (PNT 1 :: g) (PChoice (PNT 0) PEmpty) 1 nb None [0].
+Proof.
+  intros.
+  eapply VRChoiceNone; eauto using verifyrule.
+  eapply VRNTLtSomeNonZero; eauto using verifyrule.
+  simpl.
+  eauto.
+Qed.
+
+Goal
+  forall nb,
+  verifyrule
+  [PAnyChar; PAnyChar]
+  (PChoice (PNT 0) (PNT 1)) 1 nb (Some nb) [1].
+Proof.
+  intros.
+  eapply VRChoiceSome;
+  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+Qed.
+
+Goal
+  forall nb,
+  verifyrule
+  [PNT 7; PAnyChar]
+  (PChoice (PNT 0) (PNT 1)) 1 nb None [0].
+Proof.
+  intros.
+  eapply VRChoiceNone;
+  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PRepetition PEmpty) 0 nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PRepetition PAnyChar) 0 nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PRepetition (PNT 0)) 0 nb None nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule (PNT 1 :: g) (PRepetition (PNT 0)) 1 nb None [0].
+Proof.
+  intros.
+  eapply VRRepetition.
+  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PNot PEmpty) 0 nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PNot PAnyChar) 0 nb (Some true) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule g (PNot (PNT 0)) 0 nb None nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g nb,
+  verifyrule (PNT 1 :: g) (PNot (PNT 0)) 1 nb None [0].
+Proof.
+  intros.
+  eapply VRNot.
+  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+Qed.
+
+Goal
+  forall nleft,
+  verifyrule [PNT 0] (PNT 0) nleft false None (repeat 0 nleft).
+Proof.
+  intros.
+  induction nleft.
+  - (* O *)
+    eauto using verifyrule.
+  - (* S nleft *)
+    simpl.
+    eapply VRNTLtSomeNonZero; simpl; auto.
+Qed.
+
 Lemma verifyrule_det :
   forall g p nleft nb res1 res2,
   verifyrule g p nleft nb res1 ->

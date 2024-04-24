@@ -943,30 +943,29 @@ Proof.
 Qed.
 
 Lemma verifyrule_det :
-  forall g p nleft nb res1 res2,
-  verifyrule g p nleft nb res1 ->
-  verifyrule g p nleft nb res2 ->
-  res1 = res2.
+  forall g p nleft nb res1 res2 v1 v2,
+  verifyrule g p nleft nb res1 v1 ->
+  verifyrule g p nleft nb res2 v2 ->
+  res1 = res2 /\ v1 = v2.
 Proof.
   intros * H1 H2.
+  generalize dependent v2.
   generalize dependent res2.
   induction H1; intros;
   inversion H2; subst;
   try eq_nth_error;
   try lia;
+  auto;
   try match goal with
-  [ IHx: forall res, verifyrule ?g ?p ?nleft ?nb res -> Some _ = res,
-    Hx: verifyrule ?g ?p ?nleft ?nb (Some _) |- _ ] =>
+  [ IHx: forall res v, verifyrule ?g ?p ?nleft ?nb res v -> _ = res /\ _ = v,
+    Hx: verifyrule ?g ?p ?nleft ?nb _ _ |- _ ] =>
       apply IHx in Hx;
-      destruct1
-  end;
-  try match goal with
-  [ IHx: forall res, verifyrule ?g ?p ?nleft ?nb res -> _ = res,
-    Hx: verifyrule ?g ?p ?nleft ?nb _ |- _ ] =>
-        apply IHx in Hx
-  end;
-  try discriminate;
-  auto.
+      destruct Hx;
+      try discriminate;
+      try destruct1;
+      subst;
+      auto
+  end.
 Qed.
 
 (** VerifyRule function with gas **)

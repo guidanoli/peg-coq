@@ -985,25 +985,28 @@ Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
-              | PEmpty => Some (Some true)
-              | PChar _ => Some (Some nb)
-              | PAnyChar => Some (Some nb)
+              | PEmpty => Some (Some true, nil)
+              | PChar _ => Some (Some nb, nil)
+              | PAnyChar => Some (Some nb, nil)
               | PSequence p1 p2 => match verifyrule_comp g p1 nleft false gas' with
-                                   | Some (Some true) => verifyrule_comp g p2 nleft nb gas'
-                                   | Some (Some false) => Some (Some nb)
+                                   | Some (Some true, _) => verifyrule_comp g p2 nleft nb gas'
+                                   | Some (Some false, v) => Some (Some nb, v)
                                    | res => res
                                    end
               | PChoice p1 p2 => match verifyrule_comp g p1 nleft nb gas' with
-                                 | Some (Some nb') => verifyrule_comp g p2 nleft nb' gas'
+                                 | Some (Some nb', _) => verifyrule_comp g p2 nleft nb' gas'
                                  | res => res
                                  end
               | PRepetition p' => verifyrule_comp g p' nleft true gas'
               | PNot p' => verifyrule_comp g p' nleft true gas'
               | PNT i => match nth_error g i with
-                         | None => Some None
+                         | None => Some (None, nil)
                          | Some p' => match nleft with
-                                      | O => Some None
-                                      | S nleft' => verifyrule_comp g p' nleft' nb gas'
+                                      | O => Some (None, nil)
+                                      | S nleft' => match verifyrule_comp g p' nleft' nb gas' with
+                                                    | Some (res, v) => Some (res, i :: v)
+                                                    | None => None
+                                                    end
                                       end
                          end
               end

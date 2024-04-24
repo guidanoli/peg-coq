@@ -968,6 +968,17 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_length_v_le_nleft :
+  forall g p nleft nb res v,
+  verifyrule g p nleft nb res v ->
+  length v <= nleft.
+Proof.
+  intros * H.
+  induction H;
+  simpl;
+  auto using le_0_n, le_n_S.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

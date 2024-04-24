@@ -1013,11 +1013,12 @@ Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=
   end.
 
 Lemma verifyrule_comp_correct :
-  forall g p nleft nb gas res,
-  verifyrule_comp g p nleft nb gas = Some res ->
-  verifyrule g p nleft nb res.
+  forall g p nleft nb gas res v,
+  verifyrule_comp g p nleft nb gas = Some (res, v) ->
+  verifyrule g p nleft nb res v.
 Proof.
   intros * H.
+  generalize dependent v.
   generalize dependent res.
   generalize dependent nb.
   generalize dependent nleft.
@@ -1030,36 +1031,37 @@ Proof.
   try destruct1;
   eauto using verifyrule;
   try match goal with
+    [ Hx: match nth_error ?g ?i with | _ => _ end = _ |- _ ] =>
+        let H' := fresh in
+        destruct (nth_error g i) eqn:H';
+        try destruct1;
+        eauto using verifyrule;
+        match goal with
+          [ Hx: match ?nleft with | _ => _ end = _ |- _ ] =>
+              let H' := fresh in
+              destruct nleft eqn:H';
+              try destruct1;
+              eauto using verifyrule
+        end
+  end;
+  try match goal with
     [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb ?gas with | _ => _ end = _ |- _ ] =>
         let H := fresh in
-        destruct (verifyrule_comp g p nleft nb gas) as [[[]|]|] eqn:H;
+        destruct (verifyrule_comp g p nleft nb gas) as [[[[]|]]|] eqn:H;
         try discriminate;
         try destruct1;
         eauto using verifyrule;
         fail
-  end;
-  try match goal with
-      [ Hx: match nth_error ?g ?i with | _ => _ end = _ |- _ ] =>
-          let H' := fresh in
-          destruct (nth_error g i) eqn:H';
-          try destruct1;
-          eauto using verifyrule;
-          match goal with
-            [ Hx: match ?nleft with | _ => _ end = _ |- _ ] =>
-                let H' := fresh in
-                destruct nleft eqn:H';
-                try destruct1;
-                eauto using verifyrule
-          end
-    end.
+  end.
 Qed.
 
 Lemma verifyrule_comp_S_gas :
-  forall g p nleft nb res gas,
-  verifyrule_comp g p nleft nb gas = Some res ->
-  verifyrule_comp g p nleft nb (S gas) = Some res.
+  forall g p nleft nb res v gas,
+  verifyrule_comp g p nleft nb gas = Some (res, v) ->
+  verifyrule_comp g p nleft nb (S gas) = Some (res, v).
 Proof.
   intros.
+  generalize dependent v.
   generalize dependent res.
   generalize dependent nb.
   generalize dependent nleft.
@@ -1074,16 +1076,6 @@ Proof.
   simpl;
   auto;
   try match goal with
-    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb ?gas with | _ => _ end = _ |- _ ] =>
-        let H := fresh in
-        destruct (verifyrule_comp g p nleft nb gas) as [[[|]|]|] eqn:H;
-        try discriminate;
-        try destruct1;
-        apply IHgas in H;
-        rewrite H;
-        auto
-  end;
-  try match goal with
       [ |- match nth_error ?g ?i with | _ => _ end = _ ] =>
         let H' := fresh in
         destruct (nth_error g i) eqn:H'; auto;
@@ -1091,14 +1083,24 @@ Proof.
           [ |- match ?nleft with | _ => _ end = _ ] =>
             destruct nleft; auto
         end
+  end;
+  try match goal with
+    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb ?gas with | _ => _ end = _ |- _ ] =>
+        let H := fresh in
+        destruct (verifyrule_comp g p nleft nb gas) as [[[[]|]]|] eqn:H;
+        try discriminate;
+        try destruct1;
+        apply IHgas in H;
+        rewrite H;
+        auto
   end.
 Qed.
 
 Lemma verifyrule_comp_le_gas :
-  forall g p nleft nb gas1 gas2 res,
-  verifyrule_comp g p nleft nb gas1 = Some res ->
+  forall g p nleft nb gas1 gas2 res v,
+  verifyrule_comp g p nleft nb gas1 = Some (res, v) ->
   gas1 <= gas2 ->
-  verifyrule_comp g p nleft nb gas2 = Some res.
+  verifyrule_comp g p nleft nb gas2 = Some (res, v).
 Proof.
   intros * H Hle.
   induction Hle;
@@ -1107,8 +1109,8 @@ Qed.
 
 Lemma verifyrule_comp_complete :
   forall g p nleft nb,
-  exists gas res,
-  verifyrule_comp g p nleft nb gas = Some res.
+  exists gas res v,
+  verifyrule_comp g p nleft nb gas = Some (res, v).
 Proof.
   intros.
   generalize dependent nb.
@@ -1122,14 +1124,14 @@ Proof.
   induction p; intros;
   try (exists 1; simpl; eauto; fail).
   - (* PSequence p1 p2 *)
-    destruct (IHp1 g nleft H false) as [gas1 [res1 H1]].
+    destruct (IHp1 g nleft H false) as [gas1 [res1 [v1 H1]]].
     destruct res1 as [[|]|].
     + (* Some true *)
-      destruct (IHp2 g nleft H nb) as [gas2 [res2 H2]].
+      destruct (IHp2 g nleft H nb) as [gas2 [res2 [v2 H2]]].
       exists (1 + gas1 + gas2).
       simpl.
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
       eauto.
     + (* Some false *)
       exists (1 + gas1).
@@ -1142,14 +1144,14 @@ Proof.
       rewrite H1.
       eauto.
   - (* PChoice p1 p2 *)
-    destruct (IHp1 g nleft H nb) as [gas1 [res1 H1]].
+    destruct (IHp1 g nleft H nb) as [gas1 [res1 [v1 H1]]].
     destruct res1 as [nb'|].
     + (* Some nb' *)
-      destruct (IHp2 g nleft H nb') as [gas2 [res2 H2]].
+      destruct (IHp2 g nleft H nb') as [gas2 [res2 [v2 H2]]].
       exists (1 + gas1 + gas2).
       simpl.
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
+      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
       eauto.
     + (* None *)
       exists (1 + gas1).
@@ -1157,12 +1159,12 @@ Proof.
       rewrite H1.
       eauto.
   - (* PRepetition p *)
-    destruct (IHp g nleft H true) as [gas [res H1]].
+    destruct (IHp g nleft H true) as [gas [res [v H1]]].
     exists (1 + gas).
     simpl.
     eauto.
   - (* PNot p *)
-    destruct (IHp g nleft H true) as [gas [res H1]].
+    destruct (IHp g nleft H true) as [gas [res [v H1]]].
     exists (1 + gas).
     simpl.
     eauto.
@@ -1171,17 +1173,18 @@ Proof.
     + (* O *)
       exists 1. simpl.
       match goal with
-        [ |- exists _, match ?x with | _ => _ end = _ ] =>
+        [ |- exists _ _, match ?x with | _ => _ end = _ ] =>
           destruct x; eauto
       end.
     + (* S nleft *)
       destruct (nth_error g n) as [p|] eqn:Hnth.
       -- (* Some p *)
          specialize (H nleft (Nat.lt_succ_diag_r nleft) g p nb).
-         destruct H as [gas [res H]].
+         destruct H as [gas [res [v H]]].
          exists (1 + gas).
          simpl.
          rewrite Hnth.
+         rewrite H.
          eauto.
       -- (* None *)
          exists 1.
@@ -1191,30 +1194,33 @@ Proof.
 Qed.
 
 Corollary verifyrule_comp_sound :
-  forall g p nleft nb res,
-  verifyrule g p nleft nb res ->
-  exists gas, verifyrule_comp g p nleft nb gas = Some res.
+  forall g p nleft nb res v,
+  verifyrule g p nleft nb res v ->
+  exists gas, verifyrule_comp g p nleft nb gas = Some (res, v).
 Proof.
   intros * H.
-  destruct (verifyrule_comp_complete g p nleft nb) as [gas [res' H']].
-  assert (res = res') by (eauto using verifyrule_comp_correct, verifyrule_det).
+  destruct (verifyrule_comp_complete g p nleft nb) as [gas [res' [v' H']]].
+  assert (res = res' /\ v = v') as Hdet by (eauto using verifyrule_comp_correct, verifyrule_det).
+  destruct Hdet.
   subst.
   eauto.
 Qed.
 
 Lemma verifyrule_comp_S_nleft :
-  forall g p nleft nb nb' gas,
-  verifyrule_comp g p nleft nb gas = Some (Some nb') ->
-  verifyrule_comp g p (S nleft) nb gas = Some (Some nb').
+  forall g p nleft nb nb' v gas,
+  verifyrule_comp g p nleft nb gas = Some (Some nb', v) ->
+  verifyrule_comp g p (S nleft) nb gas = Some (Some nb', v).
 Proof.
   intros * H.
   generalize dependent gas.
+  generalize dependent v.
   generalize dependent nb'.
   generalize dependent nb.
   generalize dependent p.
   generalize dependent g.
   induction nleft using strong_induction.
   intros.
+  generalize dependent v.
   generalize dependent nb'.
   generalize dependent nb.
   generalize dependent nleft.
@@ -1223,20 +1229,20 @@ Proof.
   induction gas; intros; try discriminate.
   destruct p; simpl in *; auto;
   try match goal with
-    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb gas with | _ => _ end = _ |- _ ] =>
-      let Hy := fresh in
-      destruct (verifyrule_comp g p nleft nb gas) as [[[|]|]|] eqn:Hy;
-      try discriminate;
-      apply IHgas in Hy; auto;
-      rewrite Hy;
-      auto
-  end;
-  try match goal with
   [ Hx: match nth_error ?g ?n with | _ => _ end = _ |- _ ] =>
       destruct (nth_error g n) as [p|] eqn:Hnth;
       try discriminate;
       destruct nleft;
       try discriminate;
+      auto
+  end;
+  try match goal with
+    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb gas with | _ => _ end = _ |- _ ] =>
+      let Hy := fresh in
+      destruct (verifyrule_comp g p nleft nb gas) as [[[[]|]]|] eqn:Hy;
+      try discriminate;
+      apply IHgas in Hy; auto;
+      rewrite Hy;
       auto
   end.
 Qed.

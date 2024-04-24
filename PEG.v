@@ -979,6 +979,19 @@ Proof.
   auto using le_0_n, le_n_S.
 Qed.
 
+Lemma verifyrule_S_nleft :
+  forall g p nleft nb nb' v,
+  verifyrule g p nleft nb (Some nb') v ->
+  verifyrule g p (S nleft) nb (Some nb') v.
+Proof.
+  intros * H.
+  remember (Some nb').
+  generalize dependent nb'.
+  induction H; intros;
+  try discriminate;
+  eauto using verifyrule.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=
@@ -1204,47 +1217,6 @@ Proof.
   destruct Hdet.
   subst.
   eauto.
-Qed.
-
-Lemma verifyrule_comp_S_nleft :
-  forall g p nleft nb nb' v gas,
-  verifyrule_comp g p nleft nb gas = Some (Some nb', v) ->
-  verifyrule_comp g p (S nleft) nb gas = Some (Some nb', v).
-Proof.
-  intros * H.
-  generalize dependent gas.
-  generalize dependent v.
-  generalize dependent nb'.
-  generalize dependent nb.
-  generalize dependent p.
-  generalize dependent g.
-  induction nleft using strong_induction.
-  intros.
-  generalize dependent v.
-  generalize dependent nb'.
-  generalize dependent nb.
-  generalize dependent nleft.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros; try discriminate.
-  destruct p; simpl in *; auto;
-  try match goal with
-  [ Hx: match nth_error ?g ?n with | _ => _ end = _ |- _ ] =>
-      destruct (nth_error g n) as [p|] eqn:Hnth;
-      try discriminate;
-      destruct nleft;
-      try discriminate;
-      auto
-  end;
-  try match goal with
-    [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb gas with | _ => _ end = _ |- _ ] =>
-      let Hy := fresh in
-      destruct (verifyrule_comp g p nleft nb gas) as [[[[]|]]|] eqn:Hy;
-      try discriminate;
-      apply IHgas in Hy; auto;
-      rewrite Hy;
-      auto
-  end.
 Qed.
 
 (** Nullable predicate **)

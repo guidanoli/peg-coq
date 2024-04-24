@@ -655,46 +655,49 @@ Qed.
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)
+(** The v parameter is the list of visited rules without consuming input **)
 (** res = None -> has LR **)
 (** res = Some true -> no LR, nullable **)
 (** res = Some false -> no LR, not nullable **)
 
-Inductive verifyrule : grammar -> pat -> nat -> bool -> option bool -> Prop :=
+Inductive verifyrule :
+  grammar -> pat -> nat -> bool -> option bool -> list nat -> Prop :=
+
   | VREmpty :
       forall g nleft nb,
-      verifyrule g PEmpty nleft nb (Some true)
+      verifyrule g PEmpty nleft nb (Some true) nil
   | VRChar :
       forall g a nleft nb,
-      verifyrule g (PChar a) nleft nb (Some nb)
+      verifyrule g (PChar a) nleft nb (Some nb) nil
   | VRAnyChar :
       forall g nleft nb,
-      verifyrule g PAnyChar nleft nb (Some nb)
+      verifyrule g PAnyChar nleft nb (Some nb) nil
   | VRSequenceNone :
-      forall g p1 p2 nleft nb,
-      verifyrule g p1 nleft false None ->
-      verifyrule g (PSequence p1 p2) nleft nb None
+      forall g p1 p2 nleft nb v,
+      verifyrule g p1 nleft false None v ->
+      verifyrule g (PSequence p1 p2) nleft nb None nil
   | VRSequenceSomeTrue :
-      forall g p1 p2 nleft nb res,
-      verifyrule g p1 nleft false (Some true) ->
-      verifyrule g p2 nleft nb res ->
-      verifyrule g (PSequence p1 p2) nleft nb res
+      forall g p1 p2 nleft nb res v1 v2,
+      verifyrule g p1 nleft false (Some true) v1 ->
+      verifyrule g p2 nleft nb res v2 ->
+      verifyrule g (PSequence p1 p2) nleft nb res nil
   | VRSequenceSomeFalse :
-      forall g p1 p2 nleft nb,
-      verifyrule g p1 nleft false (Some false) ->
-      verifyrule g (PSequence p1 p2) nleft nb (Some nb)
+      forall g p1 p2 nleft nb v,
+      verifyrule g p1 nleft false (Some false) v ->
+      verifyrule g (PSequence p1 p2) nleft nb (Some nb) nil
   | VRChoiceNone :
-      forall g p1 p2 nleft nb,
-      verifyrule g p1 nleft nb None ->
-      verifyrule g (PChoice p1 p2) nleft nb None
+      forall g p1 p2 nleft nb v,
+      verifyrule g p1 nleft nb None v ->
+      verifyrule g (PChoice p1 p2) nleft nb None nil
   | VRChoiceSome :
-      forall g p1 p2 nleft nb nb' res,
-      verifyrule g p1 nleft nb (Some nb') ->
-      verifyrule g p2 nleft nb' res ->
-      verifyrule g (PChoice p1 p2) nleft nb res
+      forall g p1 p2 nleft nb nb' res v1 v2,
+      verifyrule g p1 nleft nb (Some nb') v1 ->
+      verifyrule g p2 nleft nb' res v2 ->
+      verifyrule g (PChoice p1 p2) nleft nb res nil
   | VRRepetition :
-      forall g p nleft nb res,
-      verifyrule g p nleft true res ->
-      verifyrule g (PRepetition p) nleft nb res
+      forall g p nleft nb res v,
+      verifyrule g p nleft true res v ->
+      verifyrule g (PRepetition p) nleft nb res nil
   | VRNot :
       forall g p nleft nb res,
       verifyrule g p nleft true res ->

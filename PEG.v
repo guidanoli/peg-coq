@@ -701,6 +701,29 @@ Inductive coherent : grammar -> pat -> bool -> Prop :=
       coherent g (PNT i) true
   .
 
+Lemma coherent_det :
+  forall g p b1 b2,
+  coherent g p b1 ->
+  coherent g p b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1;
+  intros;
+  inversion H2;
+  subst;
+  eauto using coherent;
+  try eq_nth_error;
+  try match goal with
+    [ IHx: forall b, coherent ?g ?p b -> ?b1 = b,
+      Hx: coherent ?g ?p ?b2 |- _ ] =>
+        assert (b1 = b2) by auto;
+        discriminate;
+        fail
+  end.
+Qed.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

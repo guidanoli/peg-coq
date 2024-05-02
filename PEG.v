@@ -889,11 +889,11 @@ Qed.
 
 Goal
   forall g nb,
-  verifyrule [PNT 1; g] (PSequence (PNT 0) PEmpty) 1 nb None [0].
+  verifyrule [PNT 1; PEmpty; g] (PSequence (PNT 0) PEmpty) 1 nb None [0].
 Proof.
   intros.
   eapply VRSequenceNone; eauto using verifyrule.
-  eapply VRNTLtSomeNonZero; eauto using verifyrule.
+  eapply VRNTSucc; eauto using verifyrule.
   simpl.
   eauto.
 Qed.
@@ -904,7 +904,7 @@ Goal
 Proof.
   intros.
   eapply VRSequenceSomeTrue; eauto using verifyrule.
-  eapply VRNTLtSomeNonZero; eauto using verifyrule.
+  eapply VRNTSucc; eauto using verifyrule.
   simpl.
   eauto.
 Qed.
@@ -957,7 +957,7 @@ Goal
 Proof.
   intros.
   eapply VRChoiceNone; eauto using verifyrule.
-  eapply VRNTLtSomeNonZero; eauto using verifyrule.
+  eapply VRNTSucc; eauto using verifyrule.
   simpl.
   eauto.
 Qed.
@@ -970,7 +970,7 @@ Goal
 Proof.
   intros.
   eapply VRChoiceSome;
-  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+  eapply VRNTSucc; simpl; eauto using verifyrule.
 Qed.
 
 Goal
@@ -981,7 +981,7 @@ Goal
 Proof.
   intros.
   eapply VRChoiceNone;
-  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+  eapply VRNTSucc; simpl; eauto using verifyrule.
 Qed.
 
 Goal
@@ -1011,7 +1011,7 @@ Goal
 Proof.
   intros.
   eapply VRRepetition.
-  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+  eapply VRNTSucc; simpl; eauto using verifyrule.
 Qed.
 
 Goal
@@ -1041,7 +1041,7 @@ Goal
 Proof.
   intros.
   eapply VRNot.
-  eapply VRNTLtSomeNonZero; simpl; eauto using verifyrule.
+  eapply VRNTSucc; simpl; eauto using verifyrule.
 Qed.
 
 Goal
@@ -1054,7 +1054,7 @@ Proof.
     eauto using verifyrule.
   - (* S nleft *)
     simpl.
-    eapply VRNTLtSomeNonZero; simpl; auto.
+    eapply VRNTSucc; simpl; auto.
 Qed.
 
 Lemma verifyrule_det :

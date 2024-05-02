@@ -1140,10 +1140,12 @@ Qed.
 
 Lemma verifyrule_complete :
   forall g p nleft nb,
+  (forall r, In r g -> coherent g r) ->
+  coherent g p ->
   exists res v,
   verifyrule g p nleft nb res v.
 Proof.
-  intros.
+  intros * Hgc Hpc.
   generalize dependent nb.
   generalize dependent p.
   generalize dependent g.
@@ -1151,33 +1153,38 @@ Proof.
   intros;
   generalize dependent nb;
   induction p; intros;
+  inversion Hpc; subst;
   eauto using verifyrule;
   (* PSequence *)
   try (
-    destruct (IHp1 false) as [[[|]|] [v1 H1]];
-    destruct (IHp2 nb) as [res2 [v2 H2]];
+    destruct (IHp1 H2 false) as [[[|]|] [? ?]];
+    destruct (IHp2 H3 nb) as [? [? ?]];
     eauto using verifyrule;
     fail
   );
   (* PChoice *)
   try (
-    destruct (IHp1 nb) as [[nb'|] [v1 H1]];
+    destruct (IHp1 H2 nb) as [[nb'|] [? ?]];
     eauto using verifyrule;
-    destruct (IHp2 nb') as [res2 [v2 H2]];
+    destruct (IHp2 H3 nb') as [? [? ?]];
     eauto using verifyrule;
     fail
   );
   (* PRepetition, PNot *)
   try (
-    destruct (IHp true) as [res [v H]];
+    destruct (IHp H1 true) as [? [? ?]];
     eauto using verifyrule;
     fail
   );
   (* PNT *)
   try (
-    destruct (nth_error g n) as [|p] eqn:Hnth;
-    eauto using verifyrule;
-    destruct (IHnleft g p nb) as [res [v H]];
+    assert (In p g) by eauto using nth_error_In;
+    assert (coherent g p) by auto;
+    let H := fresh in
+    (
+      assert (exists res v, verifyrule g p nleft nb res v) as H by auto;
+      destruct H as [? [? ?]]
+    );
     eauto using verifyrule;
     fail
   ).

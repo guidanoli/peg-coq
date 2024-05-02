@@ -821,14 +821,10 @@ Inductive verifyrule :
       forall g p nleft nb res v,
       verifyrule g p nleft true res v ->
       verifyrule g (PNot p) nleft nb res v
-  | VRNTNone :
-      forall g i nleft nb,
-      nth_error g i = None ->
-      verifyrule g (PNT i) nleft nb None nil
   | VRNTZero :
       forall g i nb,
       verifyrule g (PNT i) O nb None nil
-   | VRNTLtSomeNonZero :
+   | VRNTSucc :
       forall g i p nleft nb res v,
       nth_error g i = Some p ->
       verifyrule g p nleft nb res v ->

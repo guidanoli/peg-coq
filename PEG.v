@@ -992,6 +992,15 @@ Proof.
   eauto using verifyrule.
 Qed.
 
+Lemma verifyrule_lenght_v_le_nleft :
+  forall g p nleft nb res v,
+  verifyrule g p nleft nb res v ->
+  length v <= nleft.
+Proof.
+  intros * H.
+  induction H; simpl; lia.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

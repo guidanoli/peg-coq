@@ -992,6 +992,17 @@ Proof.
   eauto using verifyrule.
 Qed.
 
+Lemma verifyrule_nleft_le :
+  forall g p nleft nleft' nb nb' v,
+  verifyrule g p nleft nb (Some nb') v ->
+  nleft <= nleft' ->
+  verifyrule g p nleft' nb (Some nb') v.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using verifyrule_S_nleft.
+Qed.
+
 Lemma verifyrule_lenght_v_le_nleft :
   forall g p nleft nb res v,
   verifyrule g p nleft nb res v ->

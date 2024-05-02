@@ -652,6 +652,55 @@ Proof.
   end.
 Qed.
 
+(** Coherent predicate **)
+(** A pattern in a grammar is coherent if non-terminals always reference existing rules **)
+
+Inductive coherent : grammar -> pat -> bool -> Prop :=
+  | CEmpty :
+      forall g,
+      coherent g PEmpty true
+  | CChar :
+      forall g a,
+      coherent g (PChar a) true
+  | CAnyChar :
+      forall g,
+      coherent g PAnyChar true
+  | CSequenceFalse :
+      forall g p1 p2,
+      coherent g p1 false ->
+      coherent g (PSequence p1 p2) false
+  | CSequenceTrue :
+      forall g p1 p2 b,
+      coherent g p1 true ->
+      coherent g p2 b ->
+      coherent g (PSequence p1 p2) b
+  | CChoiceFalse :
+      forall g p1 p2,
+      coherent g p1 false ->
+      coherent g (PChoice p1 p2) false
+  | CChoiceTrue :
+      forall g p1 p2 b,
+      coherent g p1 true ->
+      coherent g p2 b ->
+      coherent g (PChoice p1 p2) b
+  | CRepetition :
+      forall g p b,
+      coherent g p b ->
+      coherent g (PRepetition p) b
+  | CNot :
+      forall g p b,
+      coherent g p b ->
+      coherent g (PNot p) b
+  | CNTNone :
+      forall g i,
+      nth_error g i = None ->
+      coherent g (PNT i) false
+  | CNTSome :
+      forall g i p,
+      nth_error g i = Some p ->
+      coherent g (PNT i) true
+  .
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

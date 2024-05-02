@@ -1001,6 +1001,28 @@ Proof.
   induction H; simpl; lia.
 Qed.
 
+Lemma verifyrule_i_in_v_lt_length_g :
+  forall g p nleft nb res v i,
+  verifyrule g p nleft nb res v ->
+  In i v ->
+  i < length g.
+Proof.
+  intros * H Hin.
+  generalize dependent i.
+  induction H; intros;
+  try contradiction;
+  eauto;
+  try match goal with
+    [ Hx: In _ (_ :: _) |- _ ] =>
+        destruct Hin;
+        try subst;
+        auto;
+        apply nth_error_Some;
+        intro;
+        eq_nth_error
+  end.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

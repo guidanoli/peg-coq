@@ -724,6 +724,32 @@ Proof.
   end.
 Qed.
 
+(** Coherent function **)
+
+Fixpoint coherent_comp (g : grammar) p gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some true
+              | PChar _ => Some true
+              | PAnyChar => Some true
+              | PSequence p1 p2 => match coherent_comp g p1 gas' with
+                                   | Some true => coherent_comp g p2 gas'
+                                   | res => res
+                                   end
+              | PChoice p1 p2 => match coherent_comp g p1 gas' with
+                                 | Some true => coherent_comp g p2 gas'
+                                 | res => res
+                                 end
+              | PRepetition p => coherent_comp g p gas'
+              | PNot p => coherent_comp g p gas'
+              | PNT i => match nth_error g i with
+                         | Some _ => Some true
+                         | None => Some false
+                         end
+              end
+  end.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

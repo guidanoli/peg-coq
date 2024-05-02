@@ -750,6 +750,27 @@ Fixpoint coherent_comp (g : grammar) p gas {struct gas} :=
               end
   end.
 
+Lemma coherent_comp_correct :
+  forall g p gas b,
+  coherent_comp g p gas = Some b ->
+  coherent g p b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate.
+  destruct p;
+  simpl in H;
+  repeat match goal with
+    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+        destruct x eqn:?
+  end;
+  try discriminate;
+  try destruct1;
+  eauto using coherent.
+Qed.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

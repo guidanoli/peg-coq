@@ -1023,6 +1023,51 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_complete :
+  forall g p nleft nb,
+  exists res v,
+  verifyrule g p nleft nb res v.
+Proof.
+  intros.
+  generalize dependent nb.
+  generalize dependent p.
+  generalize dependent g.
+  induction nleft as [|nleft IHnleft];
+  intros;
+  generalize dependent nb;
+  induction p; intros;
+  eauto using verifyrule;
+  (* PSequence *)
+  try (
+    destruct (IHp1 false) as [[[|]|] [v1 H1]];
+    destruct (IHp2 nb) as [res2 [v2 H2]];
+    eauto using verifyrule;
+    fail
+  );
+  (* PChoice *)
+  try (
+    destruct (IHp1 nb) as [[nb'|] [v1 H1]];
+    eauto using verifyrule;
+    destruct (IHp2 nb') as [res2 [v2 H2]];
+    eauto using verifyrule;
+    fail
+  );
+  (* PRepetition, PNot *)
+  try (
+    destruct (IHp true) as [res [v H]];
+    eauto using verifyrule;
+    fail
+  );
+  (* PNT *)
+  try (
+    destruct (nth_error g n) as [|p] eqn:Hnth;
+    eauto using verifyrule;
+    destruct (IHnleft g p nb) as [res [v H]];
+    eauto using verifyrule;
+    fail
+  ).
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

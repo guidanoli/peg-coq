@@ -913,7 +913,7 @@ Inductive verifyrule :
   | VRNTZero :
       forall g i nb,
       verifyrule g (PNT i) O nb None nil
-   | VRNTSucc :
+  | VRNTSucc :
       forall g i p nleft nb res v,
       nth_error g i = Some p ->
       verifyrule g p nleft nb res v ->

@@ -653,7 +653,8 @@ Proof.
 Qed.
 
 (** Coherent predicate **)
-(** A pattern in a grammar is coherent if non-terminals always reference existing rules **)
+(** A pattern in a grammar is coherent
+    if non-terminals always reference existing rules **)
 
 Inductive coherent : grammar -> pat -> bool -> Prop :=
   | CEmpty :

@@ -1229,8 +1229,8 @@ Qed.
 
 Lemma verifyrule_complete :
   forall g p nleft nb,
-  (forall r, In r g -> coherent g r) ->
-  coherent g p ->
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
   exists res v,
   verifyrule g p nleft nb res v.
 Proof.
@@ -1245,38 +1245,44 @@ Proof.
   inversion Hpc; subst;
   eauto using verifyrule;
   (* PSequence *)
-  try (
-    destruct (IHp1 H2 false) as [[[|]|] [? ?]];
-    destruct (IHp2 H3 nb) as [? [? ?]];
-    eauto using verifyrule;
-    fail
-  );
+  try match goal with
+  [ Hx1: coherent _ ?p1 _,
+    Hx2: coherent _ ?p2 _
+    |- exists _ _, verifyrule _ (PSequence ?p1 ?p2) _ _ _ _ ] =>
+      destruct (IHp1 Hx1 false) as [[[|]|] [? ?]];
+      destruct (IHp2 Hx2 nb) as [? [? ?]];
+      eauto using verifyrule;
+      fail
+  end;
   (* PChoice *)
-  try (
-    destruct (IHp1 H2 nb) as [[nb'|] [? ?]];
-    eauto using verifyrule;
-    destruct (IHp2 H3 nb') as [? [? ?]];
-    eauto using verifyrule;
-    fail
-  );
+  try match goal with
+  [ Hx1: coherent _ ?p1 _,
+    Hx2: coherent _ ?p2 _
+    |- exists _ _, verifyrule _ (PChoice ?p1 ?p2) _ _ _ _ ] =>
+      destruct (IHp1 Hx1 nb) as [[nb'|] [? ?]];
+      eauto using verifyrule;
+      destruct (IHp2 Hx2 nb') as [? [? ?]];
+      eauto using verifyrule;
+      fail
+  end;
   (* PRepetition, PNot *)
-  try (
-    destruct (IHp H1 true) as [? [? ?]];
-    eauto using verifyrule;
-    fail
-  );
+  try match goal with
+  [ Hx: coherent _ ?p _
+    |- exists _ _, verifyrule _ (_ ?p) _ _ _ _ ] =>
+      destruct (IHp Hx true) as [? [? ?]];
+      eauto using verifyrule;
+      fail
+  end;
   (* PNT *)
-  try (
-    assert (In p g) by eauto using nth_error_In;
-    assert (coherent g p) by auto;
-    let H := fresh in
-    (
-      assert (exists res v, verifyrule g p nleft nb res v) as H by auto;
-      destruct H as [? [? ?]]
-    );
+  let Hp := fresh in
+  try match goal with
+  [ Hx: coherent ?g (PNT ?n) true,
+    Hnth: nth_error ?g ?n = Some ?p |- _ ] =>
+    assert (coherent g p true) as Hp by eauto using nth_error_In;
+    destruct (IHnleft _ Hgc _ Hp nb) as [? [? ?]];
     eauto using verifyrule;
     fail
-  ).
+  end.
 Qed.
 
 (** VerifyRule function with gas **)

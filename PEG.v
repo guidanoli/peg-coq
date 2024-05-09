@@ -772,6 +772,94 @@ Proof.
   eauto using coherent.
 Qed.
 
+Lemma coherent_comp_S_gas :
+  forall g p gas b,
+  coherent_comp g p gas = Some b ->
+  coherent_comp g p (S gas) = Some b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas;
+  intros;
+  try discriminate.
+  simpl in H.
+  destruct p;
+  try destruct1;
+  remember (S gas);
+  simpl;
+  repeat match goal with
+    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+        destruct x eqn:?
+  end;
+  try discriminate;
+  subst;
+  try match goal with
+    [ Hx: coherent_comp ?g ?p ?gas = Some ?b
+      |- match coherent_comp ?g ?p (S ?gas) with | _ => _ end = _ ] =>
+      apply IHgas in Hx;
+      rewrite Hx
+  end;
+  auto.
+Qed.
+
+Lemma coherent_comp_le_gas :
+  forall g p gas1 gas2 b,
+  coherent_comp g p gas1 = Some b ->
+  gas1 <= gas2 ->
+  coherent_comp g p gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  auto using coherent_comp_S_gas.
+Qed.
+
+Lemma coherent_comp_complete :
+  forall g p,
+  exists gas b,
+  coherent_comp g p gas = Some b.
+Proof.
+  intros.
+  generalize dependent g.
+  induction p; intros;
+  (* Zero recursive calls *)
+  try (
+    exists 1;
+    simpl;
+    try match goal with
+      [ |- exists _, match ?x with | _ => _ end = _ ] =>
+        destruct x eqn:?
+    end;
+    eauto;
+    fail
+  );
+  (* One recursive call *)
+  try (
+    destruct (IHp g) as [gas [b H]];
+    exists (1 + gas);
+    eauto;
+    fail
+  );
+  (* Two recursive calls *)
+  try (
+    destruct (IHp1 g) as [gas1 [b1 H1]];
+    destruct (IHp2 g) as [gas2 [b2 H2]];
+    assert (gas1 <= gas1 + gas2) as Hle1 by lia;
+    assert (gas2 <= gas1 + gas2) as Hle2 by lia;
+    assert (coherent_comp g p1 (gas1 + gas2) = Some b1) as H1'
+    by eauto using coherent_comp_le_gas;
+    assert (coherent_comp g p2 (gas1 + gas2) = Some b2) as H2'
+    by eauto using coherent_comp_le_gas;
+    exists (1 + gas1 + gas2);
+    simpl;
+    rewrite H1';
+    destruct b1;
+    eauto;
+    fail
+  ).
+Qed.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices **)

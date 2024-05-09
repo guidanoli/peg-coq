@@ -1306,7 +1306,7 @@ Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=
               | PRepetition p' => verifyrule_comp g p' nleft true gas'
               | PNot p' => verifyrule_comp g p' nleft true gas'
               | PNT i => match nth_error g i with
-                         | None => Some (None, nil)
+                         | None => None
                          | Some p' => match nleft with
                                       | O => Some (None, nil)
                                       | S nleft' => match verifyrule_comp g p' nleft' nb gas' with
@@ -1338,22 +1338,18 @@ Proof.
   eauto using verifyrule;
   try match goal with
     [ Hx: match nth_error ?g ?i with | _ => _ end = _ |- _ ] =>
-        let H' := fresh in
-        destruct (nth_error g i) eqn:H';
-        try destruct1;
-        eauto using verifyrule;
+        destruct (nth_error g i) eqn:?;
+        try discriminate;
         match goal with
           [ Hx: match ?nleft with | _ => _ end = _ |- _ ] =>
-              let H' := fresh in
-              destruct nleft eqn:H';
+              destruct nleft eqn:?;
               try destruct1;
               eauto using verifyrule
         end
   end;
   try match goal with
     [ Hx: match verifyrule_comp ?g ?p ?nleft ?nb ?gas with | _ => _ end = _ |- _ ] =>
-        let H := fresh in
-        destruct (verifyrule_comp g p nleft nb gas) as [[[[]|]]|] eqn:H;
+        destruct (verifyrule_comp g p nleft nb gas) as [[[[]|]]|] eqn:?;
         try discriminate;
         try destruct1;
         eauto using verifyrule;

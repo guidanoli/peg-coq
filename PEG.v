@@ -501,8 +501,7 @@ Proof.
   end;
   try match goal with
     [ |- exists res, dangling _ (PNT ?i) res ] =>
-        let H := fresh in
-        destruct (nth_error g i) eqn:H
+        destruct (nth_error g i) eqn:?
   end;
   try match goal with
     [ |- exists res, dangling _ (_ (?p1 : pat) _) res ] =>
@@ -555,16 +554,14 @@ Proof.
   destruct p;
   try match goal with
     [ |- dangling _ (_ ?p1 _) _ ] =>
-      let H1 := fresh in
-        destruct (dangling_comp g p1 gas) as [[]|] eqn:H1;
-        try discriminate
+      destruct (dangling_comp g p1 gas) as [[]|] eqn:?;
+      try discriminate
   end;
   try match goal with
     [ |- dangling _ (PNT _) _ ] =>
-      let H1 := fresh in
-        destruct (nth_error g n) as [|] eqn:H1;
-        try destruct1;
-        eauto using dangling
+      destruct (nth_error g n) as [|] eqn:?;
+      try destruct1;
+      eauto using dangling
   end;
   try destruct1;
   eauto using dangling.
@@ -1379,8 +1376,7 @@ Proof.
   auto;
   try match goal with
       [ |- match nth_error ?g ?i with | _ => _ end = _ ] =>
-        let H' := fresh in
-        destruct (nth_error g i) eqn:H'; auto;
+        destruct (nth_error g i) eqn:?; auto;
         match goal with
           [ |- match ?nleft with | _ => _ end = _ ] =>
             destruct nleft; auto

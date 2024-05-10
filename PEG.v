@@ -1407,10 +1407,12 @@ Qed.
 
 Lemma verifyrule_comp_complete :
   forall g p nleft nb,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
   exists gas res v,
   verifyrule_comp g p nleft nb gas = Some (res, v).
 Proof.
-  intros.
+  intros * Hgc Hpc.
   generalize dependent nb.
   generalize dependent p.
   generalize dependent g.
@@ -1420,51 +1422,59 @@ Proof.
   generalize dependent nleft.
   generalize dependent g.
   induction p; intros;
-  try (exists 1; simpl; eauto; fail).
+  inversion Hpc; subst;
+  try (exists 1; simpl; eauto; fail);
+  try (
+    let H := fresh in
+    assert (exists gas res v, verifyrule_comp g p nleft true gas = Some (res, v))
+    as [gas [res [v H]]] by auto;
+    exists (1 + gas);
+    simpl;
+    rewrite H;
+    eauto;
+    fail
+  ).
   - (* PSequence p1 p2 *)
-    destruct (IHp1 g nleft H false) as [gas1 [res1 [v1 H1]]].
-    destruct res1 as [[|]|].
-    + (* Some true *)
-      destruct (IHp2 g nleft H nb) as [gas2 [res2 [v2 H2]]].
-      exists (1 + gas1 + gas2).
-      simpl.
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
-      eauto.
-    + (* Some false *)
-      exists (1 + gas1).
-      simpl.
-      rewrite H1.
-      eauto.
-    + (* None *)
-      exists (1 + gas1).
-      simpl.
-      rewrite H1.
-      eauto.
-  - (* PChoice p1 p2 *)
-    destruct (IHp1 g nleft H nb) as [gas1 [res1 [v1 H1]]].
-    destruct res1 as [nb'|].
-    + (* Some nb' *)
-      destruct (IHp2 g nleft H nb') as [gas2 [res2 [v2 H2]]].
-      exists (1 + gas1 + gas2).
-      simpl.
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H1 (Nat.le_add_r gas1 gas2)).
-      rewrite (verifyrule_comp_le_gas _ _ _ _ _ _ _ _ H2 (Plus.le_plus_r gas1 gas2)).
-      eauto.
-    + (* None *)
-      exists (1 + gas1).
-      simpl.
-      rewrite H1.
-      eauto.
-  - (* PRepetition p *)
-    destruct (IHp g nleft H true) as [gas [res [v H1]]].
-    exists (1 + gas).
+    assert (exists gas res v, verifyrule_comp g p1 nleft false gas = Some (res, v))
+    as [gas1 [res1 [v1 ?]]] by auto.
+    assert (exists gas res v, verifyrule_comp g p2 nleft nb gas = Some (res, v))
+    as [gas2 [res2 [v2 ?]]] by auto.
+    assert (gas1 <= gas1 + gas2) by lia.
+    assert (gas2 <= gas1 + gas2) by lia.
+    assert (verifyrule_comp g p2 nleft nb (gas1 + gas2) = Some (res2, v2))
+    by eauto using verifyrule_comp_le_gas.
+    exists (1 + gas1 + gas2).
     simpl.
+    let H := fresh in
+    assert (verifyrule_comp g p1 nleft false (gas1 + gas2) = Some (res1, v1))
+    as H by eauto using verifyrule_comp_le_gas;
+    rewrite H.
+    destruct res1 as [[|]|];
     eauto.
-  - (* PNot p *)
-    destruct (IHp g nleft H true) as [gas [res [v H1]]].
-    exists (1 + gas).
+  - (* PChoice p1 p2 *)
+    let H := fresh in
+    assert (exists gas res v, verifyrule_comp g p1 nleft nb gas = Some (res, v))
+    as [gas1 [res1 [v1 H]]] by auto;
+    destruct res1 as [nb'|];
+    try (
+      exists (1 + gas1);
+      simpl;
+      rewrite H;
+      eauto;
+      fail
+    ).
+    assert (exists gas res v, verifyrule_comp g p2 nleft nb' gas = Some (res, v))
+    as [gas2 [res2 [v2 ?]]] by auto.
+    assert (gas1 <= gas1 + gas2) by lia.
+    assert (gas2 <= gas1 + gas2) by lia.
+    assert (verifyrule_comp g p2 nleft nb' (gas1 + gas2) = Some (res2, v2))
+    by eauto using verifyrule_comp_le_gas.
+    exists (1 + gas1 + gas2).
     simpl.
+    let H := fresh in
+    assert (verifyrule_comp g p1 nleft nb (gas1 + gas2) = Some (Some nb', v1))
+    as H by eauto using verifyrule_comp_le_gas;
+    rewrite H.
     eauto.
   - (* PNT n *)
     destruct nleft.
@@ -1472,23 +1482,20 @@ Proof.
       exists 1. simpl.
       match goal with
         [ |- exists _ _, match ?x with | _ => _ end = _ ] =>
-          destruct x; eauto
+          destruct x; try discriminate; eauto
       end.
     + (* S nleft *)
-      destruct (nth_error g n) as [p|] eqn:Hnth.
-      -- (* Some p *)
-         specialize (H nleft (Nat.lt_succ_diag_r nleft) g p nb).
-         destruct H as [gas [res [v H]]].
-         exists (1 + gas).
-         simpl.
-         rewrite Hnth.
-         rewrite H.
-         eauto.
-      -- (* None *)
-         exists 1.
-         simpl.
-         rewrite Hnth.
-         eauto.
+      let H := fresh in
+      assert (exists gas res v, verifyrule_comp g p nleft nb gas = Some (res, v))
+      as [gas [res [v H]]] by eauto using nth_error_In;
+      exists (1 + gas);
+      simpl;
+      match goal with
+        [ Hx: ?lhs = ?rhs |- exists _ _, match ?lhs with | _ => _ end = _ ] =>
+          rewrite Hx
+      end;
+      rewrite H;
+      eauto.
 Qed.
 
 Corollary verifyrule_comp_sound :

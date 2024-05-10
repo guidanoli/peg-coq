@@ -1500,13 +1500,16 @@ Qed.
 
 Corollary verifyrule_comp_sound :
   forall g p nleft nb res v,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
   verifyrule g p nleft nb res v ->
   exists gas, verifyrule_comp g p nleft nb gas = Some (res, v).
 Proof.
-  intros * H.
-  destruct (verifyrule_comp_complete g p nleft nb) as [gas [res' [v' H']]].
-  assert (res = res' /\ v = v') as Hdet by (eauto using verifyrule_comp_correct, verifyrule_det).
-  destruct Hdet.
+  intros * Hgc Hpc H.
+  assert (exists gas res v, verifyrule_comp g p nleft nb gas = Some (res, v))
+  as [? [res' [v' ?]]] by eauto using verifyrule_comp_complete.
+  assert (res = res' /\ v = v')
+  as [? ?] by (eauto using verifyrule_comp_correct, verifyrule_det).
   subst.
   eauto.
 Qed.

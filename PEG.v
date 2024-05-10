@@ -1275,8 +1275,8 @@ Proof.
   try match goal with
   [ Hx: coherent ?g (PNT ?n) true,
     Hnth: nth_error ?g ?n = Some ?p |- _ ] =>
-    assert (coherent g p true) as Hp by eauto using nth_error_In;
-    destruct (IHnleft _ Hgc _ Hp nb) as [? [? ?]];
+    assert (coherent g p true) by eauto using nth_error_In;
+    assert (exists res v, verifyrule g p nleft nb res v) as [? [? ?]] by eauto;
     eauto using verifyrule;
     fail
   end.
@@ -1505,7 +1505,7 @@ Corollary verifyrule_comp_sound :
   verifyrule g p nleft nb res v ->
   exists gas, verifyrule_comp g p nleft nb gas = Some (res, v).
 Proof.
-  intros * Hgc Hpc H.
+  intros.
   assert (exists gas res v, verifyrule_comp g p nleft nb gas = Some (res, v))
   as [? [res' [v' ?]]] by eauto using verifyrule_comp_complete.
   assert (res = res' /\ v = v')

@@ -1282,6 +1282,65 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_res_none_or_some_true :
+  forall g p nb res v,
+  verifyrule g p nb true res v ->
+  res = None \/ res = Some true.
+Proof.
+  intros * H.
+  remember true.
+  induction H; subst; eauto using verifyrule.
+  match goal with
+    [ Hx: true = true -> Some _ = None \/ Some _ = Some true |- _ ] =>
+      let H := fresh in
+      assert (true = true) as H by auto;
+      specialize (Hx H);
+      destruct Hx;
+      try discriminate;
+      try destruct1;
+      auto
+  end.
+Qed.
+
+Lemma verifyrule_nullable_approx :
+  forall g p s nleft nb res v,
+  matches g p s (Success s) ->
+  verifyrule g p nleft nb res v ->
+  res = None \/ res = Some true.
+Proof.
+  intros * Hm Hv.
+  remember (Success s).
+  generalize dependent v.
+  generalize dependent res.
+  generalize dependent nb.
+  generalize dependent nleft.
+  induction Hm; intros;
+  inversion Hv; subst;
+  try destruct1;
+  try discriminate;
+  try match goal with
+  [ Hx: ?s = String _ ?s |- _ ] =>
+    exfalso; induction s; congruence; fail
+  end;
+  try match goal with
+  [ Hm1: matches _ _ ?s1 (Success ?s2),
+    Hm2: matches _ _ ?s2 (Success ?s1) |- _ ] =>
+        assert (s1 = s2) by
+        (eauto using matches_suffix, suffix_antisymmetric);
+        subst
+  end;
+  try eq_nth_error;
+  eauto using verifyrule_res_none_or_some_true;
+  try match goal with
+  [ IHx: _ -> forall nleft nb res v, verifyrule ?g ?p nleft nb res v -> _,
+    Hx: verifyrule ?g ?p _ _ _ _ |- _ ] =>
+      apply IHx in Hx; auto;
+      destruct Hx; try discriminate; try destruct1;
+      eauto using verifyrule_res_none_or_some_true;
+      fail
+  end.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

@@ -1202,6 +1202,19 @@ Proof.
   induction H; simpl; lia.
 Qed.
 
+Lemma verifyrule_length_v_eq_nleft :
+  forall g p nleft nb v,
+  verifyrule g p nleft nb None v ->
+  length v = nleft.
+Proof.
+  intros * H.
+  remember None.
+  induction H;
+  try discriminate;
+  simpl;
+  auto.
+Qed.
+
 Lemma verifyrule_i_in_v_lt_length_g :
   forall g p nleft nb res v i,
   verifyrule g p nleft nb res v ->

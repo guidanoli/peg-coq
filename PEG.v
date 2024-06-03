@@ -1295,6 +1295,28 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_nleft_ge :
+  forall g p nleft nleft' nb v,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  verifyrule g p nleft nb None v ->
+  nleft' <= nleft ->
+  exists v', verifyrule g p nleft' nb None v'.
+Proof.
+  intros.
+  assert (exists res' v', verifyrule g p nleft' nb res' v')
+  as [res' [v' ?]] by eauto using verifyrule_complete.
+  destruct res'.
+  - (* Some b *)
+    assert (verifyrule g p nleft nb (Some b) v')
+    by eauto using verifyrule_nleft_le.
+    assert (None = Some b /\ v = v')
+    as [? ?] by eauto using verifyrule_det.
+    discriminate.
+  - (* None *)
+    eauto.
+Qed.
+
 Lemma verifyrule_res_none_or_some_true :
   forall g p nb res v,
   verifyrule g p nb true res v ->

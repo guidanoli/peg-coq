@@ -504,7 +504,7 @@ Proof.
         destruct (nth_error g i) eqn:?
   end;
   try match goal with
-    [ |- exists res, dangling _ (_ (?p1 : pat) _) res ] =>
+    [ |- exists res, dangling _ (_ ?p1 _) res ] =>
       try match goal with
         [ Hx: dangling _ p1 ?res |- _ ] =>
             destruct res

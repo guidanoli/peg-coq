@@ -2088,7 +2088,7 @@ Qed.
 Lemma nullable_comp_some_true_is_nullable :
   forall g p rr gas,
   nullable_comp g p rr gas = Some true ->
-  nullable g p.
+  nullable g p true.
 Proof.
   intros * H.
   generalize dependent rr.
@@ -2436,7 +2436,7 @@ Inductive well_formed : list pat -> pat -> Prop :=
   | WFRepetition :
       forall g p,
       well_formed g p ->
-      ~ nullable g p ->
+      nullable g p false ->
       well_formed g (PRepetition p)
   | WFNot :
       forall g p,
@@ -2484,7 +2484,7 @@ Proof with eauto using matches.
     + (* Success s1 *)
       subst.
       match goal with [
-        Hx: ~ nullable ?g ?p,
+        Hx: nullable ?g ?p false,
         Hy: matches ?g ?p _ (Success ?s) |- _
       ] =>
         specialize (proper_suffix_if_not_nullable _ _ _ _ Hx Hy) as Hps;
@@ -2555,24 +2555,4 @@ Proof.
     try discriminate;
     eauto using well_formed
   ).
-  - (* PRepetition p *)
-    destruct gas; try discriminate.
-    simpl in H.
-    destruct (well_formed_comp g p gas) as [[]|] eqn:H1;
-    destruct (hungry_comp g p gas) as [[]|] eqn:H2;
-    try discriminate.
-    eauto using well_formed, hungry_comp_correct_true.
-  - (* PNot p *)
-    destruct gas; try discriminate.
-    simpl in H.
-    destruct (well_formed_comp g p gas) as [[]|] eqn:H1;
-    try discriminate.
-    eauto using well_formed.
-  - (* PNT n *)
-    destruct gas; try discriminate.
-    simpl in H.
-    destruct (nth_error g n) eqn:H1; try discriminate;
-    destruct (well_formed_comp g p gas) as [[]|] eqn:H2;
-    try discriminate.
-    eauto using well_formed, nth_error_In.
-Qed.
+Abort.

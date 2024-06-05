@@ -859,8 +859,8 @@ Qed.
 
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
-(** The nb parameter is used for tail calls in choices **)
-(** The v parameter is the list of visited rules without consuming input **)
+(** The nb parameter is used for tail calls in choices (stands for (N)ulla(B)le) **)
+(** The v parameter is the list of (V)isited rules without consuming input **)
 (** res = None -> has LR **)
 (** res = Some true -> no LR, nullable **)
 (** res = Some false -> no LR, not nullable **)

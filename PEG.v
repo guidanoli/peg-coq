@@ -1376,6 +1376,26 @@ Proof.
   end.
 Qed.
 
+Theorem verifyrule_fast_forward :
+  forall g p nleft nb res v1 i v2,
+  verifyrule g p nleft nb res (v1 ++ i :: v2) ->
+  exists nleft' nb' res', verifyrule g (PNT i) nleft' nb' res' (i :: v2).
+Proof.
+  intros * H.
+  remember (v1 ++ i :: v2) as v.
+  generalize dependent v2.
+  generalize dependent i.
+  generalize dependent v1.
+  induction H;
+  intros;
+  eauto using verifyrule;
+  destruct v1;
+  simpl in *;
+  try discriminate;
+  try destruct2;
+  eauto using verifyrule.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

@@ -1169,6 +1169,16 @@ Proof.
   end.
 Qed.
 
+Ltac pose_verifyrule_det :=
+  repeat match goal with
+    [ Hx1: verifyrule ?g ?p ?nleft ?nb ?res1 ?v1,
+      Hx2: verifyrule ?g ?p ?nleft ?nb ?res2 ?v2 |- _ ] =>
+          assert (res1 = res2 /\ v1 = v2)
+          as [? ?]
+          by eauto using verifyrule_det;
+          clear Hx2
+  end.
+
 Lemma verifyrule_S_nleft :
   forall g p nleft nb nb' v,
   verifyrule g p nleft nb (Some nb') v ->

@@ -1360,10 +1360,32 @@ Proof.
   inversion H';
   subst;
   pose_verifyrule_det;
-  subst;
-  try assert (exists b, Some b = None) as [? ?] by eauto;
   try eq_nth_error;
+  try assert (exists b, Some b = None) as [? ?] by eauto;
   try discriminate;
+  eauto.
+Qed.
+
+Lemma verifyrule_v_independent_from_nb :
+  forall g p nleft nb nb' res res' v v',
+  verifyrule g p nleft nb res v ->
+  verifyrule g p nleft nb' res' v' ->
+  v = v'.
+Proof.
+  intros * H H'.
+  generalize dependent v'.
+  generalize dependent res'.
+  generalize dependent nb'.
+  induction H;
+  intros;
+  inversion H';
+  subst;
+  pose_verifyrule_det;
+  try eq_nth_error;
+  try assert (exists b, Some b = None) as [? ?]
+  by eauto using verifyrule_res_none_independent_from_nb;
+  try discriminate;
+  try f_equal;
   eauto.
 Qed.
 

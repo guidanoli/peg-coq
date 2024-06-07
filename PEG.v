@@ -1318,8 +1318,8 @@ Proof.
 Qed.
 
 Lemma verifyrule_res_none_or_some_true :
-  forall g p nb res v,
-  verifyrule g p nb true res v ->
+  forall g p nleft res v,
+  verifyrule g p nleft true res v ->
   res = None \/ res = Some true.
 Proof.
   intros * H.

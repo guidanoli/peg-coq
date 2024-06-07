@@ -1344,6 +1344,29 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_res_none_independent_from_nb :
+  forall g p nleft nb nb' res' v v',
+  verifyrule g p nleft nb None v ->
+  verifyrule g p nleft nb' res' v' ->
+  res' = None.
+Proof.
+  intros * H H'.
+  remember None as res.
+  generalize dependent v'.
+  generalize dependent res'.
+  generalize dependent nb'.
+  induction H;
+  intros;
+  inversion H';
+  subst;
+  pose_verifyrule_det;
+  subst;
+  try assert (exists b, Some b = None) as [? ?] by eauto;
+  try eq_nth_error;
+  try discriminate;
+  eauto.
+Qed.
+
 Lemma verifyrule_nullable_approx :
   forall g p s nleft nb res v,
   matches g p s (Success s) ->

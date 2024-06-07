@@ -1327,10 +1327,7 @@ Proof.
   induction H; subst; eauto using verifyrule.
   match goal with
     [ Hx: true = true -> Some _ = None \/ Some _ = Some true |- _ ] =>
-      let H := fresh in
-      assert (true = true) as H by auto;
-      specialize (Hx H);
-      destruct Hx;
+      specialize (Hx (eq_refl true)) as [? | ?];
       try discriminate;
       try destruct1;
       auto

@@ -1448,6 +1448,62 @@ Proof.
   eauto using verifyrule.
 Qed.
 
+Theorem verifyrule_fast_forward_none :
+  forall g p nleft nb v1 i v2,
+  verifyrule g p nleft nb None (v1 ++ i :: v2) ->
+  exists nleft' nb', verifyrule g (PNT i) nleft' nb' None (i :: v2).
+Proof.
+  intros * H.
+  assert (exists nleft' nb' res', verifyrule g (PNT i) nleft' nb' res' (i :: v2))
+  as [nleft' [nb' [res' ?]]]
+  by eauto using verifyrule_fast_forward.
+  destruct res' as [b|]; eauto;
+  remember (v1 ++ i :: v2) as v;
+  generalize dependent v2;
+  generalize dependent i;
+  generalize dependent v1;
+  generalize dependent nb';
+  generalize dependent nleft';
+  generalize dependent b;
+  remember None as res;
+  induction H;
+  intros;
+  eauto using verifyrule;
+  destruct v1;
+  simpl in *;
+  try discriminate;
+  try destruct2;
+  eauto using verifyrule.
+Qed.
+
+Theorem verifyrule_fast_forward_none_explicit_nleft :
+  forall g p nb nleft v1 i v2,
+  verifyrule g p nleft nb None (v1 ++ i :: v2) ->
+  exists nb', verifyrule g (PNT i) (1 + length v2) nb' None (i :: v2).
+Proof.
+  intros * H.
+  assert (exists nleft' nb', verifyrule g (PNT i) nleft' nb' None (i :: v2))
+  as [nleft' [nb' ?]]
+  by eauto using verifyrule_fast_forward_none.
+  assert (length (i :: v2) = nleft')
+  by eauto using verifyrule_length_v_eq_nleft.
+  subst.
+  eauto.
+Qed.
+
+Theorem verifyrule_fast_forward_none_explicit_nleft_any_nb :
+  forall g p nb nleft nb' res' v1 i v2 v',
+  verifyrule g p nleft nb None (v1 ++ i :: v2) ->
+  verifyrule g (PNT i) (1 + length v2) nb' res' v' ->
+  (res' = None /\ v' = (i :: v2)).
+Proof.
+  intros * H H'.
+  assert (exists nb', verifyrule g (PNT i) (1 + length v2) nb' None (i :: v2))
+  as [? ?] by eauto using verifyrule_fast_forward_none_explicit_nleft.
+  split;
+  eauto using verifyrule_res_none_independent_from_nb, verifyrule_v_independent_from_nb.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

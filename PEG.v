@@ -1344,27 +1344,73 @@ Proof.
   end.
 Qed.
 
-Lemma verifyrule_res_none_independent_from_nb :
-  forall g p nleft nb nb' res' v v',
-  verifyrule g p nleft nb None v ->
-  verifyrule g p nleft nb' res' v' ->
-  res' = None.
+Inductive same_result_type : bool -> option bool -> bool -> option bool -> Prop :=
+  | SRTLeftRecursive :
+      forall nb nb',
+      same_result_type nb None nb' None
+  | SRTNotNullable :
+      forall nb nb',
+      same_result_type nb (Some nb) nb' (Some nb')
+  | SRTNullable :
+      forall b b',
+      same_result_type b (Some true) b' (Some true)
+  .
+
+Lemma verifyrule_nb_change :
+  forall g p nleft nb nb' res v,
+  verifyrule g p nleft nb res v ->
+  exists res', same_result_type nb res nb' res' /\ verifyrule g p nleft nb' res' v.
 Proof.
-  intros * H H'.
-  remember None as res.
-  generalize dependent v'.
-  generalize dependent res'.
+  intros * H.
   generalize dependent nb'.
   induction H;
   intros;
-  inversion H';
-  subst;
-  pose_verifyrule_det;
-  try eq_nth_error;
-  try assert (exists b, Some b = None) as [? ?] by eauto;
   try discriminate;
-  eauto.
+  eauto using verifyrule, same_result_type;
+  try match goal with
+    [ IHx: forall _, exists _, _ /\ _
+      |- exists _, _ /\ verifyrule _ _ _ ?nbx _ _ ] =>
+          specialize (IHx nbx) as [? [Hsrt ?]];
+          inversion Hsrt;
+          subst;
+          eauto using verifyrule, same_result_type;
+          fail
+  end.
+  try match goal with
+    [ IHx1: forall _, exists _, _ /\ verifyrule _ ?p1 _ _ _ _,
+      IHx2: forall _, exists _, _ /\ verifyrule _ ?p2 _ _ _ _
+      |- exists res, _ /\ verifyrule ?g (PChoice ?p1 ?p2) ?nleft ?nbx res ?v ] =>
+          specialize (IHx1 nbx) as [res' [Hsrt1 ?]];
+          inversion Hsrt1;
+          subst;
+          match goal with
+            [ _: verifyrule ?g ?p1 ?nleft ?nbx (Some ?b) _ |- _ ] =>
+                specialize (IHx2 b) as [res'' [Hsrt2 ?]];
+                inversion Hsrt2;
+                subst;
+                eauto using verifyrule, same_result_type
+          end
+  end.
 Qed.
+
+Lemma verifyrule_nb_change_none :
+  forall g p nleft nb nb' v,
+  verifyrule g p nleft nb None v ->
+  verifyrule g p nleft nb' None v.
+Proof.
+  intros * H.
+  eapply verifyrule_nb_change with (nb' := nb') in H as [res' [Hsrt H]].
+  inversion Hsrt; subst.
+  auto.
+Qed.
+
+Ltac pose_verifyrule_nb_none :=
+  try match goal with
+    [ Hx1: verifyrule ?g ?p ?nleft _ None ?v,
+      Hx2: verifyrule ?g ?p ?nleft ?nb _ _ |- _ ] =>
+          assert (verifyrule g p nleft nb None v)
+          by eauto using verifyrule_nb_change_none
+  end.
 
 Lemma verifyrule_v_independent_from_nb :
   forall g p nleft nb nb' res res' v v',
@@ -1380,10 +1426,9 @@ Proof.
   intros;
   inversion H';
   subst;
+  pose_verifyrule_nb_none;
   pose_verifyrule_det;
   try eq_nth_error;
-  try assert (exists b, Some b = None) as [? ?]
-  by eauto using verifyrule_res_none_independent_from_nb;
   try discriminate;
   try f_equal;
   eauto.

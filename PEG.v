@@ -100,13 +100,13 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
 Ltac destruct1 :=
   match goal with
   [ H: ?C _ = ?C _ |- _ ] =>
-      inversion H; clear H; subst
+      injection H as H; subst
   end.
 
 Ltac destruct2 :=
   match goal with
   [ H: ?C _ _ = ?C _ _ |- _ ] =>
-      inversion H; clear H; subst
+      injection H as H; subst
   end.
 
 Ltac apply_matches_IH :=
@@ -1192,7 +1192,7 @@ Proof.
   eauto using verifyrule.
 Qed.
 
-Lemma verifyrule_nleft_le :
+Lemma verifyrule_nleft_le_some_det :
   forall g p nleft nleft' nb nb' v,
   verifyrule g p nleft nb (Some nb') v ->
   nleft <= nleft' ->
@@ -1305,26 +1305,112 @@ Proof.
   end.
 Qed.
 
-Lemma verifyrule_nleft_ge :
-  forall g p nleft nleft' nb v,
-  (forall r, In r g -> coherent g r true) ->
-  coherent g p true ->
-  verifyrule g p nleft nb None v ->
-  nleft' <= nleft ->
-  exists v', verifyrule g p nleft' nb None v'.
+Inductive coherent_return_type_after_nleft_increase : option bool -> option bool -> Prop :=
+  | FromNone :
+      forall res,
+      coherent_return_type_after_nleft_increase None res
+  | FromSome :
+      forall b,
+      coherent_return_type_after_nleft_increase (Some b) (Some b)
+  .
+
+Lemma coherent_return_type_after_nleft_increase_transitive :
+  forall res1 res2 res3,
+  coherent_return_type_after_nleft_increase res1 res2 ->
+  coherent_return_type_after_nleft_increase res2 res3 ->
+  coherent_return_type_after_nleft_increase res1 res3.
 Proof.
+  intros * H12 H23.
+  inversion H12; subst;
+  eauto using coherent_return_type_after_nleft_increase.
+Qed.
+
+Ltac specialize_forall_eq :=
+  match goal with
+    [ Hx: forall y, ?C ?x = ?C y -> _ |- _ ] =>
+        specialize (Hx x)
+  end.
+
+Ltac specialize_eq_refl :=
+  match goal with
+    [ Hx: ?x = ?x -> _ |- _ ] =>
+        specialize (Hx (eq_refl x))
+  end.
+
+Ltac destruct_exists_hyp :=
+  match goal with
+    [ Hx: exists _, _ |- _ ] =>
+        destruct Hx
+  end.
+
+Ltac destruct_and_hyp :=
+  match goal with
+    [ Hx: _ /\ _ |- _ ] =>
+        destruct Hx
+  end.
+
+Lemma verifyrule_nleft_decrease :
+  forall g p nleft nb res v,
+  verifyrule g p (S nleft) nb res v ->
+  exists res' v',
+  coherent_return_type_after_nleft_increase res' res /\
+  verifyrule g p nleft nb res' v'.
+Proof.
+  intros * H.
+  remember (S nleft) as nleft'.
+  generalize dependent nleft.
+  induction H;
+  intros;
+  subst;
+  try discriminate;
+  try destruct1;
+  try match goal with
+    [ IHx: forall nleftx, ?nleft' = S nleftx -> _
+      |- exists _ _, _ /\ verifyrule _ _ ?nleft' _ _ _ ] =>
+          destruct nleft'
+  end;
+  repeat specialize_forall_eq;
+  repeat specialize_eq_refl;
+  repeat destruct_exists_hyp;
+  repeat destruct_and_hyp;
+  try match goal with
+    [ Hx: coherent_return_type_after_nleft_increase _ _ |- _ ] =>
+        inversion Hx; subst
+  end;
+  eauto using verifyrule, coherent_return_type_after_nleft_increase.
+Qed.
+
+Lemma verifyrule_nleft_le_coherent_result_type :
+  forall g p nleft nleft' nb res v,
+  verifyrule g p nleft' nb res v ->
+  nleft <= nleft' ->
+  exists res' v',
+  coherent_return_type_after_nleft_increase res' res /\
+  verifyrule g p nleft nb res' v'.
+Proof.
+  intros * Hv Hle.
+  generalize dependent v.
+  generalize dependent res.
+  generalize dependent nb.
+  generalize dependent p.
+  generalize dependent g.
+  induction Hle as [|nleft' Hle IH];
   intros.
-  assert (exists res' v', verifyrule g p nleft' nb res' v')
-  as [res' [v' ?]] by eauto using verifyrule_complete.
-  destruct res'.
-  - (* Some b *)
-    assert (verifyrule g p nleft nb (Some b) v')
-    by eauto using verifyrule_nleft_le.
-    assert (None = Some b /\ v = v')
-    as [? ?] by eauto using verifyrule_det.
-    discriminate.
-  - (* None *)
-    eauto.
+  - (* nleft = nleft', prove for nleft' *)
+    destruct res;
+    eauto using coherent_return_type_after_nleft_increase.
+  - (* nleft <= nleft', prove for (S nleft') *)
+    assert (exists res' v',
+            coherent_return_type_after_nleft_increase res' res /\
+            verifyrule g p nleft' nb res' v')
+    as [res' [v' [? ?]]]
+    by eauto using verifyrule_nleft_decrease.
+    assert (exists res'' v'',
+            coherent_return_type_after_nleft_increase res'' res' /\
+            verifyrule g p nleft nb res'' v'')
+    as [res'' [v'' [? ?]]]
+    by eauto.
+    eauto using coherent_return_type_after_nleft_increase_transitive.
 Qed.
 
 Lemma verifyrule_res_none_or_some_true :
@@ -1490,6 +1576,7 @@ Proof.
   simpl in *;
   try discriminate;
   try destruct2;
+  subst;
   eauto using verifyrule.
 Qed.
 

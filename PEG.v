@@ -1655,6 +1655,89 @@ Proof.
     eauto using verifyrule, verifyrule_nb_change_none, le_S_n.
 Qed.
 
+Theorem verifyrule_repetition_in_v :
+  forall g p v1 v2 v3 nb i,
+  verifyrule g p (2 + length v1 + length v2 + length v3) nb None
+  (v1 ++ i :: v2 ++ i :: v3) ->
+  verifyrule g p (3 + length v1 + 2 * length v2 + length v3) nb None
+  (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3).
+Proof.
+  intros * H.
+  assert (verifyrule g (PNT i) (1 + length (v2 ++ i :: v3)) false None (i :: v2 ++ i :: v3)).
+  {
+    assert (
+      2 + length v1 + length v2 + length v3 =
+      1 + length v1 + length (v2 ++ i :: v3)
+    ).
+    {
+      rewrite app_length.
+      simpl.
+      lia.
+    }
+    eauto using verifyrule_fast_forward_none.
+  }
+  assert (
+    2 + length v1 + length v2 + length v3 =
+    1 + length (v1 ++ i :: v2) + length v3
+  ).
+  {
+    rewrite app_length.
+    simpl.
+    lia.
+  }
+  assert (
+    length v3 <=
+    length (v2 ++ i :: v3)
+  ).
+  {
+    rewrite app_length.
+    simpl.
+    lia.
+  }
+  assert (
+    3 + length v1 + 2 * length v2 + length v3 =
+    1 + length (v1 ++ i :: v2) + length (v2 ++ i :: v3)
+  ).
+  {
+    repeat rewrite app_length.
+    simpl.
+    lia.
+  }
+  assert (
+    v1 ++ i :: v2 ++ i :: v2 ++ i :: v3 =
+    (v1 ++ i :: v2) ++ i :: v2 ++ i :: v3
+  ).
+  {
+    rewrite <- app_assoc.
+    simpl.
+    trivial.
+  }
+  assert (
+    v1 ++ i :: v2 ++ i :: v3 =
+    (v1 ++ i :: v2) ++ i :: v3
+  ).
+  {
+    rewrite <- app_assoc.
+    simpl.
+    trivial.
+  }
+  match goal with
+    [ Hverifyrule: verifyrule _ _ ?nleft _ _ ?v,
+      Heqnleft: ?nleft = _,
+      Heqv: ?v = _ |- _ ] =>
+          rewrite Heqnleft in Hverifyrule;
+          rewrite Heqv in Hverifyrule
+  end.
+  match goal with
+    [ Heqnleft: ?nleft = _,
+      Heqv: ?v = _
+      |- verifyrule _ _ ?nleft _ _ ?v ] =>
+          rewrite Heqnleft;
+          rewrite Heqv
+  end.
+  eauto using verifyrule_replace_end.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

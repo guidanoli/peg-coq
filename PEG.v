@@ -1624,6 +1624,37 @@ Proof.
   eauto using verifyrule_nb_change_none.
 Qed.
 
+Theorem verifyrule_replace_end :
+  forall g p nb nb' v1 i v2 v3,
+  verifyrule g p (1 + length v1 + length v2) nb None (v1 ++ i :: v2) ->
+  verifyrule g (PNT i) (1 + length v3) nb' None (i :: v3) ->
+  length v2 <= length v3 ->
+  verifyrule g p (1 + length v1 + length v3) nb None (v1 ++ i :: v3).
+Proof.
+  intros * Hvp Hvi Hle.
+  assert (1 + length v1 + length v2 <= 1 + length v1 + length v3) by lia.
+  remember (1 + length v1 + length v2) as nleft.
+  remember None as res.
+  remember (v1 ++ i :: v2) as v.
+  generalize dependent v3.
+  generalize dependent v2.
+  generalize dependent i.
+  generalize dependent v1.
+  generalize dependent nb'.
+  induction Hvp;
+  intros;
+  subst;
+  try discriminate;
+  repeat specialize_eq_refl;
+  eauto using verifyrule, verifyrule_nleft_le_some_det.
+  - (* PNT i *)
+    destruct v1;
+    simpl in *;
+    try destruct1;
+    try destruct2;
+    eauto using verifyrule, verifyrule_nb_change_none, le_S_n.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

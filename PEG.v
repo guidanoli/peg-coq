@@ -1625,13 +1625,28 @@ Proof.
 Qed.
 
 Theorem verifyrule_replace_end :
-  forall g p nb nb' v1 i v2 v3,
-  verifyrule g p (1 + length v1 + length v2) nb None (v1 ++ i :: v2) ->
-  verifyrule g (PNT i) (1 + length v3) nb' None (i :: v3) ->
+  forall g p nleft nleft' nb nb' v1 i v2 v3,
+  verifyrule g p nleft nb None (v1 ++ i :: v2) ->
+  verifyrule g (PNT i) nleft' nb' None (i :: v3) ->
   length v2 <= length v3 ->
   verifyrule g p (1 + length v1 + length v3) nb None (v1 ++ i :: v3).
 Proof.
   intros * Hvp Hvi Hle.
+  assert (nleft = 1 + length v1 + length v2).
+  {
+    apply verifyrule_length_v_eq_nleft in Hvp.
+    rewrite app_length in Hvp.
+    simpl in Hvp.
+    lia.
+  }
+  subst nleft.
+  assert (nleft' = 1 + length v3).
+  {
+    apply verifyrule_length_v_eq_nleft in Hvi.
+    simpl in Hvi.
+    lia.
+  }
+  subst nleft'.
   assert (1 + length v1 + length v2 <= 1 + length v1 + length v3) by lia.
   remember (1 + length v1 + length v2) as nleft.
   remember None as res.
@@ -1656,50 +1671,18 @@ Proof.
 Qed.
 
 Theorem verifyrule_repetition_in_v :
-  forall g p v1 v2 v3 nb i,
-  verifyrule g p (2 + length v1 + length v2 + length v3) nb None
-  (v1 ++ i :: v2 ++ i :: v3) ->
-  verifyrule g p (3 + length v1 + 2 * length v2 + length v3) nb None
-  (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3).
+  forall g p nleft v1 v2 v3 nb i,
+  verifyrule g p nleft nb None (v1 ++ i :: v2 ++ i :: v3) ->
+  exists nleft', verifyrule g p nleft' nb None (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3).
 Proof.
   intros * H.
-  assert (verifyrule g (PNT i) (1 + length (v2 ++ i :: v3)) false None (i :: v2 ++ i :: v3)).
-  {
-    assert (
-      2 + length v1 + length v2 + length v3 =
-      1 + length v1 + length (v2 ++ i :: v3)
-    ).
-    {
-      rewrite app_length.
-      simpl.
-      lia.
-    }
-    eauto using verifyrule_fast_forward_none.
-  }
+  assert (verifyrule g (PNT i) (1 + length (v2 ++ i :: v3)) false None (i :: v2 ++ i :: v3))
+  by eauto using verifyrule_fast_forward_none.
   assert (
-    2 + length v1 + length v2 + length v3 =
-    1 + length (v1 ++ i :: v2) + length v3
+    length v3 <= length (v2 ++ i :: v3)
   ).
   {
     rewrite app_length.
-    simpl.
-    lia.
-  }
-  assert (
-    length v3 <=
-    length (v2 ++ i :: v3)
-  ).
-  {
-    rewrite app_length.
-    simpl.
-    lia.
-  }
-  assert (
-    3 + length v1 + 2 * length v2 + length v3 =
-    1 + length (v1 ++ i :: v2) + length (v2 ++ i :: v3)
-  ).
-  {
-    repeat rewrite app_length.
     simpl.
     lia.
   }

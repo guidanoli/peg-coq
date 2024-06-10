@@ -1705,20 +1705,75 @@ Proof.
     trivial.
   }
   match goal with
-    [ Hverifyrule: verifyrule _ _ ?nleft _ _ ?v,
-      Heqnleft: ?nleft = _,
+    [ Hverifyrule: verifyrule _ _ _ _ _ ?v,
       Heqv: ?v = _ |- _ ] =>
-          rewrite Heqnleft in Hverifyrule;
           rewrite Heqv in Hverifyrule
   end.
   match goal with
-    [ Heqnleft: ?nleft = _,
-      Heqv: ?v = _
-      |- verifyrule _ _ ?nleft _ _ ?v ] =>
-          rewrite Heqnleft;
+    [ Heqv: ?v = _
+      |- exists _, verifyrule _ _ _ _ _ ?v ] =>
           rewrite Heqv
   end.
   eauto using verifyrule_replace_end.
+Qed.
+
+Theorem pidgenhole_principle :
+  forall l n,
+  length l > n ->
+  (forall a, In a l -> a < n) ->
+  exists a l1 l2 l3,
+  l = l1 ++ a :: l2 ++ a :: l3.
+Proof.
+Admitted.
+
+Theorem verifyrule_convergence_S_nleft :
+  forall g p nleft nb res v,
+  length g < nleft ->
+  verifyrule g p nleft nb res v ->
+  exists v', verifyrule g p (S nleft) nb res v'.
+Proof.
+  intros * Hlt Hv.
+  destruct res.
+  - (* Some b *)
+    eauto using verifyrule_nleft_le_some_det.
+  - (* None *)
+    assert (length v = nleft)
+    by eauto using verifyrule_length_v_eq_nleft.
+    subst nleft.
+    assert (exists i v1 v2 v3, v = v1 ++ i :: v2 ++ i :: v3)
+    as [i [v1 [v2 [v3 Heqv]]]]
+    by eauto using pidgenhole_principle, verifyrule_i_in_v_lt_length_g.
+    subst v.
+    apply verifyrule_repetition_in_v in Hv as [nleft Hv].
+    assert (length (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3) = nleft)
+    by eauto using verifyrule_length_v_eq_nleft.
+    subst nleft.
+    match goal with
+      [ Hx: verifyrule ?g ?p ?nleft ?nb None _
+        |- exists v, verifyrule ?g ?p ?nleft' ?nb None v ] =>
+            assert (nleft' <= nleft) by (repeat (rewrite app_length; simpl); lia)
+    end.
+    match goal with
+      [ Hx: verifyrule _ _ ?nleft _ _ _, Hy: _ <= ?nleft |- _ ] =>
+        specialize (verifyrule_nleft_le_coherent_result_type _ _ _ _ _ _ _ Hx Hy) as [? [? [? ?]]]
+    end.
+    match goal with
+      [ Hx: coherent_return_type_after_nleft_increase _ _ |- _ ] =>
+          inversion Hx; subst
+    end.
+    eauto.
+Qed.
+
+Theorem verifyrule_convergence :
+  forall g p nleft nleft' nb res v,
+  length g < nleft ->
+  verifyrule g p nleft nb res v ->
+  nleft <= nleft' ->
+  exists v', verifyrule g p nleft' nb res v'.
+Proof.
+  intros * Hlt Hv Hle.
+  induction Hle as [|nleft' Hle [v' IH]];
+  eauto using verifyrule_convergence_S_nleft, Nat.lt_le_trans.
 Qed.
 
 (** VerifyRule function with gas **)

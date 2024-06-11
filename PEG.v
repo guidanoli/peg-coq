@@ -6,6 +6,7 @@ From Coq Require Import Lists.List.
 From Coq Require Import Lia.
 From Peg Require Import Strong.
 From Peg Require Import Suffix.
+From Peg Require Import Pigeonhole.
 
 Import ListNotations.
 
@@ -1717,15 +1718,6 @@ Proof.
   eauto using verifyrule_replace_end.
 Qed.
 
-Theorem pidgenhole_principle :
-  forall l n,
-  length l > n ->
-  (forall a, In a l -> a < n) ->
-  exists a l1 l2 l3,
-  l = l1 ++ a :: l2 ++ a :: l3.
-Proof.
-Admitted.
-
 Theorem verifyrule_convergence_S_nleft :
   forall g p nleft nb res v,
   length g < nleft ->
@@ -1742,7 +1734,7 @@ Proof.
     subst nleft.
     assert (exists i v1 v2 v3, v = v1 ++ i :: v2 ++ i :: v3)
     as [i [v1 [v2 [v3 Heqv]]]]
-    by eauto using pidgenhole_principle, verifyrule_i_in_v_lt_length_g.
+    by eauto using pigeonhole_principle, verifyrule_i_in_v_lt_length_g.
     subst v.
     apply verifyrule_repetition_in_v in Hv as [nleft Hv].
     assert (length (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3) = nleft)

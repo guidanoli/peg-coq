@@ -1610,6 +1610,55 @@ Proof.
   eauto.
 Qed.
 
+(** CheckLoops predicate **)
+(** Check whether a pattern has potential infinite loops **)
+
+Inductive checkloops : grammar -> pat -> bool -> Prop :=
+  | CLEmpty :
+      forall g,
+      checkloops g PEmpty false
+  | CLChar :
+      forall g a,
+      checkloops g (PChar a) false
+  | CLAnyChar :
+      forall g,
+      checkloops g PAnyChar false
+  | CLSequenceTrue :
+      forall g p1 p2,
+      checkloops g p1 true ->
+      checkloops g (PSequence p1 p2) true
+  | CLSequenceFalse :
+      forall g p1 p2 b,
+      checkloops g p1 false ->
+      checkloops g p2 b ->
+      checkloops g (PSequence p1 p2) b
+  | CLChoiceTrue :
+      forall g p1 p2,
+      checkloops g p1 true ->
+      checkloops g (PChoice p1 p2) true
+  | CLChoiceFalse :
+      forall g p1 p2 b,
+      checkloops g p1 false ->
+      checkloops g p2 b ->
+      checkloops g (PChoice p1 p2) b
+  | CLRepetitionNullable :
+      forall g p nleft v,
+      verifyrule g p nleft false (Some true) v ->
+      checkloops g (PRepetition p) true
+  | CLRepetitionNotNullable :
+      forall g p nleft v b,
+      verifyrule g p nleft false (Some false) v ->
+      checkloops g p b ->
+      checkloops g (PRepetition p) b
+  | CLNot :
+      forall g p b,
+      checkloops g p b ->
+      checkloops g (PNot p) b
+  | CLNT :
+      forall g i,
+      checkloops g (PNT i) true
+  .
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

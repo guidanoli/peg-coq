@@ -1645,56 +1645,56 @@ Qed.
 (** CheckLoops predicate **)
 (** Check whether a pattern has potential infinite loops **)
 
-Inductive checkloops : grammar -> pat -> bool -> Prop :=
+Inductive checkloops : grammar -> pat -> nat -> bool -> Prop :=
   | CLEmpty :
-      forall g,
-      checkloops g PEmpty false
+      forall g nleft,
+      checkloops g PEmpty nleft false
   | CLChar :
-      forall g a,
-      checkloops g (PChar a) false
+      forall g a nleft,
+      checkloops g (PChar a) nleft false
   | CLAnyChar :
-      forall g,
-      checkloops g PAnyChar false
+      forall g nleft,
+      checkloops g PAnyChar nleft false
   | CLSequenceTrue :
-      forall g p1 p2,
-      checkloops g p1 true ->
-      checkloops g (PSequence p1 p2) true
+      forall g p1 p2 nleft,
+      checkloops g p1 nleft true ->
+      checkloops g (PSequence p1 p2) nleft true
   | CLSequenceFalse :
-      forall g p1 p2 b,
-      checkloops g p1 false ->
-      checkloops g p2 b ->
-      checkloops g (PSequence p1 p2) b
+      forall g p1 p2 b nleft,
+      checkloops g p1 nleft false ->
+      checkloops g p2 nleft b ->
+      checkloops g (PSequence p1 p2) nleft b
   | CLChoiceTrue :
-      forall g p1 p2,
-      checkloops g p1 true ->
-      checkloops g (PChoice p1 p2) true
+      forall g p1 p2 nleft,
+      checkloops g p1 nleft true ->
+      checkloops g (PChoice p1 p2) nleft true
   | CLChoiceFalse :
-      forall g p1 p2 b,
-      checkloops g p1 false ->
-      checkloops g p2 b ->
-      checkloops g (PChoice p1 p2) b
+      forall g p1 p2 nleft b,
+      checkloops g p1 nleft false ->
+      checkloops g p2 nleft b ->
+      checkloops g (PChoice p1 p2) nleft b
   | CLRepetitionNullable :
       forall g p nleft v,
       verifyrule g p nleft false (Some true) v ->
-      checkloops g (PRepetition p) true
+      checkloops g (PRepetition p) nleft true
   | CLRepetitionNotNullable :
       forall g p nleft v b,
       verifyrule g p nleft false (Some false) v ->
-      checkloops g p b ->
-      checkloops g (PRepetition p) b
+      checkloops g p nleft b ->
+      checkloops g (PRepetition p) nleft b
   | CLNot :
-      forall g p b,
-      checkloops g p b ->
-      checkloops g (PNot p) b
+      forall g p nleft b,
+      checkloops g p nleft b ->
+      checkloops g (PNot p) nleft b
   | CLNT :
-      forall g i,
-      checkloops g (PNT i) true
+      forall g i nleft,
+      checkloops g (PNT i) nleft true
   .
 
 Theorem checkloops_det :
-  forall g p b1 b2,
-  checkloops g p b1 ->
-  checkloops g p b2 ->
+  forall g p nleft b1 b2,
+  checkloops g p nleft b1 ->
+  checkloops g p nleft b2 ->
   b1 = b2.
 Proof.
   intros * H1 H2.

@@ -833,6 +833,38 @@ Proof.
   eauto using verifyrule_S_nleft.
 Qed.
 
+Lemma verifyrule_nleft_some_det :
+  forall g p nleft nleft' nb b b' v v',
+  verifyrule g p nleft nb (Some b) v ->
+  verifyrule g p nleft' nb (Some b') v' ->
+  b = b' /\ v = v'.
+Proof.
+  intros * H H'.
+  destruct (Compare_dec.le_ge_dec nleft nleft') as [Hle|Hge];
+  try unfold ge in *;
+  match goal with
+    [ Hx: ?nleft <= ?nleft',
+      Hy: verifyrule ?g ?p ?nleft ?nb (Some ?b) ?v,
+      Hz: verifyrule ?g ?p ?nleft' ?nb (Some ?b') ?v' |- _ ] =>
+          assert (verifyrule g p nleft' nb (Some b) v)
+          by eauto using verifyrule_nleft_le_some_det
+  end;
+  pose_verifyrule_det;
+  subst;
+  destruct1;
+  auto.
+Qed.
+
+Ltac pose_verifyrule_some_det :=
+  repeat match goal with
+    [ Hx1: verifyrule ?g ?p ?nleft1 ?nb (Some ?b1) ?v1,
+      Hx2: verifyrule ?g ?p ?nleft2 ?nb (Some ?b2) ?v2 |- _ ] =>
+          assert (b1 = b2 /\ v1 = v2)
+          as [? ?]
+          by eauto using verifyrule_nleft_some_det;
+          clear Hx2
+  end.
+
 Lemma verifyrule_length_v_le_nleft :
   forall g p nleft nb res v,
   verifyrule g p nleft nb res v ->
@@ -1658,6 +1690,23 @@ Inductive checkloops : grammar -> pat -> bool -> Prop :=
       forall g i,
       checkloops g (PNT i) true
   .
+
+Theorem checkloops_det :
+  forall g p b1 b2,
+  checkloops g p b1 ->
+  checkloops g p b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1; intros;
+  inversion H2; subst;
+  try assert (true = false) by auto;
+  try assert (false = true) by auto;
+  try pose_verifyrule_some_det;
+  try discriminate;
+  auto.
+Qed.
 
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)

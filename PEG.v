@@ -1863,74 +1863,84 @@ Qed.
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 
-Inductive nullable : grammar -> pat -> bool -> Prop :=
+Inductive nullable : grammar -> pat -> nat -> option bool -> Prop :=
   | NEmpty :
-      forall g,
-      nullable g PEmpty true
+      forall g nleft,
+      nullable g PEmpty nleft (Some true)
   | NChar :
-      forall g a,
-      nullable g (PChar a) false
+      forall g a nleft,
+      nullable g (PChar a) nleft (Some false)
   | NAnyChar :
-      forall g,
-      nullable g PAnyChar false
-  | NSequenceFalse :
-      forall g p1 p2,
-      nullable g p1 false ->
-      nullable g (PSequence p1 p2) false
-  | NSequenceTrue :
-      forall g p1 p2 b,
-      nullable g p1 true ->
-      nullable g p2 b ->
-      nullable g (PSequence p1 p2) b
-  | NChoiceTrue1 :
-      forall g p1 p2,
-      nullable g p1 true ->
-      nullable g (PChoice p1 p2) true
-  | NChoiceTrue2 :
-      forall g p1 p2,
-      nullable g p2 true ->
-      nullable g (PChoice p1 p2) true
-  | NChoiceFalse :
-      forall g p1 p2,
-      nullable g p1 false ->
-      nullable g p2 false ->
-      nullable g (PChoice p1 p2) false
+      forall g nleft,
+      nullable g PAnyChar nleft (Some false)
+  | NSequenceNone :
+      forall g p1 p2 nleft,
+      nullable g p1 nleft None ->
+      nullable g (PSequence p1 p2) nleft None
+  | NSequenceSomeFalse :
+      forall g p1 p2 nleft,
+      nullable g p1 nleft (Some false) ->
+      nullable g (PSequence p1 p2) nleft (Some false)
+  | NSequenceSomeTrue :
+      forall g p1 p2 nleft res,
+      nullable g p1 nleft (Some true) ->
+      nullable g p2 nleft res ->
+      nullable g (PSequence p1 p2) nleft res
+  | NChoiceNone :
+      forall g p1 p2 nleft,
+      nullable g p1 nleft None ->
+      nullable g (PChoice p1 p2) nleft None
+  | NChoiceSomeFalse :
+      forall g p1 p2 nleft res,
+      nullable g p1 nleft (Some false) ->
+      nullable g p2 nleft res ->
+      nullable g (PChoice p1 p2) nleft res
+  | NChoiceSomeTrue :
+      forall g p1 p2 nleft,
+      nullable g p1 nleft (Some true) ->
+      nullable g (PChoice p1 p2) nleft (Some true)
   | NRepetition :
-      forall g p,
-      nullable g (PRepetition p) true
+      forall g p nleft,
+      nullable g (PRepetition p) nleft (Some true)
   | NNot :
-      forall g p,
-      nullable g (PNot p) true
-  | NNT :
-      forall g i p b,
+      forall g p nleft,
+      nullable g (PNot p) nleft (Some true)
+  | NNTZero :
+      forall g i p,
       nth_error g i = Some p ->
-      nullable g p b ->
-      nullable g (PNT i) b
+      nullable g (PNT i) O None
+  | NNTSucc :
+      forall g i p res nleft,
+      nth_error g i = Some p ->
+      nullable g p nleft res ->
+      nullable g (PNT i) (S nleft) res
   .
 
 (* ! {A <- A} |= A *)
 Example nullable_ex1 :
-  ~ exists b,
-    nullable
+  forall nleft b,
+    ~ nullable
     [PNT 0]
     (PNT 0)
-    b.
+    nleft
+    (Some b).
 Proof.
-  intro H.
-  destruct H as [b H].
+  intros * H.
   remember (PNT 0) as p.
   remember [p] as g.
-  induction H; try discriminate.
-  destruct1.
-  simpl in H.
-  destruct1.
+  remember (Some b) as res.
+  induction H;
+  try discriminate;
+  try destruct1;
+  simpl in H;
+  destruct1;
   auto.
 Qed.
 
 (* G |= ε *)
 Example nullable_ex2 :
-  forall g,
-  nullable g PEmpty true.
+  forall g nleft,
+  nullable g PEmpty nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -1938,8 +1948,8 @@ Qed.
 
 (* ! G |= 'a' *)
 Example nullable_ex3 :
-  forall g a,
-  nullable g (PChar a) false.
+  forall g a nleft,
+  nullable g (PChar a) nleft (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -1947,8 +1957,8 @@ Qed.
 
 (* ! G |= . *)
 Example nullable_ex4 :
-  forall g,
-  nullable g PAnyChar false.
+  forall g nleft,
+  nullable g PAnyChar nleft (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -1956,8 +1966,8 @@ Qed.
 
 (* G |= ε ε *)
 Example nullable_ex5 :
-  forall g,
-  nullable g (PSequence PEmpty PEmpty) true.
+  forall g nleft,
+  nullable g (PSequence PEmpty PEmpty) nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -1965,8 +1975,8 @@ Qed.
 
 (* ! G |= . ε *)
 Example nullable_ex6 :
-  forall g,
-  nullable g (PSequence PAnyChar PEmpty) false.
+  forall g nleft,
+  nullable g (PSequence PAnyChar PEmpty) nleft (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -1974,8 +1984,8 @@ Qed.
 
 (* ! G |= ε . *)
 Example nullable_ex7 :
-  forall g,
-  nullable g (PSequence PEmpty PAnyChar) false.
+  forall g nleft,
+  nullable g (PSequence PEmpty PAnyChar) nleft (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -1983,8 +1993,8 @@ Qed.
 
 (* ! G |= . . *)
 Example nullable_ex8 :
-  forall g,
-  nullable g (PSequence PAnyChar PAnyChar) false.
+  forall g nleft,
+  nullable g (PSequence PAnyChar PAnyChar) nleft (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -1992,8 +2002,8 @@ Qed.
 
 (* G |= ε / ε *)
 Example nullable_ex9 :
-  forall g,
-  nullable g (PChoice PEmpty PEmpty) true.
+  forall g nleft,
+  nullable g (PChoice PEmpty PEmpty) nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2001,8 +2011,8 @@ Qed.
 
 (* G |= . / ε *)
 Example nullable_ex10 :
-  forall g,
-  nullable g (PChoice PAnyChar PEmpty) true.
+  forall g nleft,
+  nullable g (PChoice PAnyChar PEmpty) nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2010,8 +2020,8 @@ Qed.
 
 (* G |= ε / . *)
 Example nullable_ex11 :
-  forall g,
-  nullable g (PChoice PEmpty PAnyChar) true.
+  forall g nleft,
+  nullable g (PChoice PEmpty PAnyChar) nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2019,8 +2029,8 @@ Qed.
 
 (* ! G |= . / . *)
 Example nullable_ex12 :
-  forall g,
-  nullable g (PChoice PAnyChar PAnyChar) false.
+  forall g nleft,
+  nullable g (PChoice PAnyChar PAnyChar) nleft (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -2028,8 +2038,8 @@ Qed.
 
 (* G |= p* *)
 Example nullable_ex13 :
-  forall g p,
-  nullable g (PRepetition p) true.
+  forall g p nleft,
+  nullable g (PRepetition p) nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2037,8 +2047,8 @@ Qed.
 
 (* G |= !p *)
 Example nullable_ex14 :
-  forall g p,
-  nullable g (PNot p) true.
+  forall g p nleft,
+  nullable g (PNot p) nleft (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2046,142 +2056,131 @@ Qed.
 
 (* ! { P <- . P } |= P *)
 Example nullable_ex15 :
+  forall nleft,
   nullable
     [PSequence PAnyChar (PNT 0)]
     (PNT 0)
-    false.
+    (S nleft)
+    (Some false).
 Proof.
+  intros.
   econstructor; simpl; eauto.
   eauto using nullable.
 Qed.
 
 (* { P <- . P / ε } |= P *)
 Example nullable_ex16 :
+  forall nleft,
   nullable
     [PChoice (PSequence PAnyChar (PNT 0)) PEmpty]
     (PNT 0)
-    true.
+    (S nleft)
+    (Some true).
 Proof.
+  intros.
   econstructor; simpl; eauto.
   eauto using nullable.
 Qed.
 
 (* ! {} |= A *)
 Example nullable_ex17 :
-  ~ exists b,
-  nullable [] (PNT 0) b.
+  forall nleft res,
+  ~ nullable [] (PNT 0) nleft res.
 Proof.
-  intro H.
-  destruct H as [b H].
+  intros * H.
   inversion H;
-  subst.
-  discriminate.
+  subst;
+  try discriminate.
 Qed.
 
 (* { A <- 'a' A | ε ; B <- A A } |= A B *)
 Example nullable_ex18 :
+  forall nleft,
   nullable
   [PChoice (PSequence (PChar "a") (PNT 0)) PEmpty; PSequence (PNT 0) (PNT 0)]
   (PSequence (PNT 0) (PNT 1))
-  true.
+  (S (S nleft))
+  (Some true).
 Proof.
+  intros.
   repeat match goal with
-         | [ |- nullable _ (PSequence _ _) _ ] => econstructor
-         | [ |- nullable _ (PNT _) _ ] => econstructor; simpl; eauto
-         | [ |- nullable _ (PChoice _ _) _ ] => eauto using nullable
+         | [ |- nullable _ (PSequence _ _) _ _ ] => econstructor
+         | [ |- nullable _ (PNT _) _ _ ] => econstructor; simpl; eauto
+         | [ |- nullable _ (PChoice _ _) _ _ ] => eauto using nullable
          | _ => fail
          end.
 Qed.
 
 Lemma nullable_det :
-  forall g p b1 b2,
-  nullable g p b1 ->
-  nullable g p b2 ->
-  b1 = b2.
+  forall g p nleft res1 res2,
+  nullable g p nleft res1 ->
+  nullable g p nleft res2 ->
+  res1 = res2.
 Proof.
   intros * H1 H2.
-  generalize dependent b2.
+  generalize dependent res2.
   induction H1;
   intros;
   inversion H2; subst;
   try eq_nth_error;
   try match goal with
-  [ IHx: forall bx, nullable ?g ?p bx -> ?b1 = bx,
-    Hx: nullable ?g ?p ?b2 |- _ ] =>
+  [ IHx: forall resx, nullable ?g ?p ?nleft resx -> ?res1 = resx,
+    Hx: nullable ?g ?p ?nleft ?res2 |- _ ] =>
         apply IHx in Hx;
         discriminate
   end;
   auto.
 Qed.
 
-Lemma nullable_approx :
-  forall g p s,
-  matches g p s (Success s) ->
-  nullable g p true.
+Lemma nullable_Some_S_nleft :
+  forall g p nleft b,
+  nullable g p nleft (Some b) ->
+  nullable g p (S nleft) (Some b).
 Proof.
   intros * H.
-  remember (Success s).
-  induction H;
+  remember (Some b) as res.
+  generalize dependent b.
+  induction H; intros;
   try discriminate;
-  try destruct1;
-  try (exfalso; induction s; congruence; fail);
-  try (
-    subst;
-    match goal with
-    [ Hm1: matches _ _ ?s1 (Success ?s2),
-      Hm2: matches _ _ ?s2 (Success ?s1) |- _ ] =>
-          assert (s1 = s2) by
-          (eauto using matches_suffix, suffix_antisymmetric)
-    end;
-    subst
-  );
   eauto using nullable.
 Qed.
 
-Theorem proper_suffix_if_not_nullable :
-  forall g p s s',
-  nullable g p false ->
-  matches g p s (Success s') ->
-  proper_suffix s' s.
+Lemma nullable_Some_nleft_le :
+  forall g p nleft nleft' b,
+  nullable g p nleft (Some b) ->
+  nleft <= nleft' ->
+  nullable g p nleft' (Some b).
 Proof.
-  intros * H1 H2.
-  specialize (matches_suffix _ _ _ _ H2) as H3.
-  induction H3 as [|s s' a H3 IHsuffix].
-  - (* SuffixRefl *)
-    exfalso.
-    specialize (nullable_approx _ _ _ H2) as H3.
-    specialize (nullable_det _ _ _ _ H1 H3) as H4.
-    discriminate.
-  - (* SuffixChar *)
-    eauto using suffix_is_proper_suffix_with_char.
+  intros * H Hle.
+  induction Hle;
+  eauto using nullable_Some_S_nleft.
 Qed.
 
-(** Nullable function with gas
-    "rr" stands for "remaining rules" **)
+(** Nullable function with gas **)
 
-Fixpoint nullable_comp g p rr gas {struct gas} :=
+Fixpoint nullable_comp g p nleft gas {struct gas} :=
   match gas with
   | O => None
   | S gas' => match p with
-              | PEmpty => Some true
-              | PChar _ => Some false
-              | PAnyChar => Some false
-              | PSequence p1 p2 => match nullable_comp g p1 rr gas' with
-                                   | Some true => nullable_comp g p2 rr gas'
+              | PEmpty => Some (Some true)
+              | PChar _ => Some (Some false)
+              | PAnyChar => Some (Some false)
+              | PSequence p1 p2 => match nullable_comp g p1 nleft gas' with
+                                   | Some (Some true) => nullable_comp g p2 nleft gas'
                                    | ob => ob
                                    end
-              | PChoice p1 p2 => match nullable_comp g p1 rr gas' with
-                                 | Some false => nullable_comp g p2 rr gas'
+              | PChoice p1 p2 => match nullable_comp g p1 nleft gas' with
+                                 | Some (Some false) => nullable_comp g p2 nleft gas'
                                  | ob => ob
                                  end
-              | PRepetition _ => Some true
-              | PNot _ => Some true
+              | PRepetition _ => Some (Some true)
+              | PNot _ => Some (Some true)
               | PNT i => match nth_error g i with
-                         | Some p' => match rr with
-                                      | O => Some false
-                                      | S rr' => nullable_comp g p' rr' gas'
+                         | Some p' => match nleft with
+                                      | O => Some None
+                                      | S nleft' => nullable_comp g p' nleft' gas'
                                       end
-                         | None => Some false
+                         | None => None
                          end
               end
   end.
@@ -2193,13 +2192,13 @@ Ltac destruct_match_subject :=
   end.
 
 Lemma nullable_comp_S_gas :
-  forall g p rr gas b,
-  nullable_comp g p rr gas = Some b ->
-  nullable_comp g p rr (S gas) = Some b.
+  forall g p nleft gas res,
+  nullable_comp g p nleft gas = Some res ->
+  nullable_comp g p nleft (S gas) = Some res.
 Proof.
   intros * H.
-  generalize dependent b.
-  generalize dependent rr.
+  generalize dependent res.
+  generalize dependent nleft.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros; try discriminate;
@@ -2207,8 +2206,8 @@ Proof.
   try destruct1;
   auto;
   try (
-    destruct (nullable_comp g p1 rr gas) as [[|]|] eqn:Hn1;
-    destruct (nullable_comp g p2 rr gas) as [[|]|] eqn:Hn2;
+    destruct (nullable_comp g p1 nleft gas) as [[[|]|]|] eqn:Hn1;
+    destruct (nullable_comp g p2 nleft gas) as [[[|]|]|] eqn:Hn2;
     try discriminate;
     destruct1;
     try apply IHgas in Hn1;
@@ -2234,10 +2233,10 @@ Proof.
 Qed.
 
 Lemma nullable_comp_le_gas :
-  forall g p v gas1 gas2 b,
-  nullable_comp g p v gas1 = Some b ->
+  forall g p nleft gas1 gas2 res,
+  nullable_comp g p nleft gas1 = Some res ->
   gas1 <= gas2 ->
-  nullable_comp g p v gas2 = Some b.
+  nullable_comp g p nleft gas2 = Some res.
 Proof.
   intros * H Hle.
   induction Hle;
@@ -2287,42 +2286,47 @@ Qed.
    instead of summing up the pat_size of each rule of the grammar,
    but the sum makes the proof of lower bound easier *)
 Lemma nullable_comp_complete :
-  forall g p rr gas,
-  gas >= pat_size p + rr * (grammar_size g) ->
-  exists b, nullable_comp g p rr gas = Some b.
+  forall g p nleft gas,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  gas >= pat_size p + nleft * (grammar_size g) ->
+  exists res, nullable_comp g p nleft gas = Some res.
 Proof.
-  intros * Hge.
-  generalize dependent rr.
+  intros * Hgc Hpc Hge.
+  generalize dependent nleft.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros;
   try (destruct p; inversion Hge; fail);
   destruct p;
+  inversion Hpc; subst;
   try (simpl; eauto; fail);
   try (
     simpl in Hge;
-    assert (gas >= pat_size p1 + rr * grammar_size g) as Hge1 by lia;
-    assert (gas >= pat_size p2 + rr * grammar_size g) as Hge2 by lia;
-    clear Hge;
-    specialize (IHgas _ _ _ Hge1) as H1;
-    destruct H1 as [n1 H1];
-    specialize (IHgas _ _ _ Hge2) as H2;
+    assert (gas >= pat_size p1 + nleft * grammar_size g) by lia;
+    assert (gas >= pat_size p2 + nleft * grammar_size g) by lia;
+    assert (exists res, nullable_comp g p1 nleft gas = Some res) as [res1 Hn1] by auto;
+    assert (exists res, nullable_comp g p2 nleft gas = Some res) by auto;
     simpl;
-    simpl in H1;
-    rewrite H1;
-    destruct n1;
+    rewrite Hn1;
+    destruct res1 as [[|]|];
     eauto;
     fail
   );
   try (
     simpl in Hge;
     simpl;
-    destruct (nth_error g n) as [p|] eqn:Hnth; eauto;
+    match goal with
+      [ Hx: ?lhs = _ |-
+        exists _, match ?lhs with | _ => _ end = _ ] =>
+          rewrite Hx
+    end;
     assert (In p g) as HIn by (eauto using nth_error_In);
-    destruct rr; eauto;
+    destruct nleft; eauto;
     specialize (pat_size_le_grammar_size _ _ HIn) as Hle;
-    assert (gas >= pat_size p + rr * grammar_size g) by lia;
-    auto
+    assert (gas >= pat_size p + nleft * grammar_size g) by lia;
+    auto;
+    fail
   ).
 Qed.
 
@@ -2330,35 +2334,49 @@ Qed.
    We just know there exists SOME gas for which nullable_comp
    gives SOME result. :-) *)
 Lemma nullable_comp_exists_gas :
-  forall g p rr,
+  forall g p nleft,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
   exists gas b,
-  nullable_comp g p rr gas = Some b.
+  nullable_comp g p nleft gas = Some b.
 Proof.
   eauto using nullable_comp_complete.
 Qed.
 
-Lemma nullable_comp_some_true_is_nullable :
-  forall g p rr gas,
-  nullable_comp g p rr gas = Some true ->
-  nullable g p true.
+Lemma nullable_comp_correct :
+  forall g p nleft gas res,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  nullable_comp g p nleft gas = Some res ->
+  nullable g p nleft res.
 Proof.
-  intros * H.
-  generalize dependent rr.
+  intros * Hgc Hpc H.
+  generalize dependent res.
+  generalize dependent nleft.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros; try discriminate.
   destruct p; eauto using nullable;
+  inversion Hpc; subst;
   try (simpl in H; discriminate; fail);
   try (
     simpl in H;
-    destruct (nullable_comp g p1 rr gas) as [[|]|] eqn:H1; try discriminate;
+    try destruct (nullable_comp g p1 nleft gas)
+    as [[[|]|]|] eqn:?;
+    try discriminate;
+    try destruct1;
     eauto using nullable;
     fail
   );
   try (
     simpl in H;
-    destruct (nth_error g n) eqn:Hnth; try discriminate;
-    destruct rr; try discriminate;
+    destruct (nth_error g n) eqn:?;
+    try discriminate;
+    try destruct1;
+    destruct nleft;
+    try discriminate;
+    try destruct1;
+    assert (In p g) as HIn by (eauto using nth_error_In);
     eauto using nullable;
     fail
   ).

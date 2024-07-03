@@ -129,7 +129,7 @@ Ltac eq_nth_error :=
 
 (** Match predicate determinism **)
 
-Theorem matches_det :
+Theorem matches_determinism :
   forall g p s res1 res2,
   matches g p s res1 ->
   matches g p s res2 ->
@@ -149,11 +149,11 @@ Proof.
   auto.
 Qed.
 
-Ltac pose_matches_det :=
+Ltac pose_matches_determinism :=
   match goal with
   [ H1: matches ?g ?p ?s ?r1,
     H2: matches ?g ?p ?s ?r2 |- _ ] =>
-        pose (matches_det g p s r1 r2 H1 H2)
+        pose (matches_determinism g p s r1 r2 H1 H2)
   end.
 
 Example infinite_loop :
@@ -165,7 +165,7 @@ Proof.
   remember (PRepetition p).
   induction H2;
   try destruct1;
-  try pose_matches_det;
+  try pose_matches_determinism;
   try discriminate;
   try destruct1;
   auto.
@@ -229,7 +229,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
               end
   end.
 
-Theorem matches_comp_correct :
+Theorem matches_comp_soundness :
   forall g p s gas res,
   matches_comp g p s gas = Some res ->
   matches g p s res.
@@ -290,13 +290,13 @@ Proof with eauto using matches.
       discriminate.
 Qed.
 
-Corollary matches_comp_det :
+Corollary matches_comp_determinism :
   forall g p s gas1 gas2 res1 res2,
   matches_comp g p s gas1 = Some res1 ->
   matches_comp g p s gas2 = Some res2 ->
   res1 = res2.
 Proof.
-  eauto using matches_comp_correct, matches_det.
+  eauto using matches_comp_soundness, matches_determinism.
 Qed.
 
 Lemma matches_comp_S_gas_some :
@@ -378,7 +378,7 @@ Ltac rewrite_match_subject_in_goal :=
       rewrite Hx
   end.
 
-Theorem matches_comp_complete :
+Theorem matches_comp_termination :
   forall g p s res,
   matches g p s res ->
   (exists gas, matches_comp g p s gas = Some res).
@@ -462,7 +462,7 @@ Inductive coherent : grammar -> pat -> bool -> Prop :=
       coherent g (PNT i) true
   .
 
-Lemma coherent_det :
+Lemma coherent_determinism :
   forall g p b1 b2,
   coherent g p b1 ->
   coherent g p b2 ->
@@ -511,7 +511,7 @@ Fixpoint coherent_comp (g : grammar) p gas {struct gas} :=
               end
   end.
 
-Lemma coherent_comp_correct :
+Lemma coherent_comp_soundness :
   forall g p gas b,
   coherent_comp g p gas = Some b ->
   coherent g p b.
@@ -575,7 +575,7 @@ Proof.
   auto using coherent_comp_S_gas.
 Qed.
 
-Lemma coherent_comp_complete :
+Lemma coherent_comp_termination :
   forall g p,
   exists gas b,
   coherent_comp g p gas = Some b.
@@ -906,7 +906,7 @@ Proof.
     eapply VRNTSucc; simpl; auto.
 Qed.
 
-Lemma verifyrule_det :
+Lemma verifyrule_determinism :
   forall g p nleft nb res1 res2 v1 v2,
   verifyrule g p nleft nb res1 v1 ->
   verifyrule g p nleft nb res2 v2 ->
@@ -932,13 +932,13 @@ Proof.
   end.
 Qed.
 
-Ltac pose_verifyrule_det :=
+Ltac pose_verifyrule_determinism :=
   repeat match goal with
     [ Hx1: verifyrule ?g ?p ?nleft ?nb ?res1 ?v1,
       Hx2: verifyrule ?g ?p ?nleft ?nb ?res2 ?v2 |- _ ] =>
           assert (res1 = res2 /\ v1 = v2)
           as [? ?]
-          by eauto using verifyrule_det;
+          by eauto using verifyrule_determinism;
           clear Hx2
   end.
 
@@ -955,7 +955,7 @@ Proof.
   eauto using verifyrule.
 Qed.
 
-Lemma verifyrule_nleft_le_some_det :
+Lemma verifyrule_nleft_le_some_determinism :
   forall g p nleft nleft' nb nb' v,
   verifyrule g p nleft nb (Some nb') v ->
   nleft <= nleft' ->
@@ -966,7 +966,7 @@ Proof.
   eauto using verifyrule_S_nleft.
 Qed.
 
-Lemma verifyrule_nleft_some_det :
+Lemma verifyrule_nleft_some_determinism :
   forall g p nleft nleft' nb b b' v v',
   verifyrule g p nleft nb (Some b) v ->
   verifyrule g p nleft' nb (Some b') v' ->
@@ -980,21 +980,21 @@ Proof.
       Hy: verifyrule ?g ?p ?nleft ?nb (Some ?b) ?v,
       Hz: verifyrule ?g ?p ?nleft' ?nb (Some ?b') ?v' |- _ ] =>
           assert (verifyrule g p nleft' nb (Some b) v)
-          by eauto using verifyrule_nleft_le_some_det
+          by eauto using verifyrule_nleft_le_some_determinism
   end;
-  pose_verifyrule_det;
+  pose_verifyrule_determinism;
   subst;
   destruct1;
   auto.
 Qed.
 
-Ltac pose_verifyrule_some_det :=
+Ltac pose_verifyrule_some_determinism :=
   repeat match goal with
     [ Hx1: verifyrule ?g ?p ?nleft1 ?nb (Some ?b1) ?v1,
       Hx2: verifyrule ?g ?p ?nleft2 ?nb (Some ?b2) ?v2 |- _ ] =>
           assert (b1 = b2 /\ v1 = v2)
           as [? ?]
-          by eauto using verifyrule_nleft_some_det;
+          by eauto using verifyrule_nleft_some_determinism;
           clear Hx2
   end.
 
@@ -1042,7 +1042,7 @@ Proof.
   end.
 Qed.
 
-Lemma verifyrule_complete :
+Lemma verifyrule_termination :
   forall g p nleft nb,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
@@ -1308,7 +1308,7 @@ Proof.
   inversion H';
   subst;
   pose_verifyrule_nb_none;
-  pose_verifyrule_det;
+  pose_verifyrule_determinism;
   try eq_nth_error;
   try discriminate;
   try f_equal;
@@ -1456,7 +1456,7 @@ Proof.
   subst;
   try discriminate;
   repeat specialize_eq_refl;
-  eauto using verifyrule, verifyrule_nleft_le_some_det.
+  eauto using verifyrule, verifyrule_nleft_le_some_determinism.
   - (* PNT i *)
     destruct v1;
     simpl in *;
@@ -1521,7 +1521,7 @@ Proof.
   intros * Hlt Hv.
   destruct res.
   - (* Some b *)
-    eauto using verifyrule_nleft_le_some_det.
+    eauto using verifyrule_nleft_le_some_determinism.
   - (* None *)
     assert (length v = nleft)
     by eauto using verifyrule_length_v_eq_nleft.
@@ -1595,7 +1595,7 @@ Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=
               end
   end.
 
-Lemma verifyrule_comp_correct :
+Lemma verifyrule_comp_soundness :
   forall g p nleft nb gas res v,
   verifyrule_comp g p nleft nb gas = Some (res, v) ->
   verifyrule g p nleft nb res v.
@@ -1685,7 +1685,7 @@ Proof.
   auto using verifyrule_comp_S_gas.
 Qed.
 
-Lemma verifyrule_comp_complete :
+Lemma verifyrule_comp_termination :
   forall g p nleft nb,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
@@ -1778,22 +1778,6 @@ Proof.
       eauto.
 Qed.
 
-Corollary verifyrule_comp_sound :
-  forall g p nleft nb res v,
-  (forall r, In r g -> coherent g r true) ->
-  coherent g p true ->
-  verifyrule g p nleft nb res v ->
-  exists gas, verifyrule_comp g p nleft nb gas = Some (res, v).
-Proof.
-  intros.
-  assert (exists gas res v, verifyrule_comp g p nleft nb gas = Some (res, v))
-  as [? [res' [v' ?]]] by eauto using verifyrule_comp_complete.
-  assert (res = res' /\ v = v')
-  as [? ?] by (eauto using verifyrule_comp_correct, verifyrule_det).
-  subst.
-  eauto.
-Qed.
-
 (** CheckLoops predicate **)
 (** Check whether a pattern has potential infinite loops **)
 
@@ -1843,7 +1827,7 @@ Inductive checkloops : grammar -> pat -> nat -> bool -> Prop :=
       checkloops g (PNT i) nleft true
   .
 
-Theorem checkloops_det :
+Theorem checkloops_determinism :
   forall g p nleft b1 b2,
   checkloops g p nleft b1 ->
   checkloops g p nleft b2 ->
@@ -1855,7 +1839,7 @@ Proof.
   inversion H2; subst;
   try assert (true = false) by auto;
   try assert (false = true) by auto;
-  try pose_verifyrule_some_det;
+  try pose_verifyrule_some_determinism;
   try discriminate;
   auto.
 Qed.
@@ -2111,7 +2095,7 @@ Proof.
          end.
 Qed.
 
-Lemma nullable_det :
+Lemma nullable_determinism :
   forall g p nleft res1 res2,
   nullable g p nleft res1 ->
   nullable g p nleft res2 ->
@@ -2184,6 +2168,45 @@ Fixpoint nullable_comp g p nleft gas {struct gas} :=
                          end
               end
   end.
+
+Lemma nullable_comp_soundness :
+  forall g p nleft gas res,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  nullable_comp g p nleft gas = Some res ->
+  nullable g p nleft res.
+Proof.
+  intros * Hgc Hpc H.
+  generalize dependent res.
+  generalize dependent nleft.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros; try discriminate.
+  destruct p; eauto using nullable;
+  inversion Hpc; subst;
+  try (simpl in H; discriminate; fail);
+  try (
+    simpl in H;
+    try destruct (nullable_comp g p1 nleft gas)
+    as [[[|]|]|] eqn:?;
+    try discriminate;
+    try destruct1;
+    eauto using nullable;
+    fail
+  );
+  try (
+    simpl in H;
+    destruct (nth_error g n) eqn:?;
+    try discriminate;
+    try destruct1;
+    destruct nleft;
+    try discriminate;
+    try destruct1;
+    assert (In p g) as HIn by (eauto using nth_error_In);
+    eauto using nullable;
+    fail
+  ).
+Qed.
 
 Ltac destruct_match_subject :=
   match goal with
@@ -2285,7 +2308,7 @@ Qed.
 (* Here, we could have used the max pat_size of the grammar
    instead of summing up the pat_size of each rule of the grammar,
    but the sum makes the proof of lower bound easier *)
-Lemma nullable_comp_complete :
+Lemma nullable_comp_termination_lower_bound :
   forall g p nleft gas,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
@@ -2333,496 +2356,12 @@ Qed.
 (* Here, we don't care about any particular lower bound value.
    We just know there exists SOME gas for which nullable_comp
    gives SOME result. :-) *)
-Lemma nullable_comp_exists_gas :
+Lemma nullable_comp_termination :
   forall g p nleft,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
   exists gas b,
   nullable_comp g p nleft gas = Some b.
 Proof.
-  eauto using nullable_comp_complete.
+  eauto using nullable_comp_termination_lower_bound.
 Qed.
-
-Lemma nullable_comp_correct :
-  forall g p nleft gas res,
-  (forall r, In r g -> coherent g r true) ->
-  coherent g p true ->
-  nullable_comp g p nleft gas = Some res ->
-  nullable g p nleft res.
-Proof.
-  intros * Hgc Hpc H.
-  generalize dependent res.
-  generalize dependent nleft.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros; try discriminate.
-  destruct p; eauto using nullable;
-  inversion Hpc; subst;
-  try (simpl in H; discriminate; fail);
-  try (
-    simpl in H;
-    try destruct (nullable_comp g p1 nleft gas)
-    as [[[|]|]|] eqn:?;
-    try discriminate;
-    try destruct1;
-    eauto using nullable;
-    fail
-  );
-  try (
-    simpl in H;
-    destruct (nth_error g n) eqn:?;
-    try discriminate;
-    try destruct1;
-    destruct nleft;
-    try discriminate;
-    try destruct1;
-    assert (In p g) as HIn by (eauto using nth_error_In);
-    eauto using nullable;
-    fail
-  ).
-Qed.
-
-(** Hungry predicate **)
-(** A "hungry" pattern always consumes a character on a successful match **)
-
-Inductive hungry : grammar -> pat -> bool -> Prop :=
-  | HEmpty :
-      forall g,
-      hungry g PEmpty false
-  | HChar :
-      forall g a,
-      hungry g (PChar a) true
-  | HAnyChar :
-      forall g,
-      hungry g PAnyChar true
-  | HSequenceTrue1 :
-      forall g p1 p2,
-      hungry g p1 true ->
-      hungry g (PSequence p1 p2) true
-  | HSequenceTrue2 :
-      forall g p1 p2,
-      hungry g p2 true ->
-      hungry g (PSequence p1 p2) true
-  | HSequenceFalse :
-      forall g p1 p2,
-      hungry g p1 false ->
-      hungry g p2 false ->
-      hungry g (PSequence p1 p2) false
-  | HChoiceTrue :
-      forall g p1 p2,
-      hungry g p1 true ->
-      hungry g p2 true ->
-      hungry g (PChoice p1 p2) true
-  | HChoiceFalse1 :
-      forall g p1 p2,
-      hungry g p1 false ->
-      hungry g (PChoice p1 p2) false
-  | HChoiceFalse2 :
-      forall g p1 p2,
-      hungry g p2 false ->
-      hungry g (PChoice p1 p2) false
-  | HRepetition :
-      forall g p,
-      hungry g (PRepetition p) false
-  | HNot :
-      forall g p,
-      hungry g (PNot p) false
-  | HNonTerminal :
-      forall g i p b,
-      nth_error g i = Some p ->
-      hungry g p b ->
-      hungry g (PNT i) b
-  .
-
-Lemma string_not_infinite :
-  forall a s,
-  s <> String a s.
-Proof.
-  intros * Hcontra.
-  induction s; congruence.
-Qed.
-
-Theorem hungry_correct :
-  forall g p, hungry g p true -> ~ exists s, matches g p s (Success s).
-Proof.
-  intros * H1 H2.
-  remember true as b.
-  induction H1;
-  try discriminate;
-  destruct H2 as [s H2];
-  inversion H2; subst;
-  try (eapply string_not_infinite; eauto; fail);
-  try eq_nth_error;
-  try match goal with [
-    Hx1: matches _ _ s (Success ?saux),
-    Hx2: matches _ _ ?saux (Success s) |- _
-  ] =>
-    assert (s = saux) by (eauto using suffix_antisymmetric, matches_suffix);
-    subst
-  end;
-  eauto.
-Qed.
-
-Lemma hungry_det :
-  forall g p b1 b2,
-  hungry g p b1 ->
-  hungry g p b2 ->
-  b1 = b2.
-Proof.
-  intros * H1 H2.
-  induction H1; intros;
-  inversion H2; subst;
-  try eq_nth_error;
-  eauto.
-Qed.
-
-Theorem matches_hungry_proper_suffix :
-  forall g p s s',
-  hungry g p true ->
-  matches g p s (Success s') ->
-  proper_suffix s' s.
-Proof.
-  intros * H1 H2.
-  specialize (matches_suffix _ _ _ _ H2) as H3.
-  induction H3 as [|s s' a H3 IHsuffix].
-  - (* SuffixRefl *)
-    exfalso.
-    eauto using (hungry_correct _ _ H1).
-  - (* SuffixChar *)
-    eauto using suffix_is_proper_suffix_with_char.
-Qed.
-
-(** Hungry function with gas **)
-
-Fixpoint hungry_comp g p gas {struct gas} :=
-  match gas with
-  | O => None
-  | S gas' => match p with
-              | PChar _ => Some true
-              | PAnyChar => Some true
-              | PSequence p1 p2 => let b1 := hungry_comp g p1 gas' in
-                                   let b2 := hungry_comp g p2 gas' in
-                                   match b1, b2 with
-                                   | Some true, _ => Some true
-                                   | _, Some true => Some true
-                                   | Some false, Some false => Some false
-                                   | _, _ => None
-                                   end
-              | PChoice p1 p2 => let b1 := hungry_comp g p1 gas' in
-                                 let b2 := hungry_comp g p2 gas' in
-                                 match b1, b2 with
-                                 | Some true, Some true => Some true
-                                 | Some false, _ => Some false
-                                 | _, Some false => Some false
-                                 | _, _ => None
-                                 end
-              | PNT i => match nth_error g i with
-                         | Some p' => hungry_comp g p' gas'
-                         | None => None
-                         end
-              | _ => Some false
-              end
-  end.
-
-Theorem hungry_comp_correct :
-  forall g p gas b,
-  hungry_comp g p gas = Some b ->
-  hungry g p b.
-Proof.
-  intros * H.
-  generalize dependent b.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros;
-  destruct p; simpl in H;
-  try (
-    remember (hungry_comp g p1 gas) as ores1 eqn:H1;
-    remember (hungry_comp g p2 gas) as ores2 eqn:H2;
-    symmetry in H1;
-    symmetry in H2;
-    destruct ores1 as [[]|];
-    destruct ores2 as [[]|];
-    try discriminate;
-    eauto using hungry
-  );
-  try (
-    destruct b;
-    try discriminate;
-    eauto using hungry;
-    fail
-  ).
-  - (* PNT n *)
-    destruct (nth_error g n) eqn:Hnth; try discriminate.
-    eauto using hungry.
-Qed.
-
-Theorem hungry_comp_det :
-  forall g p gas1 gas2 b1 b2,
-  hungry_comp g p gas1 = Some b1 ->
-  hungry_comp g p gas2 = Some b2 ->
-  b1 = b2.
-Proof.
-  eauto using hungry_comp_correct, hungry_det.
-Qed.
-
-Lemma hungry_comp_S_gas_some :
-  forall g p gas b,
-  hungry_comp g p gas = Some b ->
-  hungry_comp g p (S gas) = Some b.
-Proof.
-  intros * H.
-  generalize dependent b.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas; intros; try discriminate.
-  destruct p; simpl in H;
-  try (injection H as H; subst; auto);
-  try (
-    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1;
-    destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2;
-    try discriminate;
-    try apply IHgas in Haux1;
-    try apply IHgas in Haux2;
-    remember (S gas) as gas';
-    simpl;
-    try rewrite Haux1;
-    try rewrite Haux2;
-    destruct (hungry_comp g p1 gas') as [[]|];
-    auto;
-    fail
-  );
-  try (
-    remember (S gas);
-    simpl;
-    auto;
-    fail
-  ).
-  - (* PNT n *)
-    destruct (nth_error g n) eqn:H1;
-    try apply IHgas in H;
-    remember (S gas);
-    simpl;
-    rewrite H1;
-    auto.
-Qed.
-
-Lemma hungry_comp_S_gas_none :
-  forall g p gas,
-  hungry_comp g p (S gas) = None ->
-  hungry_comp g p gas = None.
-Proof.
-  intros.
-  destruct (hungry_comp g p gas) eqn:H'; trivial.
-  apply hungry_comp_S_gas_some in H'.
-  rewrite H' in H.
-  discriminate.
-Qed.
-
-Lemma hungry_comp_gas_some_le :
-  forall g p gas gas' b,
-  hungry_comp g p gas = Some b ->
-  gas <= gas' ->
-  hungry_comp g p gas' = Some b.
-Proof.
-  intros * H1 Hle.
-  induction Hle; auto.
-  eauto using hungry_comp_S_gas_some.
-Qed.
-
-Lemma hungry_comp_gas_none_le :
-  forall g p gas gas',
-  hungry_comp g p gas' = None ->
-  gas <= gas' ->
-  hungry_comp g p gas = None.
-Proof.
-  intros * H1 Hle.
-  induction Hle; auto.
-  eauto using hungry_comp_S_gas_none.
-Qed.
-
-Theorem hungry_comp_complete_true :
-  forall g p b,
-  hungry g p b ->
-  (exists gas, hungry_comp g p gas = Some b).
-Proof.
-  intros * H.
-  induction H;
-  (* Cases with no recursive calls *)
-  try (exists 1; auto; fail);
-  (* Cases with one recursive call *)
-  try (
-    destruct IHhungry as [gas IH];
-    exists (1 + gas);
-    simpl;
-    try rewrite_match_subject_in_goal;
-    eauto;
-    fail
-  );
-  (* Cases with two recursive calls *)
-  try (
-    destruct IHhungry as [gas IH];
-    exists (1 + gas);
-    simpl;
-    destruct (hungry_comp g p1 gas) as [[]|] eqn:Haux1; auto;
-    destruct (hungry_comp g p2 gas) as [[]|] eqn:Haux2; auto;
-    try discriminate
-  );
-  try (
-    destruct IHhungry1 as [gas1 IH1];
-    destruct IHhungry2 as [gas2 IH2];
-    exists (1 + gas1 + gas2);
-    simpl;
-    specialize (Nat.le_add_r gas1 gas2) as Hle1;
-    rewrite (hungry_comp_gas_some_le _ _ _ _ _ IH1 Hle1);
-    specialize (Plus.le_plus_r gas1 gas2) as Hle2;
-    rewrite (hungry_comp_gas_some_le _ _ _ _ _ IH2 Hle2);
-    trivial
-  ).
-Qed.
-
-(** Well-formed predicate **)
-(** A "well-formed" pattern is guaranteed to yield a match result for any input string **)
-
-Inductive well_formed : list pat -> pat -> Prop :=
-  | WFEmpty :
-      forall g,
-      well_formed g PEmpty
-  | WFChar :
-      forall g a,
-      well_formed g (PChar a)
-  | WFAnyChar :
-      forall g,
-      well_formed g PAnyChar
-  | WFSequence :
-      forall g p1 p2,
-      well_formed g p1 ->
-      well_formed g p2 ->
-      well_formed g (PSequence p1 p2)
-  | WFChoice :
-      forall g p1 p2,
-      well_formed g p1 ->
-      well_formed g p2 ->
-      well_formed g (PChoice p1 p2)
-  | WFRepetition :
-      forall g p,
-      well_formed g p ->
-      nullable g p false ->
-      well_formed g (PRepetition p)
-  | WFNot :
-      forall g p,
-      well_formed g p ->
-      well_formed g (PNot p)
-  | WFNonTerminal :
-      forall g p i,
-      nth_error g i = Some p ->
-      well_formed g (PNT i)
-  .
-
-Theorem well_formed_correct :
-  forall g p s, well_formed g p -> exists res, matches g p s res.
-Proof with eauto using matches.
-  intros * H.
-  generalize dependent s.
-  induction H; intros.
-  - (* PEmpty *)
-    eauto using matches.
-  - (* PChar a *)
-    destruct s as [|a'].
-    + (* EmptyString *)
-      eauto using matches.
-    + (* String a' s' *)
-      destruct (ascii_dec a a');
-      subst...
-  - (* PAnyChar *)
-    destruct s...
-  - (* PSequence p1 p2 *)
-    destruct (IHwell_formed1 s) as [[|s1]].
-    + (* Failure *)
-      eauto using matches.
-    + (* Success s1 *)
-      destruct (IHwell_formed2 s1)...
-  - (* PChoice p1 p2 *)
-    destruct (IHwell_formed2 s).
-    destruct (IHwell_formed1 s) as [[|]]...
-  - (* PRepetition p *)
-    remember (String.length s) as n.
-    generalize dependent s.
-    induction n as [n IHn] using strong_induction; intros.
-    destruct (IHwell_formed s) as [[|s1]].
-    + (* Failure *)
-      eauto using matches.
-    + (* Success s1 *)
-      subst.
-      match goal with [
-        Hx: nullable ?g ?p false,
-        Hy: matches ?g ?p _ (Success ?s) |- _
-      ] =>
-        specialize (proper_suffix_if_not_nullable _ _ _ _ Hx Hy) as Hps;
-        specialize (proper_suffix_length_lt _ _ Hps) as Hlt;
-        specialize (eq_refl (String.length s)) as Hlen;
-        destruct (IHn _ Hlt _ Hlen)
-      end.
-      eauto using matches.
-  - (* PNot p *)
-    destruct (IHwell_formed s) as [[|]]...
-  - (* PNT i *)
-Abort.
-
-(** Well-formed function with gas **)
-
-Fixpoint well_formed_comp g p gas :=
-  match gas with
-  | O => None
-  | S gas' => match p with
-              | PEmpty => Some true
-              | PChar _ => Some true
-              | PAnyChar => Some true
-              | PSequence p1 p2 => let b1 := well_formed_comp g p1 gas' in
-                                   let b2 := well_formed_comp g p2 gas' in
-                                   match b1, b2 with
-                                   | Some true, Some true => Some true
-                                   | None, None => None
-                                   | _, _ => Some false
-                                   end
-              | PChoice p1 p2 => let b1 := well_formed_comp g p1 gas' in
-                                 let b2 := well_formed_comp g p2 gas' in
-                                 match b1, b2 with
-                                 | Some true, Some true => Some true
-                                 | None, None => None
-                                 | _, _ => Some false
-                                 end
-              | PRepetition p => let b1 := well_formed_comp g p gas' in
-                                 let b2 := hungry_comp g p gas' in
-                                 match b1, b2 with
-                                 | Some true, Some true => Some true
-                                 | None, None => None
-                                 | _, _ => Some false
-                                 end
-              | PNot p => well_formed_comp g p gas'
-              | PNT i => match nth_error g i with
-                         | Some p => Some true
-                         | None => Some false
-                         end
-              end
-  end.
-
-Theorem well_formed_comp_correct_true :
-  forall g p gas,
-  (forall p', In p' g -> well_formed g p') ->
-  well_formed_comp g p gas = Some true ->
-  well_formed g p.
-Proof.
-  intros g p.
-  generalize dependent g.
-  induction p; intros * Hg H;
-  eauto using well_formed;
-  try (
-    destruct gas;
-    try discriminate;
-    simpl in H;
-    destruct (well_formed_comp g p1 gas) as [[]|] eqn:H1;
-    destruct (well_formed_comp g p2 gas) as [[]|] eqn:H2;
-    try discriminate;
-    eauto using well_formed
-  ).
-Abort.

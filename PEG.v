@@ -1042,64 +1042,6 @@ Proof.
   end.
 Qed.
 
-Lemma verifyrule_termination :
-  forall g p nleft nb,
-  (forall r, In r g -> coherent g r true) ->
-  coherent g p true ->
-  exists res v,
-  verifyrule g p nleft nb res v.
-Proof.
-  intros * Hgc Hpc.
-  generalize dependent nb.
-  generalize dependent p.
-  generalize dependent g.
-  induction nleft as [|nleft IHnleft];
-  intros;
-  generalize dependent nb;
-  induction p; intros;
-  inversion Hpc; subst;
-  eauto using verifyrule;
-  (* PSequence *)
-  try match goal with
-  [ Hx1: coherent _ ?p1 _,
-    Hx2: coherent _ ?p2 _
-    |- exists _ _, verifyrule _ (PSequence ?p1 ?p2) _ _ _ _ ] =>
-      destruct (IHp1 Hx1 false) as [[[|]|] [? ?]];
-      destruct (IHp2 Hx2 nb) as [? [? ?]];
-      eauto using verifyrule;
-      fail
-  end;
-  (* PChoice *)
-  try match goal with
-  [ Hx1: coherent _ ?p1 _,
-    Hx2: coherent _ ?p2 _
-    |- exists _ _, verifyrule _ (PChoice ?p1 ?p2) _ _ _ _ ] =>
-      destruct (IHp1 Hx1 nb) as [[nb'|] [? ?]];
-      eauto using verifyrule;
-      destruct (IHp2 Hx2 nb') as [? [? ?]];
-      eauto using verifyrule;
-      fail
-  end;
-  (* PRepetition, PNot *)
-  try match goal with
-  [ Hx: coherent _ ?p _
-    |- exists _ _, verifyrule _ (_ ?p) _ _ _ _ ] =>
-      destruct (IHp Hx true) as [? [? ?]];
-      eauto using verifyrule;
-      fail
-  end;
-  (* PNT *)
-  let Hp := fresh in
-  try match goal with
-  [ Hx: coherent ?g (PNT ?n) true,
-    Hnth: nth_error ?g ?n = Some ?p |- _ ] =>
-    assert (coherent g p true) by eauto using nth_error_In;
-    assert (exists res v, verifyrule g p nleft nb res v) as [? [? ?]] by eauto;
-    eauto using verifyrule;
-    fail
-  end.
-Qed.
-
 Inductive coherent_return_type_after_nleft_increase : option bool -> option bool -> Prop :=
   | FromNone :
       forall res,

@@ -2113,19 +2113,16 @@ Fixpoint nullable_comp g p nleft gas {struct gas} :=
 
 Lemma nullable_comp_soundness :
   forall g p nleft gas res,
-  (forall r, In r g -> coherent g r true) ->
-  coherent g p true ->
   nullable_comp g p nleft gas = Some res ->
   nullable g p nleft res.
 Proof.
-  intros * Hgc Hpc H.
+  intros * H.
   generalize dependent res.
   generalize dependent nleft.
   generalize dependent p.
   generalize dependent g.
   induction gas; intros; try discriminate.
   destruct p; eauto using nullable;
-  inversion Hpc; subst;
   try (simpl in H; discriminate; fail);
   try (
     simpl in H;

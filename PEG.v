@@ -2117,10 +2117,16 @@ Proof.
   ).
 Qed.
 
-Ltac destruct_match_subject :=
+Ltac destruct_match_subject_in_goal :=
   match goal with
     [ |- match ?x with _ => _ end = _ ] =>
       destruct x
+  end.
+
+Ltac destruct_match_subject_in_hyp :=
+  match goal with
+    [ Hx: match ?x with _ => _ end = _ |- _ ] =>
+      destruct x eqn:?
   end.
 
 Lemma nullable_comp_S_gas :
@@ -2146,7 +2152,7 @@ Proof.
     try apply IHgas in Hn2;
     remember (S gas);
     simpl;
-    repeat destruct_match_subject;
+    repeat destruct_match_subject_in_goal;
     try destruct1;
     try discriminate;
     auto
@@ -2155,11 +2161,11 @@ Proof.
     destruct (nth_error g n) eqn:Hn;
     remember (S gas);
     simpl;
-    destruct_match_subject;
+    destruct_match_subject_in_goal;
     try destruct1;
     try discriminate;
     auto;
-    destruct_match_subject;
+    destruct_match_subject_in_goal;
     auto
   ).
 Qed.

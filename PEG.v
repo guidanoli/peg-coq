@@ -2360,3 +2360,48 @@ Proof.
   try discriminate;
   auto.
 Qed.
+
+(** CheckLoops function **)
+
+Fixpoint checkloops_comp g p nleft gas {struct gas} :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some (Some false)
+              | PChar _ => Some (Some false)
+              | PAnyChar => Some (Some false)
+              | PSequence p1 p2 => match checkloops_comp g p1 nleft gas' with
+                                   | Some (Some false) => checkloops_comp g p2 nleft gas'
+                                   | res => res
+                                   end
+              | PChoice p1 p2 => match checkloops_comp g p1 nleft gas' with
+                                 | Some (Some false) => checkloops_comp g p2 nleft gas'
+                                 | res => res
+                                 end
+              | PRepetition p' => match nullable_comp g p' nleft gas' with
+                                  | Some (Some false) => checkloops_comp g p' nleft gas'
+                                  | res => res
+                                  end
+              | PNot p' => checkloops_comp g p' nleft gas'
+              | PNT _ => Some (Some false)
+              end
+  end.
+
+Lemma checkloops_comp_soundness :
+  forall g p nleft gas res,
+  checkloops_comp g p nleft gas = Some res ->
+  checkloops g p nleft res.
+Proof.
+  intros * H.
+  generalize dependent res.
+  generalize dependent nleft.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; try discriminate; intros.
+  destruct p;
+  simpl in H;
+  repeat destruct_match_subject_in_hyp;
+  try destruct1;
+  try discriminate;
+  eauto using checkloops, nullable_comp_soundness.
+Qed.

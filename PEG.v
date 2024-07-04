@@ -2082,6 +2082,33 @@ Proof.
   eauto using nullable_Some_S_nleft.
 Qed.
 
+Lemma verifyrule_similar_to_nullable :
+  forall g p nleft b v,
+  verifyrule g p nleft false (Some b) v ->
+  nullable g p nleft (Some b).
+Proof.
+  intros * H.
+  remember (Some b) as res.
+  remember false as nb.
+  generalize dependent b.
+  induction H; intros;
+  try destruct1;
+  try discriminate;
+  subst;
+  eauto using nullable;
+  try match goal with
+    [ Hx: verifyrule _ _ _ false (Some ?nb') _ |- _ ] =>
+        destruct nb'
+  end;
+  try match goal with
+    [ Hx: verifyrule _ _ _ true (Some ?b) _ |- _ ] =>
+        apply verifyrule_res_none_or_some_true in Hx as [|];
+        try discriminate;
+        try destruct1
+  end;
+  eauto using nullable.
+Qed.
+
 (** Nullable function with gas **)
 
 Fixpoint nullable_comp g p nleft gas {struct gas} :=

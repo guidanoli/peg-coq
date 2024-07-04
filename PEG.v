@@ -2405,3 +2405,107 @@ Proof.
   try discriminate;
   eauto using checkloops, nullable_comp_soundness.
 Qed.
+
+Lemma checkloops_comp_S_gas :
+  forall g p nleft gas res,
+  checkloops_comp g p nleft gas = Some res ->
+  checkloops_comp g p nleft (S gas) = Some res.
+Proof.
+  intros * H.
+  generalize dependent res.
+  generalize dependent nleft.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; try discriminate; intros.
+  destruct p;
+  simpl in H;
+  repeat destruct_match_subject_in_hyp;
+  try destruct1;
+  try discriminate;
+  remember (S gas) as gas';
+  repeat match goal with
+    [ Hx: checkloops_comp _ _ _ gas = Some _ |- _ ] =>
+        apply IHgas in Hx
+  end;
+  try match goal with
+    [ Hx: nullable_comp _ _ _ gas = Some _ |- _ ] =>
+        apply nullable_comp_S_gas in Hx
+  end;
+  simpl;
+  subst;
+  try rewrite_match_subject_in_goal;
+  eauto.
+Qed.
+
+Lemma checkloops_comp_le_gas :
+  forall g p nleft gas gas' res,
+  checkloops_comp g p nleft gas = Some res ->
+  gas <= gas' ->
+  checkloops_comp g p nleft gas' = Some res.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using checkloops_comp_S_gas.
+Qed.
+
+Lemma checkloops_comp_termination :
+  forall g p nleft,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  exists gas res,
+  checkloops_comp g p nleft gas = Some res.
+Proof.
+  intros * Hgc Hpc.
+  induction p; intros;
+  inversion Hpc; subst;
+  repeat match goal with
+    [ Hx: coherent ?g ?p ?b, Hy: coherent ?g ?p ?b -> _ |- _ ] =>
+      specialize (Hy Hx)
+  end;
+  repeat destruct_exists_hyp;
+  (* 2 recursive calls *)
+  try match goal with
+    [ Hx1: checkloops_comp ?g ?p1 ?nleft ?gas1 = Some ?res1,
+      Hx2: checkloops_comp ?g ?p2 ?nleft ?gas2 = Some ?res2 |- _ ] =>
+          assert (gas1 <= gas1 + gas2) by lia;
+          assert (gas2 <= gas1 + gas2) by lia;
+          assert (checkloops_comp g p1 nleft (gas1 + gas2) = Some res1)
+          as Hx1' by eauto using checkloops_comp_le_gas;
+          assert (checkloops_comp g p2 nleft (gas1 + gas2) = Some res2)
+          by eauto using checkloops_comp_le_gas;
+          exists (1 + gas1 + gas2);
+          destruct res1 as [[|]|];
+          simpl;
+          rewrite Hx1';
+          eauto;
+          fail
+  end;
+  (* 1 recursive call + nullable_comp *)
+  try match goal with
+    [ Hx1: checkloops_comp ?g ?p1 ?nleft ?gas1 = Some ?res1 |- _ ] =>
+        assert (exists gas res, nullable_comp g p1 nleft gas = Some res)
+        as [gas2 [res2 ?]] by eauto using nullable_comp_termination;
+        assert (gas1 <= gas1 + gas2) by lia;
+        assert (gas2 <= gas1 + gas2) by lia;
+        assert (checkloops_comp g p1 nleft (gas1 + gas2) = Some res1)
+        as Hx1' by eauto using checkloops_comp_le_gas;
+        assert (nullable_comp g p1 nleft (gas1 + gas2) = Some res2)
+        as Hx2' by eauto using nullable_comp_le_gas;
+        exists (1 + gas1 + gas2);
+        simpl;
+        rewrite Hx2';
+        destruct res2 as [[|]|];
+        eauto;
+        fail
+  end;
+  (* 1 recursive call *)
+  try match goal with
+    [ Hx1: checkloops_comp ?g ?p1 ?nleft ?gas1 = Some ?res1 |- _ ] =>
+        exists (1 + gas1);
+        simpl;
+        eauto;
+        fail
+  end;
+  (* 0 recursive calls *)
+  try (exists 1; simpl; eauto; fail).
+Qed.

@@ -2294,20 +2294,28 @@ Inductive checkloops : grammar -> pat -> nat -> option bool -> Prop :=
   | CLAnyChar :
       forall g nleft,
       checkloops g PAnyChar nleft (Some false)
-  | CLSequenceTrue :
+  | CLSequenceNone :
+      forall g p1 p2 nleft,
+      checkloops g p1 nleft None ->
+      checkloops g (PSequence p1 p2) nleft None
+  | CLSequenceSomeTrue :
       forall g p1 p2 nleft,
       checkloops g p1 nleft (Some true) ->
       checkloops g (PSequence p1 p2) nleft (Some true)
-  | CLSequenceFalse :
+  | CLSequenceSomeFalse :
       forall g p1 p2 res nleft,
       checkloops g p1 nleft (Some false) ->
       checkloops g p2 nleft res ->
       checkloops g (PSequence p1 p2) nleft res
-  | CLChoiceTrue :
+  | CLChoiceNone :
+      forall g p1 p2 nleft,
+      checkloops g p1 nleft None ->
+      checkloops g (PChoice p1 p2) nleft None
+  | CLChoiceSomeTrue :
       forall g p1 p2 nleft,
       checkloops g p1 nleft (Some true) ->
       checkloops g (PChoice p1 p2) nleft (Some true)
-  | CLChoiceFalse :
+  | CLChoiceSomeFalse :
       forall g p1 p2 nleft res,
       checkloops g p1 nleft (Some false) ->
       checkloops g p2 nleft res ->
@@ -2331,7 +2339,7 @@ Inductive checkloops : grammar -> pat -> nat -> option bool -> Prop :=
       checkloops g (PNot p) nleft res
   | CLNT :
       forall g i nleft,
-      checkloops g (PNT i) nleft (Some true)
+      checkloops g (PNT i) nleft (Some false)
   .
 
 Theorem checkloops_determinism :
@@ -2346,6 +2354,8 @@ Proof.
   inversion H2; subst;
   try assert (Some true = Some false) by auto;
   try assert (Some false = Some true) by auto;
+  try assert (Some false = None) by auto;
+  try assert (None = Some false) by auto;
   try pose_nullable_determinism;
   try discriminate;
   auto.

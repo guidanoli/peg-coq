@@ -1720,72 +1720,6 @@ Proof.
       eauto.
 Qed.
 
-(** CheckLoops predicate **)
-(** Check whether a pattern has potential infinite loops **)
-
-Inductive checkloops : grammar -> pat -> nat -> bool -> Prop :=
-  | CLEmpty :
-      forall g nleft,
-      checkloops g PEmpty nleft false
-  | CLChar :
-      forall g a nleft,
-      checkloops g (PChar a) nleft false
-  | CLAnyChar :
-      forall g nleft,
-      checkloops g PAnyChar nleft false
-  | CLSequenceTrue :
-      forall g p1 p2 nleft,
-      checkloops g p1 nleft true ->
-      checkloops g (PSequence p1 p2) nleft true
-  | CLSequenceFalse :
-      forall g p1 p2 b nleft,
-      checkloops g p1 nleft false ->
-      checkloops g p2 nleft b ->
-      checkloops g (PSequence p1 p2) nleft b
-  | CLChoiceTrue :
-      forall g p1 p2 nleft,
-      checkloops g p1 nleft true ->
-      checkloops g (PChoice p1 p2) nleft true
-  | CLChoiceFalse :
-      forall g p1 p2 nleft b,
-      checkloops g p1 nleft false ->
-      checkloops g p2 nleft b ->
-      checkloops g (PChoice p1 p2) nleft b
-  | CLRepetitionNullable :
-      forall g p nleft v,
-      verifyrule g p nleft false (Some true) v ->
-      checkloops g (PRepetition p) nleft true
-  | CLRepetitionNotNullable :
-      forall g p nleft v b,
-      verifyrule g p nleft false (Some false) v ->
-      checkloops g p nleft b ->
-      checkloops g (PRepetition p) nleft b
-  | CLNot :
-      forall g p nleft b,
-      checkloops g p nleft b ->
-      checkloops g (PNot p) nleft b
-  | CLNT :
-      forall g i nleft,
-      checkloops g (PNT i) nleft true
-  .
-
-Theorem checkloops_determinism :
-  forall g p nleft b1 b2,
-  checkloops g p nleft b1 ->
-  checkloops g p nleft b2 ->
-  b1 = b2.
-Proof.
-  intros * H1 H2.
-  generalize dependent b2.
-  induction H1; intros;
-  inversion H2; subst;
-  try assert (true = false) by auto;
-  try assert (false = true) by auto;
-  try pose_verifyrule_some_determinism;
-  try discriminate;
-  auto.
-Qed.
-
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 
@@ -2330,4 +2264,70 @@ Lemma nullable_comp_termination :
   nullable_comp g p nleft gas = Some b.
 Proof.
   eauto using nullable_comp_termination_lower_bound.
+Qed.
+
+(** CheckLoops predicate **)
+(** Check whether a pattern has potential infinite loops **)
+
+Inductive checkloops : grammar -> pat -> nat -> bool -> Prop :=
+  | CLEmpty :
+      forall g nleft,
+      checkloops g PEmpty nleft false
+  | CLChar :
+      forall g a nleft,
+      checkloops g (PChar a) nleft false
+  | CLAnyChar :
+      forall g nleft,
+      checkloops g PAnyChar nleft false
+  | CLSequenceTrue :
+      forall g p1 p2 nleft,
+      checkloops g p1 nleft true ->
+      checkloops g (PSequence p1 p2) nleft true
+  | CLSequenceFalse :
+      forall g p1 p2 b nleft,
+      checkloops g p1 nleft false ->
+      checkloops g p2 nleft b ->
+      checkloops g (PSequence p1 p2) nleft b
+  | CLChoiceTrue :
+      forall g p1 p2 nleft,
+      checkloops g p1 nleft true ->
+      checkloops g (PChoice p1 p2) nleft true
+  | CLChoiceFalse :
+      forall g p1 p2 nleft b,
+      checkloops g p1 nleft false ->
+      checkloops g p2 nleft b ->
+      checkloops g (PChoice p1 p2) nleft b
+  | CLRepetitionNullable :
+      forall g p nleft v,
+      verifyrule g p nleft false (Some true) v ->
+      checkloops g (PRepetition p) nleft true
+  | CLRepetitionNotNullable :
+      forall g p nleft v b,
+      verifyrule g p nleft false (Some false) v ->
+      checkloops g p nleft b ->
+      checkloops g (PRepetition p) nleft b
+  | CLNot :
+      forall g p nleft b,
+      checkloops g p nleft b ->
+      checkloops g (PNot p) nleft b
+  | CLNT :
+      forall g i nleft,
+      checkloops g (PNT i) nleft true
+  .
+
+Theorem checkloops_determinism :
+  forall g p nleft b1 b2,
+  checkloops g p nleft b1 ->
+  checkloops g p nleft b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1; intros;
+  inversion H2; subst;
+  try assert (true = false) by auto;
+  try assert (false = true) by auto;
+  try pose_verifyrule_some_determinism;
+  try discriminate;
+  auto.
 Qed.

@@ -1992,6 +1992,15 @@ Proof.
   auto.
 Qed.
 
+Ltac pose_nullable_determinism :=
+  match goal with
+    [ Hx1: nullable ?g ?p ?nleft ?res1,
+      Hx2: nullable ?g ?p ?nleft ?res2 |- _ ] =>
+          assert (res1 = res2)
+          by eauto using nullable_determinism;
+          clear Hx2
+  end.
+
 Lemma nullable_Some_S_nleft :
   forall g p nleft b,
   nullable g p nleft (Some b) ->
@@ -2269,50 +2278,54 @@ Qed.
 (** CheckLoops predicate **)
 (** Check whether a pattern has potential infinite loops **)
 
-Inductive checkloops : grammar -> pat -> nat -> bool -> Prop :=
+Inductive checkloops : grammar -> pat -> nat -> option bool -> Prop :=
   | CLEmpty :
       forall g nleft,
-      checkloops g PEmpty nleft false
+      checkloops g PEmpty nleft (Some false)
   | CLChar :
       forall g a nleft,
-      checkloops g (PChar a) nleft false
+      checkloops g (PChar a) nleft (Some false)
   | CLAnyChar :
       forall g nleft,
-      checkloops g PAnyChar nleft false
+      checkloops g PAnyChar nleft (Some false)
   | CLSequenceTrue :
       forall g p1 p2 nleft,
-      checkloops g p1 nleft true ->
-      checkloops g (PSequence p1 p2) nleft true
+      checkloops g p1 nleft (Some true) ->
+      checkloops g (PSequence p1 p2) nleft (Some true)
   | CLSequenceFalse :
-      forall g p1 p2 b nleft,
-      checkloops g p1 nleft false ->
-      checkloops g p2 nleft b ->
-      checkloops g (PSequence p1 p2) nleft b
+      forall g p1 p2 res nleft,
+      checkloops g p1 nleft (Some false) ->
+      checkloops g p2 nleft res ->
+      checkloops g (PSequence p1 p2) nleft res
   | CLChoiceTrue :
       forall g p1 p2 nleft,
-      checkloops g p1 nleft true ->
-      checkloops g (PChoice p1 p2) nleft true
+      checkloops g p1 nleft (Some true) ->
+      checkloops g (PChoice p1 p2) nleft (Some true)
   | CLChoiceFalse :
-      forall g p1 p2 nleft b,
-      checkloops g p1 nleft false ->
-      checkloops g p2 nleft b ->
-      checkloops g (PChoice p1 p2) nleft b
+      forall g p1 p2 nleft res,
+      checkloops g p1 nleft (Some false) ->
+      checkloops g p2 nleft res ->
+      checkloops g (PChoice p1 p2) nleft res
+  | CLRepetitionLR :
+      forall g p nleft,
+      nullable g p nleft None ->
+      checkloops g (PRepetition p) nleft None
   | CLRepetitionNullable :
-      forall g p nleft v,
-      verifyrule g p nleft false (Some true) v ->
-      checkloops g (PRepetition p) nleft true
+      forall g p nleft,
+      nullable g p nleft (Some true) ->
+      checkloops g (PRepetition p) nleft (Some true)
   | CLRepetitionNotNullable :
-      forall g p nleft v b,
-      verifyrule g p nleft false (Some false) v ->
-      checkloops g p nleft b ->
-      checkloops g (PRepetition p) nleft b
+      forall g p nleft res,
+      nullable g p nleft (Some false) ->
+      checkloops g p nleft res ->
+      checkloops g (PRepetition p) nleft res
   | CLNot :
-      forall g p nleft b,
-      checkloops g p nleft b ->
-      checkloops g (PNot p) nleft b
+      forall g p nleft res,
+      checkloops g p nleft res ->
+      checkloops g (PNot p) nleft res
   | CLNT :
       forall g i nleft,
-      checkloops g (PNT i) nleft true
+      checkloops g (PNT i) nleft (Some true)
   .
 
 Theorem checkloops_determinism :
@@ -2325,9 +2338,9 @@ Proof.
   generalize dependent b2.
   induction H1; intros;
   inversion H2; subst;
-  try assert (true = false) by auto;
-  try assert (false = true) by auto;
-  try pose_verifyrule_some_determinism;
+  try assert (Some true = Some false) by auto;
+  try assert (Some false = Some true) by auto;
+  try pose_nullable_determinism;
   try discriminate;
   auto.
 Qed.

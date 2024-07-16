@@ -1074,6 +1074,12 @@ Ltac specialize_eq_refl :=
         specialize (Hx (eq_refl x))
   end.
 
+Ltac specialize_eq_hyp :=
+  match goal with
+    [ Hx: ?x = ?y -> _, Hy: ?x = ?y |- _ ] =>
+        specialize (Hx Hy)
+  end.
+
 Ltac destruct_exists_hyp :=
   match goal with
     [ Hx: exists _, _ |- _ ] =>

@@ -2418,6 +2418,32 @@ Proof.
   auto.
 Qed.
 
+Theorem checkloops_Some_S_nleft :
+  forall g p nleft b,
+  checkloops g p nleft (Some b) ->
+  checkloops g p (S nleft) (Some b).
+Proof.
+  intros * H.
+  remember (Some b) as res.
+  generalize dependent b.
+  induction H;
+  intros;
+  try destruct1;
+  try discriminate;
+  eauto using checkloops, nullable_Some_S_nleft.
+Qed.
+
+Theorem checkloops_Some_nleft_le :
+  forall g p nleft nleft' b,
+  checkloops g p nleft (Some b) ->
+  nleft <= nleft' ->
+  checkloops g p nleft' (Some b).
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using checkloops_Some_S_nleft.
+Qed.
+
 (** CheckLoops function **)
 
 Fixpoint checkloops_comp g p nleft gas {struct gas} :=

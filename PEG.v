@@ -2058,6 +2058,57 @@ Proof.
   eauto using nullable.
 Qed.
 
+Lemma nullable_none_is_verifyrule_none :
+  forall g p nleft,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  nullable g p nleft None ->
+  exists v, verifyrule g p nleft false None v.
+Proof.
+  intros * Hcg Hcp Hn.
+  remember None as res.
+  induction Hn;
+  inversion Hcp;
+  subst;
+  try discriminate;
+  try eq_nth_error;
+  try match goal with
+    [ Hx: nth_error ?g ?i = Some ?p |- _ ] =>
+        assert (In p g)
+        by eauto using nth_error_In;
+        assert (coherent g p true)
+        by eauto
+  end;
+  repeat match goal with
+    [ IHx: (forall r, In r ?g -> coherent ?g ?p ?b) -> _,
+      Hx: forall r, In r ?g -> coherent ?g ?p ?b |- _ ] =>
+        specialize (IHx Hx)
+  end;
+  repeat match goal with
+    [ IHx: coherent ?g ?p ?b -> _,
+      Hx: coherent ?g ?p ?b |- _ ] =>
+        specialize (IHx Hx)
+  end;
+  try specialize_eq_refl;
+  try destruct_exists_hyp;
+  eauto using verifyrule;
+  try (
+    assert (exists gas res v, verifyrule_comp g p1 nleft false gas = Some (res, v))
+    as [gas [res' [v Hvcp1]]]
+    by eauto using verifyrule_comp_termination;
+    assert (verifyrule g p1 nleft false res' v)
+    by eauto using verifyrule_comp_soundness;
+    destruct res';
+    eauto using verifyrule;
+    assert (nullable g p1 nleft (Some b))
+    by eauto using verifyrule_similar_to_nullable;
+    pose_nullable_determinism;
+    destruct1;
+    eauto using verifyrule;
+    fail
+  ).
+Qed.
+
 (** Nullable function with gas **)
 
 Fixpoint nullable_comp g p nleft gas {struct gas} :=

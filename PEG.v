@@ -1510,6 +1510,12 @@ Proof.
   eauto using verifyrule_convergence_S_nleft, Nat.lt_le_trans.
 Qed.
 
+Ltac specialize_coherent :=
+  match goal with
+    [ Hx: coherent ?g ?p ?b, IHx: coherent ?g ?p ?b -> _ |- _ ] =>
+        specialize (IHx Hx)
+  end.
+
 Lemma verifyrule_safe_grammar_yields_safe_pattern :
   forall g p nb,
   (forall r, In r g -> coherent g r true) ->
@@ -1521,10 +1527,7 @@ Proof.
   generalize dependent nb.
   induction p; intros;
   inversion Hpc; subst;
-  repeat match goal with
-    [ Hx: coherent ?g ?p true, IHx: coherent ?g ?p true -> _ |- _ ] =>
-        specialize (IHx Hx)
-  end;
+  repeat specialize_coherent;
   repeat destruct_exists_hyp;
   try (exists 1; eauto using verifyrule; fail);
   try match goal with
@@ -2156,11 +2159,7 @@ Proof.
       Hx: forall r, In r ?g -> coherent ?g ?p ?b |- _ ] =>
         specialize (IHx Hx)
   end;
-  repeat match goal with
-    [ IHx: coherent ?g ?p ?b -> _,
-      Hx: coherent ?g ?p ?b |- _ ] =>
-        specialize (IHx Hx)
-  end;
+  repeat specialize_coherent;
   try specialize_eq_refl;
   try destruct_exists_hyp;
   eauto using verifyrule;
@@ -2526,10 +2525,7 @@ Proof.
   intros * Hgc Hgv Hpc.
   induction p;
   inversion Hpc; subst;
-  repeat match goal with
-    [ IHx: coherent ?g ?p ?b -> _, Hx: coherent ?g ?p ?b |- _ ] =>
-        specialize (IHx Hx)
-  end;
+  repeat specialize_coherent;
   repeat destruct_exists_hyp;
   try match goal with
     [ Hx1: checkloops ?g ?p1 ?nleft1 (Some ?b1),
@@ -2670,10 +2666,7 @@ Proof.
   intros * Hgc Hpc.
   induction p; intros;
   inversion Hpc; subst;
-  repeat match goal with
-    [ Hx: coherent ?g ?p ?b, Hy: coherent ?g ?p ?b -> _ |- _ ] =>
-      specialize (Hy Hx)
-  end;
+  repeat specialize_coherent;
   repeat destruct_exists_hyp;
   (* 2 recursive calls *)
   try match goal with

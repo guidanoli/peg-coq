@@ -1510,6 +1510,78 @@ Proof.
   eauto using verifyrule_convergence_S_nleft, Nat.lt_le_trans.
 Qed.
 
+Lemma verifyrule_safe_grammar_yields_safe_pattern :
+  forall g p nb,
+  (forall r, In r g -> coherent g r true) ->
+  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  coherent g p true ->
+  exists nleft b v, verifyrule g p nleft nb (Some b) v.
+Proof.
+  intros * Hgc Hgv Hpc.
+  generalize dependent nb.
+  induction p; intros;
+  inversion Hpc; subst;
+  repeat match goal with
+    [ Hx: coherent ?g ?p true, IHx: coherent ?g ?p true -> _ |- _ ] =>
+        specialize (IHx Hx)
+  end;
+  repeat destruct_exists_hyp;
+  try (exists 1; eauto using verifyrule; fail);
+  try match goal with
+    [ Hx1: forall nb, exists _ _ _, verifyrule ?g ?p1 _ nb (Some _) _,
+      Hx2: forall nb, exists _ _ _, verifyrule ?g ?p2 _ nb (Some _) _
+      |- exists _ _ _, verifyrule ?g (_ ?p1 ?p2) _ ?nb _ _ ] =>
+          specialize (Hx1 false);
+          specialize (Hx2 nb);
+          destruct Hx1 as [nleft1 [b1 [v1 ?]]];
+          destruct Hx2 as [nleft2 [b2 [v2 ?]]];
+          assert (nleft1 <= nleft1 + nleft2) by lia;
+          assert (nleft2 <= nleft1 + nleft2) by lia;
+          assert (verifyrule g p1 (nleft1 + nleft2) false (Some b1) v1)
+          by eauto using verifyrule_nleft_le_some_determinism;
+          assert (verifyrule g p2 (nleft1 + nleft2) nb (Some b2) v2)
+          by eauto using verifyrule_nleft_le_some_determinism;
+          destruct b1;
+          eauto using verifyrule;
+          fail
+  end;
+  try match goal with
+    [ Hx1: forall nb, exists _ _ _, verifyrule ?g ?p1 _ nb (Some _) _,
+      Hx2: forall nb, exists _ _ _, verifyrule ?g ?p2 _ nb (Some _) _
+      |- exists _ _ _, verifyrule ?g (_ ?p1 ?p2) _ ?nb _ _ ] =>
+          specialize (Hx1 nb);
+          destruct Hx1 as [nleft1 [b1 [v1 ?]]];
+          specialize (Hx2 b1);
+          destruct Hx2 as [nleft2 [b2 [v2 ?]]];
+          assert (nleft1 <= nleft1 + nleft2) by lia;
+          assert (nleft2 <= nleft1 + nleft2) by lia;
+          assert (verifyrule g p1 (nleft1 + nleft2) nb (Some b1) v1)
+          by eauto using verifyrule_nleft_le_some_determinism;
+          assert (verifyrule g p2 (nleft1 + nleft2) b1 (Some b2) v2)
+          by eauto using verifyrule_nleft_le_some_determinism;
+          destruct b1;
+          eauto using verifyrule;
+          fail
+  end;
+  try match goal with
+  [ Hx: forall nb, exists _ _ _, verifyrule ?g ?p _ nb (Some _) _
+    |- exists _ _ _, verifyrule ?g (_ ?p) _ ?nb _ _ ] =>
+        specialize (Hx true);
+        repeat destruct_exists_hyp;
+        eauto using verifyrule;
+        fail
+  end;
+  try match goal with
+    [ Hnth: nth_error ?g ?n = Some ?p
+      |- exists _ _ _, verifyrule g (PNT ?n) _ ?nb _ _ ] =>
+        assert (In p g) by eauto using nth_error_In;
+        assert (coherent g p true) by eauto;
+        assert (exists nleft b v, verifyrule g p nleft nb (Some b) v)
+        as [nleft [b [v ?]]] by eauto;
+        eauto using verifyrule
+  end.
+Qed.
+
 (** VerifyRule function with gas **)
 
 Fixpoint verifyrule_comp g p nleft nb gas {struct gas} :=

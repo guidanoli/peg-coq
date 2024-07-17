@@ -2516,6 +2516,63 @@ Proof.
   eauto using checkloops_Some_S_nleft.
 Qed.
 
+Lemma checkloops_safe_grammar :
+  forall g p,
+  (forall r, In r g -> coherent g r true) ->
+  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  coherent g p true ->
+  exists nleft b, checkloops g p nleft (Some b).
+Proof.
+  intros * Hgc Hgv Hpc.
+  induction p;
+  inversion Hpc; subst;
+  repeat match goal with
+    [ IHx: coherent ?g ?p ?b -> _, Hx: coherent ?g ?p ?b |- _ ] =>
+        specialize (IHx Hx)
+  end;
+  repeat destruct_exists_hyp;
+  try match goal with
+    [ Hx1: checkloops ?g ?p1 ?nleft1 (Some ?b1),
+      Hx2: checkloops ?g ?p2 ?nleft2 (Some ?b2)
+      |- exists _ _, checkloops ?g (_ ?p1 ?p2) _ _ ] =>
+          assert (nleft1 <= nleft1 + nleft2) by lia;
+          assert (nleft2 <= nleft1 + nleft2) by lia;
+          assert (checkloops g p1 (nleft1 + nleft2) (Some b1))
+          by eauto using checkloops_Some_nleft_le;
+          assert (checkloops g p2 (nleft1 + nleft2) (Some b2))
+          by eauto using checkloops_Some_nleft_le;
+          destruct b1;
+          eauto using checkloops;
+          fail
+  end;
+  try match goal with
+    [ Hx: coherent ?g ?p true,
+      Hy: checkloops ?g ?p ?nleft' (Some ?b')
+      |- exists _ _, checkloops ?g (PRepetition ?p) _ _ ] =>
+          assert (exists nleft b v, verifyrule g p nleft false (Some b) v)
+          as [nleft [b [v ?]]] by eauto using verifyrule_safe_grammar_yields_safe_pattern;
+          assert (nullable g p nleft (Some b))
+          by eauto using verifyrule_similar_to_nullable;
+          assert (nleft <= nleft + nleft') by lia;
+          assert (nleft' <= nleft + nleft') by lia;
+          assert (nullable g p (nleft + nleft') (Some b))
+          by eauto using nullable_Some_nleft_le;
+          assert (checkloops g p (nleft + nleft') (Some b'))
+          by eauto using checkloops_Some_nleft_le;
+          destruct b;
+          eauto using checkloops;
+          fail
+  end;
+  try match goal with
+    [ Hx: checkloops ?g ?p ?nleft (Some _)
+      |- exists _ _, checkloops ?g (_ ?p) _ _ ] =>
+          exists nleft;
+          eauto using checkloops;
+          fail
+  end;
+  try (exists 1; eauto using checkloops; fail).
+Qed.
+
 (** CheckLoops function **)
 
 Fixpoint checkloops_comp g p nleft gas {struct gas} :=

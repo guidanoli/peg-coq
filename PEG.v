@@ -2218,6 +2218,22 @@ Proof.
   eauto using string_not_infinite.
 Qed.
 
+Lemma nullable_Some_false_proper_suffix :
+  forall g p nleft s s',
+  nullable g p nleft (Some false) ->
+  matches g p s (Success s') ->
+  proper_suffix s' s.
+Proof.
+  intros * Hnullable Hmatches.
+  apply matches_suffix in Hmatches as Hsuffix.
+  induction Hsuffix.
+  - (* SuffixRefl *)
+    exfalso.
+    eauto using (nullable_Some_false_matches _ _ _ Hnullable).
+  - (* SuffixChar *)
+    eauto using suffix_is_proper_suffix_with_char.
+Qed.
+
 (** Nullable function with gas **)
 
 Fixpoint nullable_comp g p nleft gas {struct gas} :=

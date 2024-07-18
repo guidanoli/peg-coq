@@ -2180,6 +2180,44 @@ Proof.
   ).
 Qed.
 
+Lemma string_not_infinite :
+  forall a s,
+  String a s = s ->
+  False.
+Proof.
+  intros.
+  induction s; congruence.
+Qed.
+
+Lemma nullable_Some_false_matches :
+  forall g p nleft,
+  nullable g p nleft (Some false) ->
+  ~ exists s, matches g p s (Success s).
+Proof.
+  intros * Hnullable [s Hmatches].
+  generalize dependent s.
+  remember (Some false) as res.
+  induction Hnullable;
+  intros;
+  inversion Hmatches;
+  subst;
+  try eq_nth_error;
+  try discriminate;
+  try specialize_eq_hyp;
+  try match goal with
+    [ H12: matches _ _ ?s1 (Success ?s2),
+      H21: matches _ _ ?s2 (Success ?s1) |- _ ] =>
+          assert (suffix s1 s2)
+          by eauto using matches_suffix;
+          assert (suffix s2 s1)
+          by eauto using matches_suffix;
+          assert (s1 = s2)
+          by eauto using suffix_antisymmetric;
+          subst
+  end;
+  eauto using string_not_infinite.
+Qed.
+
 (** Nullable function with gas **)
 
 Fixpoint nullable_comp g p nleft gas {struct gas} :=

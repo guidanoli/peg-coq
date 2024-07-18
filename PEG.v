@@ -2768,3 +2768,97 @@ Proof.
   (* 0 recursive calls *)
   try (exists 1; simpl; eauto; fail).
 Qed.
+
+Ltac specialize_checkloops :=
+  match goal with
+    [ Hx: checkloops ?g ?p _ ?b, IHx: forall nleft, checkloops ?g ?p nleft ?b -> _ |- _ ] =>
+        specialize (IHx _ Hx)
+  end.
+
+Theorem safe_match :
+  forall g p nleft s,
+  (forall r, In r g -> coherent g r true) ->
+  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  (forall r, In r g -> exists nleft, checkloops g r nleft (Some false)) ->
+  coherent g p true ->
+  checkloops g p nleft (Some false) ->
+  exists res, matches g p s res.
+Proof.
+  intros * Hgc Hgv Hgl Hpc Hpl.
+  generalize dependent s.
+  generalize dependent nleft.
+  induction p; intros;
+  inversion Hpc; subst;
+  inversion Hpl; subst;
+  repeat specialize_coherent;
+  repeat specialize_checkloops;
+  try match goal with
+    [ |- exists _, matches _ (PChar ?a) ?s _ ] =>
+        destruct s as [|a' s'];
+        eauto using matches;
+        destruct (ascii_dec a a');
+        subst;
+        eauto using matches;
+        fail
+  end;
+  try match goal with
+    [ |- exists _, matches _ PAnyChar ?s _ ] =>
+        destruct s;
+        eauto using matches;
+        fail
+  end;
+  try match goal with
+    [ IHx1: forall _, exists _, matches ?g ?p1 _ _,
+      IHx2: forall _, exists _, matches ?g ?p2 _ _
+      |- exists _, matches ?g (PSequence ?p1 ?p2) ?s _ ] =>
+          specialize (IHx1 s) as [res1 ?];
+          destruct res1 as [|s'];
+          eauto using matches;
+          specialize (IHx2 s') as [res2 ?];
+          eauto using matches;
+          fail
+  end;
+  try match goal with
+    [ IHx1: forall _, exists _, matches ?g ?p1 _ _,
+      IHx2: forall _, exists _, matches ?g ?p2 _ _
+      |- exists _, matches ?g (PChoice ?p1 ?p2) ?s _ ] =>
+          specialize (IHx1 s) as [res1 ?];
+          specialize (IHx2 s) as [res2 ?];
+          destruct res1 as [|s'];
+          eauto using matches;
+          fail
+  end;
+  try match goal with
+    [ IHx: forall _, exists _, matches ?g ?p _ _
+      |- exists _, matches ?g (PRepetition ?p) ?s _ ] =>
+          remember (String.length s) as n;
+          generalize dependent s;
+          induction n using strong_induction;
+          intros;
+          subst;
+          specialize (IHx s) as [res ?];
+          destruct res as [|s'];
+          eauto using matches;
+          assert (exists res, matches g (PRepetition p) s' res) as [? ?]
+          by eauto using nullable_Some_false_proper_suffix, proper_suffix_length_lt;
+          eauto using matches;
+          fail
+  end;
+  try match goal with
+    [ IHx: forall _, exists _, matches ?g ?p _ _
+      |- exists _, matches ?g (_ ?p) ?s _ ] =>
+          specialize (IHx s) as [res ?];
+          destruct res;
+          eauto using matches;
+          fail
+  end;
+  eauto using matches.
+  - match goal with
+      [ Hnth: nth_error ?g ?n = Some ?p |- _ ] =>
+          assert (In p g)
+          by eauto using nth_error_In;
+          assert (exists nleft b v, verifyrule g p nleft false (Some b) v)
+          as [nleft' [b [v ?]]]
+          by eauto
+    end.
+Abort.

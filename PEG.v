@@ -485,6 +485,14 @@ Proof.
   end.
 Qed.
 
+Ltac pose_coherent_determinism :=
+  match goal with
+    [ Hx1: coherent ?g ?r ?b1,
+      Hx2: coherent ?g ?r ?b2 |- _ ] =>
+          assert (b1 = b2)
+          by eauto using coherent_determinism
+  end.
+
 (** Coherent function **)
 
 Fixpoint coherent_comp (g : grammar) p gas {struct gas} :=
@@ -2774,6 +2782,151 @@ Ltac specialize_checkloops :=
     [ Hx: checkloops ?g ?p _ ?b, IHx: forall nleft, checkloops ?g ?p nleft ?b -> _ |- _ ] =>
         specialize (IHx _ Hx)
   end.
+
+(** Coherent list **)
+
+Inductive lcoherent : grammar -> list pat -> bool -> Prop :=
+  | LCNil :
+      forall g,
+      lcoherent g nil true
+  | LCConsFalse :
+      forall g r rs,
+      coherent g r false ->
+      lcoherent g (cons r rs) false
+  | LCConsTrue :
+      forall g r rs b,
+      coherent g r true ->
+      lcoherent g rs b ->
+      lcoherent g (cons r rs) b.
+
+Lemma lcoherent_determinism :
+  forall g rs b1 b2,
+  lcoherent g rs b1 ->
+  lcoherent g rs b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1; intros;
+  inversion H2; subst;
+  try (pose_coherent_determinism; discriminate);
+  eauto using coherent_determinism.
+Qed.
+
+Lemma lcoherent_true_In :
+  forall g rs r,
+  lcoherent g rs true ->
+  In r rs ->
+  coherent g r true.
+Proof.
+  intros * Hc HIn.
+  generalize dependent r.
+  generalize dependent g.
+  induction rs; intros.
+  - (* nil *)
+    exfalso.
+    auto using in_nil.
+  - (* cons r rs *)
+    inversion Hc; subst.
+    simpl in HIn.
+    destruct HIn;
+    subst;
+    eauto.
+Qed.
+
+Fixpoint lcoherent_comp g rs gas :=
+  match rs with
+  | nil => Some true
+  | cons r rs' => match coherent_comp g r gas with
+                  | Some true => lcoherent_comp g rs' gas
+                  | res => res
+                  end
+  end.
+
+Lemma lcoherent_comp_soundness :
+  forall g rs gas b,
+  lcoherent_comp g rs gas = Some b ->
+  lcoherent g rs b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent gas.
+  generalize dependent g.
+  induction rs as [|r rs];
+  intros.
+  - (* nil *)
+    simpl in H.
+    destruct1.
+    eauto using lcoherent.
+  - (* cons r rs *)
+    simpl in H.
+    destruct (coherent_comp g r gas) as [[|]|] eqn:?;
+    try discriminate;
+    try destruct1;
+    eauto using lcoherent, coherent_comp_soundness.
+Qed.
+
+Lemma lcoherent_comp_S_gas :
+  forall g rs gas b,
+  lcoherent_comp g rs gas = Some b ->
+  lcoherent_comp g rs (S gas) = Some b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent gas.
+  generalize dependent g.
+  induction rs as [|r rs]; intros.
+  - (* nil *)
+    eauto.
+  - (* cons r rs *)
+    unfold lcoherent_comp in H.
+    destruct (coherent_comp g r gas) as [[|]|] eqn:Haux;
+    fold lcoherent_comp in H;
+    try discriminate;
+    unfold lcoherent_comp;
+    apply coherent_comp_S_gas in Haux;
+    rewrite Haux;
+    eauto.
+Qed.
+
+Lemma lcoherent_comp_le_gas :
+  forall g rs gas1 gas2 b,
+  lcoherent_comp g rs gas1 = Some b ->
+  gas1 <= gas2 ->
+  lcoherent_comp g rs gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using lcoherent_comp_S_gas.
+Qed.
+
+Lemma lcoherent_comp_termination :
+  forall g rs,
+  exists gas b,
+  lcoherent_comp g rs gas = Some b.
+Proof.
+  intros.
+  induction rs as [|r rs [gasrs [brs ?]]].
+  - (* nil *)
+    exists 0.
+    simpl.
+    eauto.
+  - (* cons r rs *)
+    simpl.
+    assert (exists gas b, coherent_comp g r gas = Some b)
+    as [gasr [br Hr]]
+    by eauto using coherent_comp_termination.
+    assert (gasr <= gasr + gasrs) by lia.
+    assert (gasrs <= gasr + gasrs) by lia.
+    assert (lcoherent_comp g rs (gasr + gasrs) = Some brs)
+    as Hcg by eauto using lcoherent_comp_le_gas.
+    assert (coherent_comp g r (gasr + gasrs) = Some br)
+    as Hc by eauto using coherent_comp_le_gas.
+    exists (gasr + gasrs).
+    rewrite Hc.
+    destruct br;
+    eauto.
+Qed.
 
 Theorem safe_match :
   forall g p nleft s,

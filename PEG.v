@@ -2242,6 +2242,64 @@ Proof.
     eauto using suffix_is_proper_suffix_with_char.
 Qed.
 
+Lemma nullable_convergence :
+  forall g p nleft nleft' res,
+  (forall r, In r g -> coherent g r true) ->
+  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  coherent g p true ->
+  length g < nleft ->
+  nullable g p nleft res ->
+  nleft <= nleft' ->
+  nullable g p nleft' res.
+Proof.
+  intros * Hgc Hgv Hpc Hlt H Hle.
+  Check verifyrule_comp_termination.
+  assert (exists gas res v, verifyrule_comp g p nleft false gas = Some (res, v))
+  as [? [? [? ?]]]
+  by eauto using verifyrule_comp_termination.
+  match goal with
+    [ Hx: verifyrule_comp ?g ?p ?nleft false ?gas = Some (?res, ?v) |- _ ] =>
+        assert (verifyrule g p nleft false res v)
+        by eauto using verifyrule_comp_soundness
+  end.
+  assert (exists nleft b v, verifyrule g p nleft false (Some b) v)
+  as [? [? [? ?]]]
+  by eauto using verifyrule_safe_grammar_yields_safe_pattern.
+  match goal with
+    [ Hx: verifyrule ?g ?p ?nleft1 false (Some ?b) ?v1,
+      Hy: verifyrule ?g ?p ?nleft2 false ?res ?v2,
+      Hz: length ?g < ?nleft2 |- _ ] =>
+          destruct (Compare_dec.le_ge_dec nleft1 nleft2);
+          try match goal with
+            [ Hw: ?nleft1 <= ?nleft2,
+              Hv: length ?g < ?nleft2 |- _ ] =>
+                  assert (verifyrule g p nleft2 false (Some b) v1)
+                  by eauto using verifyrule_nleft_le_some_determinism
+          end;
+          try match goal with
+            [ Hw: ?nleft1 >= ?nleft2 |- _ ] =>
+                assert (nleft2 <= nleft1) by lia;
+                assert (exists v', verifyrule g p nleft1 false res v')
+                as [? ?]
+                by eauto using verifyrule_convergence;
+                pose_verifyrule_determinism;
+                subst
+          end
+  end;
+  match goal with
+    [ Hx: nullable ?g ?p ?nleft ?res,
+      Hy: verifyrule ?g ?p ?nleft false (Some ?b) ?v |- _ ] =>
+          assert (nullable g p nleft (Some b))
+          by eauto using verifyrule_similar_to_nullable;
+          pose_nullable_determinism;
+          subst;
+          assert (exists v', verifyrule g p nleft' false (Some b) v')
+          as [? ?]
+          by eauto using verifyrule_convergence;
+          eauto using verifyrule_similar_to_nullable
+  end.
+Qed.
+
 (** Nullable function with gas **)
 
 Fixpoint nullable_comp g p nleft gas {struct gas} :=

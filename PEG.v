@@ -2869,7 +2869,7 @@ Ltac specialize_checkloops :=
         specialize (IHx _ Hx)
   end.
 
-(** Coherent list **)
+(** Coherent for lists of patterns **)
 
 Inductive lcoherent : grammar -> list pat -> bool -> Prop :=
   | LCNil :
@@ -3014,7 +3014,7 @@ Proof.
     eauto.
 Qed.
 
-(** Verify Rule List **)
+(** VerifyRule for lists of patterns **)
 
 Inductive lverifyrule : grammar -> list pat -> bool -> Prop :=
   | LVNil :

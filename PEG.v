@@ -2928,10 +2928,210 @@ Proof.
     eauto.
 Qed.
 
+(** Verify Rule List **)
+
+Inductive lverifyrule : grammar -> list pat -> bool -> Prop :=
+  | LVNil :
+      forall g,
+      lverifyrule g nil true
+  | LVConsSome :
+      forall g r rs nleft nb v b,
+      verifyrule g r nleft false (Some nb) v ->
+      lverifyrule g rs b ->
+      lverifyrule g (cons r rs) b
+  | LVConsNone :
+      forall g r rs nleft v,
+      length g < nleft ->
+      verifyrule g r nleft false None v ->
+      lverifyrule g (cons r rs) false
+  .
+
+Lemma lverifyrule_deterministic :
+  forall g rs b1 b2,
+  lverifyrule g rs b1 ->
+  lverifyrule g rs b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1; intros;
+  inversion H2; subst;
+  try match goal with
+    [ HSome : verifyrule ?g ?r ?nleftSome false (Some ?nb') ?vSome,
+      HNone : verifyrule ?g ?r ?nleftNone false None ?vNone,
+      Hlt : length ?g < ?nleftNone |- _ ] =>
+          destruct (Compare_dec.le_ge_dec nleftSome nleftNone);
+          match goal with
+          | [ Hle : ?nleftSome <= ?nleftNone |- _ ] =>
+                assert (verifyrule g r nleftNone false (Some nb') vSome)
+                by eauto using verifyrule_nleft_le_some_determinism
+          | [ Hle : ?nleftSome >= ?nleftNone |- _ ] =>
+                assert (nleftNone <= nleftSome) by lia;
+                assert (exists v, verifyrule g r nleftSome false None v)
+                as [? ?] by eauto using verifyrule_convergence
+          end;
+          pose_verifyrule_determinism;
+          discriminate;
+          fail
+  end;
+  eauto.
+Qed.
+
+Lemma lverifyrule_true_In :
+  forall g rs r,
+  lverifyrule g rs true ->
+  In r rs ->
+  exists nleft b v,
+  verifyrule g r nleft false (Some b) v.
+Proof.
+  intros * Hlv HIn.
+  generalize dependent r.
+  generalize dependent g.
+  induction rs; intros.
+  - (* nil *)
+    exfalso.
+    eauto using in_nil.
+  - (* cons r rs *)
+    inversion Hlv; subst.
+    simpl in HIn.
+    destruct HIn.
+    + (* r = r' *)
+      subst.
+      eauto.
+    + (* In r rs *)
+      eauto.
+Qed.
+
+Fixpoint lverifyrule_comp g rs gas :=
+  match rs with
+  | nil => Some true
+  | cons r rs' => match verifyrule_comp g r (S (length g)) false gas with
+                  | Some (Some _, _) => lverifyrule_comp g rs' gas
+                  | Some (None, _) => Some false
+                  | None => None
+                  end
+  end.
+
+Lemma lverifyrule_comp_soundness :
+  forall g rs gas b,
+  lverifyrule_comp g rs gas = Some b ->
+  lverifyrule g rs b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent gas.
+  generalize dependent g.
+  induction rs;
+  intros.
+  - (* nil *)
+    simpl in H.
+    destruct1.
+    eauto using lverifyrule.
+  - (* cons r rs *)
+    simpl in H.
+    match goal with
+      [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+          destruct x as [[[|] ?]|] eqn:?;
+          try destruct1;
+          try discriminate;
+          try match goal with
+            [ Hx: verifyrule_comp ?g ?r ?nleft false ?gas = Some (?res, ?v) |- _ ] =>
+                assert (verifyrule g r nleft false res v)
+                by eauto using verifyrule_comp_soundness
+          end;
+          eauto using lverifyrule
+    end.
+Qed.
+
+Lemma lverifyrule_comp_S_gas :
+  forall g rs gas b,
+  lverifyrule_comp g rs gas = Some b ->
+  lverifyrule_comp g rs (S gas) = Some b.
+Proof.
+  intros * H.
+  induction rs;
+  simpl in H.
+  - (* nil *)
+    destruct1.
+    auto.
+  - (* cons r rs *)
+    match goal with
+      [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+          destruct x as [[[|] ?]|] eqn:?;
+          try discriminate;
+          try destruct1;
+          match goal with
+            [ Hx: verifyrule_comp ?g ?r ?nleft ?nb ?gas = Some ?res |- _ ] =>
+                assert (verifyrule_comp g r nleft nb (S gas) = Some res)
+                as Haux by eauto using verifyrule_comp_S_gas;
+                unfold lverifyrule_comp;
+                rewrite_match_subject_in_goal;
+                fold lverifyrule_comp;
+                eauto
+          end
+    end.
+Qed.
+
+Lemma lverifyrule_comp_le_gas :
+  forall g rs gas1 gas2 b,
+  lverifyrule_comp g rs gas1 = Some b ->
+  gas1 <= gas2 ->
+  lverifyrule_comp g rs gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using lverifyrule_comp_S_gas.
+Qed.
+
+Lemma lverifyrule_comp_termination :
+  forall g rs,
+  lcoherent g g true ->
+  lcoherent g rs true ->
+  exists gas b,
+  lverifyrule_comp g rs gas = Some b.
+Proof.
+  intros * Hg Hrs.
+  induction rs as [|r rs].
+  - (* nil *)
+    exists 0.
+    simpl.
+    eauto.
+  - (* cons r rs *)
+    inversion Hrs; subst.
+    match goal with
+      [ Hx: lcoherent ?g ?rs true -> _, Hy: lcoherent ?g ?rs true |- _ ] =>
+          specialize (Hx Hy) as [gas1 [? ?]]
+    end.
+    assert (exists gas res v, verifyrule_comp g r (S (length g)) false gas = Some (res, v))
+    as [gas2 [res [v Hv]]]
+    by eauto using verifyrule_comp_termination, lcoherent_true_In.
+    simpl.
+    assert (gas1 <= gas1 + gas2) by lia.
+    assert (gas2 <= gas1 + gas2) by lia.
+    assert (lverifyrule_comp g rs (gas1 + gas2) = Some x)
+    as Hlv' by eauto using lverifyrule_comp_le_gas.
+    assert (verifyrule_comp g r (S (length g)) false (gas1 + gas2) = Some (res, v))
+    as Hv' by eauto using verifyrule_comp_le_gas.
+    exists (gas1 + gas2).
+    rewrite Hv'.
+    destruct res;
+    eauto.
+Qed.
+
+Lemma lverifyrule_comp_termination_grammar :
+  forall g,
+  lcoherent g g true ->
+  exists gas b,
+  lverifyrule_comp g g gas = Some b.
+Proof.
+  intros.
+  eauto using lverifyrule_comp_termination.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  (forall r, In r g -> exists nleft b v, verifyrule g r nleft false (Some b) v) ->
   (forall r, In r g -> exists nleft, checkloops g r nleft (Some false)) ->
   coherent g p true ->
   checkloops g p nleft (Some false) ->

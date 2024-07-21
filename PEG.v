@@ -2635,6 +2635,34 @@ Proof.
   eauto using checkloops_Some_S_nleft.
 Qed.
 
+Lemma checkloops_Some_determinism :
+  forall g p nleft1 nleft2 b1 b2,
+  checkloops g p nleft1 (Some b1) ->
+  checkloops g p nleft2 (Some b2) ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  destruct (Compare_dec.le_ge_dec nleft1 nleft2);
+  try match goal with
+    [ Hge: ?x >= ?y |- _ ] =>
+        assert (y <= x) by lia
+  end;
+  match goal with
+    [ Hx: checkloops ?g ?p ?nleftx (Some ?bx),
+      Hle: ?nleftx <= ?nlefty |- _ ] =>
+          assert (checkloops g p nlefty (Some bx))
+          by eauto using checkloops_Some_nleft_le
+  end;
+  match goal with
+    [ Hx1: checkloops ?g ?p ?nleft (Some ?b1),
+      Hx2: checkloops ?g ?p ?nleft (Some ?b2) |- _ ] =>
+          assert (Some b1 = Some b2)
+          by eauto using checkloops_determinism
+  end;
+  destruct1;
+  auto.
+Qed.
+
 Lemma checkloops_safe_grammar :
   forall g p,
   (forall r, In r g -> coherent g r true) ->

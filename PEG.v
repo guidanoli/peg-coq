@@ -3214,6 +3214,43 @@ Proof.
   eauto using lverifyrule_comp_termination.
 Qed.
 
+(** CheckLoops for lists of patterns **)
+
+Inductive lcheckloops : grammar -> list pat -> bool -> Prop :=
+  | LCLNil :
+      forall g,
+      lcheckloops g nil false
+  | LCLConsSomeTrue :
+      forall g r nleft rs,
+      checkloops g r nleft (Some true) ->
+      lcheckloops g (cons r rs) true
+  | LCLConsSomeFalse :
+      forall g r nleft rs b,
+      checkloops g r nleft (Some false) ->
+      lcheckloops g rs b ->
+      lcheckloops g (cons r rs) b
+  .
+
+Lemma lcheckloops_determinism :
+  forall g rs b1 b2,
+  lcheckloops g rs b1 ->
+  lcheckloops g rs b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1; intros;
+  inversion H2; subst;
+  try match goal with
+    [ Hx1: checkloops ?g ?r ?nleft1 (Some ?b1),
+      Hx2: checkloops ?g ?r ?nleft2 (Some ?b2) |- _ ] =>
+          assert (b1 = b2)
+          by eauto using checkloops_Some_determinism
+  end;
+  try discriminate;
+  auto.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

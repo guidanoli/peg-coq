@@ -3366,6 +3366,17 @@ Proof.
     end.
 Qed.
 
+Lemma lcheckloops_comp_le_gas :
+  forall g rs gas1 gas2 b,
+  lcheckloops_comp g rs gas1 = Some b ->
+  gas1 <= gas2 ->
+  lcheckloops_comp g rs gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using lcheckloops_comp_S_gas.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

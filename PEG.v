@@ -3226,7 +3226,7 @@ Proof.
     inversion Hrs; subst.
     match goal with
       [ Hx: lcoherent ?g ?rs true -> _, Hy: lcoherent ?g ?rs true |- _ ] =>
-          specialize (Hx Hy) as [gas1 [? ?]]
+          specialize (Hx Hy) as [gas1 [resrs ?]]
     end.
     assert (exists gas res v, verifyrule_comp g r (S (length g)) false gas = Some (res, v))
     as [gas2 [res [v Hv]]]
@@ -3234,7 +3234,7 @@ Proof.
     simpl.
     assert (gas1 <= gas1 + gas2) by lia.
     assert (gas2 <= gas1 + gas2) by lia.
-    assert (lverifyrule_comp g rs (gas1 + gas2) = Some x)
+    assert (lverifyrule_comp g rs (gas1 + gas2) = Some resrs)
     as Hlv' by eauto using lverifyrule_comp_le_gas.
     assert (verifyrule_comp g r (S (length g)) false (gas1 + gas2) = Some (res, v))
     as Hv' by eauto using verifyrule_comp_le_gas.

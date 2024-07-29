@@ -2620,6 +2620,15 @@ Proof.
   auto.
 Qed.
 
+Ltac pose_checkloops_determinism :=
+  match goal with
+    [ Hx1: checkloops ?g ?p ?nleft ?res1,
+      Hx2: checkloops ?g ?p ?nleft ?res2 |- _ ] =>
+          assert (res1 = res2)
+          by eauto using checkloops_determinism;
+          clear Hx2
+  end.
+
 Theorem checkloops_Some_S_nleft :
   forall g p nleft b,
   checkloops g p nleft (Some b) ->
@@ -2726,6 +2735,50 @@ Proof.
           fail
   end;
   try (exists 1; eauto using checkloops; fail).
+Qed.
+
+Lemma checkloops_convergence :
+  forall g p nleft nleft' res,
+  (forall r, In r g -> coherent g r true) ->
+  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  coherent g p true ->
+  length g < nleft ->
+  checkloops g p nleft res ->
+  nleft <= nleft' ->
+  checkloops g p nleft' res.
+Proof.
+  intros * Hgc Hgv Hpc Hlt Hcl Hle.
+  generalize dependent nleft'.
+  induction Hcl;
+  intros;
+  inversion Hpc; subst;
+  eauto using checkloops, nullable_convergence.
+Qed.
+
+Lemma checkloops_Some_convergence :
+  forall g p nleft nleft' b res,
+  (forall r, In r g -> coherent g r true) ->
+  (forall r nb, In r g -> exists nleft b v, verifyrule g r nleft nb (Some b) v) ->
+  coherent g p true ->
+  checkloops g p nleft (Some b) ->
+  length g < nleft' ->
+  checkloops g p nleft' res ->
+  res = Some b.
+Proof.
+  intros * Hgc Hgv Hpc Hc Hlt Hc'.
+  destruct (Compare_dec.le_ge_dec nleft nleft');
+  match goal with
+  | [ _: ?nleft <= ?nleft' |- _ ] =>
+      assert (checkloops g p nleft' (Some b))
+      by eauto using checkloops_Some_nleft_le
+  | [ _: ?nleft >= ?nleft' |- _ ] =>
+      assert (nleft' <= nleft) by lia;
+      assert (checkloops g p nleft res)
+      by eauto using checkloops_convergence
+  end;
+  pose_checkloops_determinism;
+  subst;
+  eauto.
 Qed.
 
 (** CheckLoops function **)
@@ -3403,6 +3456,51 @@ Proof.
   intros * H Hle.
   induction Hle;
   eauto using lcheckloops_comp_S_gas.
+Qed.
+
+Lemma lcheckloops_comp_termination :
+  forall g rs,
+  lcoherent g g true ->
+  lcoherent g rs true ->
+  lverifyrule g g true ->
+  exists gas b,
+  lcheckloops_comp g rs gas = Some b.
+Proof.
+  intros * Hgc Hrsc Hgv.
+  induction rs as [|r rs];
+  intros.
+  - (* nil *)
+    exists 0.
+    simpl.
+    eauto.
+  - (* cons r rs *)
+    inversion Hrsc; subst.
+    match goal with
+      [ Hx: lcoherent ?g ?rs true -> _, Hy: lcoherent ?g ?rs true |- _ ] =>
+          specialize (Hx Hy) as [gas1 [resrs ?]]
+    end.
+    assert (exists nleft b, checkloops g r nleft (Some b))
+    as [nleft [b ?]]
+    by eauto using checkloops_safe_grammar, lcoherent_true_In, lverifyrule_true_In.
+    assert (exists gas res, checkloops_comp g r (S (length g)) gas = Some res)
+    as [gas2 [res Hcl]]
+    by eauto using checkloops_comp_termination, lcoherent_true_In.
+    assert (checkloops g r (S (length g)) res)
+    by eauto using checkloops_comp_soundness.
+    assert (res = Some b)
+    by eauto using checkloops_Some_convergence, lcoherent_true_In, lverifyrule_true_In.
+    subst res.
+    simpl.
+    assert (gas1 <= gas1 + gas2) by lia.
+    assert (gas2 <= gas1 + gas2) by lia.
+    assert (lcheckloops_comp g rs (gas1 + gas2) = Some resrs)
+    as Hlcl' by eauto using lcheckloops_comp_le_gas.
+    assert (checkloops_comp g r (S (length g)) (gas1 + gas2) = Some (Some b))
+    as Hcl' by eauto using checkloops_comp_le_gas.
+    exists (gas1 + gas2).
+    rewrite Hcl'.
+    destruct b;
+    eauto.
 Qed.
 
 Theorem safe_match :

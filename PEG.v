@@ -3108,7 +3108,7 @@ Inductive lverifyrule : grammar -> list pat -> bool -> Prop :=
       lverifyrule g (cons r rs) false
   .
 
-Lemma lverifyrule_deterministic :
+Lemma lverifyrule_determinism :
   forall g rs b1 b2,
   lverifyrule g rs b1 ->
   lverifyrule g rs b2 ->

@@ -3270,6 +3270,29 @@ Proof.
   auto.
 Qed.
 
+Lemma lcheckloops_false_In :
+  forall g rs r,
+  lcheckloops g rs false ->
+  In r rs ->
+  exists nleft,
+  checkloops g r nleft (Some false).
+Proof.
+  intros * Hcl HIn.
+  generalize dependent r.
+  generalize dependent g.
+  induction rs as [|r rs IHrs];
+  intros.
+  - (* nil *)
+    exfalso.
+    eauto using in_nil.
+  - (* cons r rs *)
+    inversion Hcl; subst.
+    simpl in HIn.
+    destruct HIn;
+    subst;
+    eauto.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

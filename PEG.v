@@ -3293,6 +3293,46 @@ Proof.
     eauto.
 Qed.
 
+Fixpoint lcheckloops_comp g rs gas :=
+  match rs with
+  | nil => Some false
+  | cons r rs' => match checkloops_comp g r (S (length g)) gas with
+                  | Some (Some false) => lcheckloops_comp g rs' gas
+                  | Some (Some true) => Some true
+                  | _ => None
+                  end
+  end.
+
+Lemma lcheckloops_comp_soundness :
+  forall g rs gas b,
+  lcheckloops_comp g rs gas = Some b ->
+  lcheckloops g rs b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent gas.
+  generalize dependent g.
+  induction rs as [|r rs IHrs]; intros.
+  - (* nil *)
+    simpl in H.
+    destruct1.
+    eauto using lcheckloops.
+  - (* cons r rs *)
+    simpl in H.
+    match goal with
+      [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+          destruct x as [[[|]|]|] eqn:?;
+          try destruct1;
+          try discriminate;
+          try match goal with
+            [ Hx: checkloops_comp ?g ?r ?nleft ?gas = Some ?res |- _ ] =>
+                assert (checkloops g r nleft res)
+                by eauto using checkloops_comp_soundness
+          end;
+          eauto using lcheckloops
+    end.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

@@ -3312,13 +3312,13 @@ Proof.
   generalize dependent b.
   generalize dependent gas.
   generalize dependent g.
-  induction rs; intros.
+  induction rs;
+  intros;
+  simpl in H.
   - (* nil *)
-    simpl in H.
     destruct1.
     eauto using lcheckloops.
   - (* cons r rs *)
-    simpl in H.
     match goal with
       [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
           destruct x as [[[|]|]|] eqn:?;

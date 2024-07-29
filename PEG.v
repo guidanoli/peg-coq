@@ -3503,6 +3503,204 @@ Proof.
     eauto.
 Qed.
 
+(** Verify Grammar **)
+
+Inductive verifygrammar : grammar -> bool -> Prop :=
+  | VGIncoherent :
+      forall g,
+      lcoherent g g false ->
+      verifygrammar g false
+  | VGLeftRecursive :
+      forall g,
+      lcoherent g g true ->
+      lverifyrule g g false ->
+      verifygrammar g false
+  | VGEmptyLoops :
+      forall g,
+      lcoherent g g true ->
+      lverifyrule g g true ->
+      lcheckloops g g true ->
+      verifygrammar g false
+  | VGSafe :
+      forall g,
+      lcoherent g g true ->
+      lverifyrule g g true ->
+      lcheckloops g g false ->
+      verifygrammar g true
+  .
+
+Lemma verifygrammar_determinism :
+  forall g b1 b2,
+  verifygrammar g b1 ->
+  verifygrammar g b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1;
+  intros;
+  inversion H2; subst;
+  eauto using verifygrammar,
+              lcoherent_determinism,
+              lverifyrule_determinism,
+              lcheckloops_determinism.
+Qed.
+
+Lemma verifygrammar_true :
+  forall g,
+  verifygrammar g true ->
+  lcoherent g g true /\ lverifyrule g g true /\ lcheckloops g g false.
+Proof.
+  intros * H.
+  inversion H;
+  eauto.
+Qed.
+
+Definition verifygrammar_comp g gas :=
+  match lcoherent_comp g g gas with
+  | Some true => match lverifyrule_comp g g gas with
+                 | Some true => match lcheckloops_comp g g gas with
+                                | Some false => Some true
+                                | Some true => Some false
+                                | None => None
+                                end
+                 | res => res
+                 end
+  | res => res
+  end.
+
+Lemma verifygrammar_comp_soundness :
+  forall g gas b,
+  verifygrammar_comp g gas = Some b ->
+  verifygrammar g b.
+Proof.
+  intros * H.
+  unfold verifygrammar_comp in H.
+  repeat (destruct_match_subject_in_hyp; try discriminate);
+  try destruct1;
+  eauto using verifygrammar,
+              lcoherent_comp_soundness,
+              lverifyrule_comp_soundness,
+              lcheckloops_comp_soundness.
+Qed.
+
+Lemma verifygrammar_comp_S_gas :
+  forall g gas b,
+  verifygrammar_comp g gas = Some b ->
+  verifygrammar_comp g (S gas) = Some b.
+Proof.
+  intros * H.
+  unfold verifygrammar_comp in *.
+  repeat (destruct_match_subject_in_hyp; try discriminate);
+  try destruct1;
+  try match goal with
+    [ Hx: lcoherent_comp ?g ?g ?gas = Some ?b |- _ ] =>
+        let H := fresh in (
+          assert (lcoherent_comp g g (S gas) = Some b)
+          as H
+          by eauto using lcoherent_comp_S_gas;
+          rewrite H;
+          auto
+        )
+  end;
+  try match goal with
+    [ Hx: lverifyrule_comp ?g ?g ?gas = Some ?b |- _ ] =>
+        let H := fresh in (
+          assert (lverifyrule_comp g g (S gas) = Some b)
+          as H
+          by eauto using lverifyrule_comp_S_gas;
+          rewrite H;
+          auto
+        )
+  end;
+  try match goal with
+    [ Hx: lcheckloops_comp ?g ?g ?gas = Some ?b |- _ ] =>
+        let H := fresh in (
+          assert (lcheckloops_comp g g (S gas) = Some b)
+          as H
+          by eauto using lcheckloops_comp_S_gas;
+          rewrite H;
+          auto
+        )
+  end.
+Qed.
+
+Lemma verifygrammar_comp_le_gas :
+  forall g gas1 gas2 b,
+  verifygrammar_comp g gas1 = Some b ->
+  gas1 <= gas2 ->
+  verifygrammar_comp g gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using verifygrammar_comp_S_gas.
+Qed.
+
+Lemma verifygrammar_comp_termination :
+  forall g,
+  exists gas b,
+  verifygrammar_comp g gas = Some b.
+Proof.
+  intros.
+  unfold verifygrammar_comp.
+  assert (exists gas b, lcoherent_comp g g gas = Some b)
+  as [gasc [bc Hc]]
+  by eauto using lcoherent_comp_termination.
+  assert (lcoherent g g bc)
+  by eauto using lcoherent_comp_soundness.
+  destruct bc.
+  + (* true *)
+    assert (exists gas b, lverifyrule_comp g g gas = Some b)
+    as [gasv [bv Hv]]
+    by eauto using lverifyrule_comp_termination.
+    assert (lverifyrule g g bv)
+    by eauto using lverifyrule_comp_soundness.
+    destruct bv.
+    - (* true *)
+      assert (exists gas b, lcheckloops_comp g g gas = Some b)
+      as [gasl [bl Hl]]
+      by eauto using lcheckloops_comp_termination.
+      assert (lcheckloops g g bl)
+      by eauto using lcheckloops_comp_soundness.
+      pose (gasc + gasv + gasl) as gas.
+      assert (gasc <= gas) by lia.
+      assert (gasv <= gas) by lia.
+      assert (gasl <= gas) by lia.
+      exists gas.
+      assert (lcoherent_comp g g gas = Some true)
+      as Hc'
+      by eauto using lcoherent_comp_le_gas.
+      rewrite Hc'.
+      assert (lverifyrule_comp g g gas = Some true)
+      as Hv'
+      by eauto using lverifyrule_comp_le_gas.
+      rewrite Hv'.
+      assert (lcheckloops_comp g g gas = Some bl)
+      as Hl'
+      by eauto using lcheckloops_comp_le_gas.
+      rewrite Hl'.
+      destruct bl;
+      eauto.
+    - (* false *)
+      pose (gasc + gasv) as gas.
+      assert (gasc <= gas) by lia.
+      assert (gasv <= gas) by lia.
+      exists gas.
+      assert (lcoherent_comp g g gas = Some true)
+      as Hc'
+      by eauto using lcoherent_comp_le_gas.
+      rewrite Hc'.
+      assert (lverifyrule_comp g g gas = Some false)
+      as Hv'
+      by eauto using lverifyrule_comp_le_gas.
+      rewrite Hv'.
+      eauto.
+  + (* false *)
+    exists gasc.
+    rewrite Hc.
+    eauto.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->
@@ -3608,4 +3806,28 @@ Proof.
     as [? ?] by eauto.
     assert (exists res, matches g p s res) as [? ?] by eauto.
     eauto using matches.
+Qed.
+
+Theorem lpredicates_safe_match :
+  forall g p nleft s,
+  lcoherent g g true ->
+  lverifyrule g g true ->
+  lcheckloops g g false ->
+  coherent g p true ->
+  checkloops g p nleft (Some false) ->
+  exists res, matches g p s res.
+Proof.
+  eauto using safe_match, lcoherent_true_In, lverifyrule_true_In, lcheckloops_false_In.
+Qed.
+
+Theorem verifygrammar_safe_match :
+  forall g p nleft s,
+  verifygrammar g true ->
+  coherent g p true ->
+  checkloops g p nleft (Some false) ->
+  exists res, matches g p s res.
+Proof.
+  intros * Hvg Hpc Hlp.
+  specialize (verifygrammar_true _ Hvg) as [? [? ?]].
+  eauto using lpredicates_safe_match.
 Qed.

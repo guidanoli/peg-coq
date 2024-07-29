@@ -3280,7 +3280,7 @@ Proof.
   intros * Hcl HIn.
   generalize dependent r.
   generalize dependent g.
-  induction rs as [|r rs IHrs];
+  induction rs;
   intros.
   - (* nil *)
     exfalso.
@@ -3312,7 +3312,7 @@ Proof.
   generalize dependent b.
   generalize dependent gas.
   generalize dependent g.
-  induction rs as [|r rs IHrs]; intros.
+  induction rs; intros.
   - (* nil *)
     simpl in H.
     destruct1.

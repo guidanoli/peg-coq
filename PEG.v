@@ -10,6 +10,39 @@ From Peg Require Import Pigeonhole.
 
 Import ListNotations.
 
+(** Tactics **)
+(*************)
+
+Ltac specialize_forall_eq :=
+  match goal with
+    [ Hx: forall y, ?C ?x = ?C y -> _ |- _ ] =>
+        specialize (Hx x)
+  end.
+
+Ltac specialize_eq_refl :=
+  match goal with
+    [ Hx: ?x = ?x -> _ |- _ ] =>
+        specialize (Hx (eq_refl x))
+  end.
+
+Ltac specialize_eq_hyp :=
+  match goal with
+    [ Hx: ?x = ?y -> _, Hy: ?x = ?y |- _ ] =>
+        specialize (Hx Hy)
+  end.
+
+Ltac destruct_exists_hyp :=
+  match goal with
+    [ Hx: exists _, _ |- _ ] =>
+        destruct Hx
+  end.
+
+Ltac destruct_and_hyp :=
+  match goal with
+    [ Hx: _ /\ _ |- _ ] =>
+        destruct Hx
+  end.
+
 (** Syntax **)
 (************)
 
@@ -1069,36 +1102,6 @@ Proof.
   inversion H12; subst;
   eauto using coherent_return_type_after_nleft_increase.
 Qed.
-
-Ltac specialize_forall_eq :=
-  match goal with
-    [ Hx: forall y, ?C ?x = ?C y -> _ |- _ ] =>
-        specialize (Hx x)
-  end.
-
-Ltac specialize_eq_refl :=
-  match goal with
-    [ Hx: ?x = ?x -> _ |- _ ] =>
-        specialize (Hx (eq_refl x))
-  end.
-
-Ltac specialize_eq_hyp :=
-  match goal with
-    [ Hx: ?x = ?y -> _, Hy: ?x = ?y |- _ ] =>
-        specialize (Hx Hy)
-  end.
-
-Ltac destruct_exists_hyp :=
-  match goal with
-    [ Hx: exists _, _ |- _ ] =>
-        destruct Hx
-  end.
-
-Ltac destruct_and_hyp :=
-  match goal with
-    [ Hx: _ /\ _ |- _ ] =>
-        destruct Hx
-  end.
 
 Lemma verifyrule_nleft_decrease :
   forall g p nleft nb res v,

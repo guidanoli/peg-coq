@@ -3503,7 +3503,12 @@ Proof.
     eauto.
 Qed.
 
-(** Verify Grammar **)
+(** Verify Grammar
+
+    verifygrammar g true === all rules are coherent, non-LR, and void of empty loops
+    verifygrammar g false === some rules is either incoherent, LR, or has an empty loop
+
+**)
 
 Inductive verifygrammar : grammar -> bool -> Prop :=
   | VGIncoherent :

@@ -3086,7 +3086,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma lverifyrule_true_In :
+Lemma lverifyrule_true_In_false :
   forall g rs r,
   lverifyrule g rs true ->
   In r rs ->
@@ -3109,6 +3109,23 @@ Proof.
       eauto.
     + (* In r rs *)
       eauto.
+Qed.
+
+Lemma lverifyrule_true_In :
+  forall g rs r nb,
+  lverifyrule g rs true ->
+  In r rs ->
+  exists nleft b v,
+  verifyrule g r nleft nb (Some b) v.
+Proof.
+  intros * Hlv HIn.
+  assert (exists nleft b v, verifyrule g r nleft false (Some b) v)
+  as [nleft [? [v ?]]]
+  by eauto using lverifyrule_true_In_false.
+  assert (exists b', verifyrule g r nleft nb (Some b') v)
+  as [? ?]
+  by eauto using verifyrule_nb_change_some.
+  eauto.
 Qed.
 
 Fixpoint lverifyrule_comp g rs gas :=

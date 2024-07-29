@@ -1241,6 +1241,17 @@ Proof.
   auto.
 Qed.
 
+Lemma verifyrule_nb_change_some :
+  forall g p nleft nb nb' b v,
+  verifyrule g p nleft nb (Some b) v ->
+  exists b', verifyrule g p nleft nb' (Some b') v.
+Proof.
+  intros * H.
+  eapply verifyrule_nb_change with (nb' := nb') in H as [res' [Hsrt H]].
+  inversion Hsrt; subst;
+  eauto.
+Qed.
+
 Ltac pose_verifyrule_nb_none :=
   try match goal with
     [ Hx1: verifyrule ?g ?p ?nleft _ None ?v,

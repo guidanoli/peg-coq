@@ -661,6 +661,66 @@ Proof.
   ).
 Qed.
 
+(** Coherent without gas **)
+
+Fixpoint compute_coherent_comp_gas p :=
+  match p with
+  | PEmpty => 1
+  | PChar _ => 1
+  | PAnyChar => 1
+  | PSequence p1 p2 => 1 + compute_coherent_comp_gas p1 + compute_coherent_comp_gas p2
+  | PChoice p1 p2 => 1 + compute_coherent_comp_gas p1 + compute_coherent_comp_gas p2
+  | PRepetition p1 => 1 + compute_coherent_comp_gas p1
+  | PNot p1 => 1 + compute_coherent_comp_gas p1
+  | PNT _ => 1
+  end.
+
+Lemma coherent_comp_gas_bounded :
+  forall g p gas,
+  compute_coherent_comp_gas p <= gas ->
+  exists b,
+  coherent_comp g p gas = Some b.
+Proof.
+  intros * Hle.
+  generalize dependent g.
+  generalize dependent gas.
+  induction p;
+  intros;
+  simpl in Hle;
+  induction Hle;
+  try (
+    destruct_exists_hyp;
+    eauto using coherent_comp_S_gas;
+    fail
+  );
+  try (
+    simpl;
+    eauto;
+    fail
+  );
+  try match goal with
+    [ |- exists _, coherent_comp _ (_ ?p1 ?p2) _ = _ ] =>
+        simpl;
+        remember (compute_coherent_comp_gas p1) as gas1;
+        remember (compute_coherent_comp_gas p2) as gas2;
+        assert (gas1 <= gas1 + gas2) by lia;
+        assert (gas2 <= gas1 + gas2) by lia;
+        assert (exists b, coherent_comp g p1 (gas1 + gas2) = Some b)
+        as [b1 Hc1] by eauto;
+        rewrite Hc1;
+        destruct b1;
+        eauto;
+        fail
+  end;
+  try match goal with
+    [ |- exists _, coherent_comp ?g (PNT ?i) _ = _ ] =>
+        simpl;
+        destruct (nth_error g i);
+        eauto;
+        fail
+  end.
+Qed.
+
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices (stands for (N)ulla(B)le) **)

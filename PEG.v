@@ -3161,7 +3161,7 @@ Proof.
           match goal with
             [ Hx: verifyrule_comp ?g ?r ?nleft ?nb ?gas = Some ?res |- _ ] =>
                 assert (verifyrule_comp g r nleft nb (S gas) = Some res)
-                as Haux by eauto using verifyrule_comp_S_gas;
+                as ? by eauto using verifyrule_comp_S_gas;
                 unfold lverifyrule_comp;
                 rewrite_match_subject_in_goal;
                 fold lverifyrule_comp;

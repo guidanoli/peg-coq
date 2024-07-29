@@ -3333,6 +3333,39 @@ Proof.
     end.
 Qed.
 
+Lemma lcheckloops_comp_S_gas :
+  forall g rs gas b,
+  lcheckloops_comp g rs gas = Some b ->
+  lcheckloops_comp g rs (S gas) = Some b.
+Proof.
+  intros * H.
+  generalize dependent b.
+  generalize dependent gas.
+  generalize dependent g.
+  induction rs;
+  intros;
+  simpl in H.
+  - (* nil *)
+    destruct1.
+    auto.
+  - (* cons r rs *)
+    match goal with
+      [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
+          destruct x as [[[|]|]|] eqn:?;
+          try discriminate;
+          try destruct1;
+          try match goal with
+            [ Hx: checkloops_comp ?g ?r ?nleft ?gas = Some ?res |- _ ] =>
+                assert (checkloops_comp g r nleft (S gas) = Some res)
+                as ? by eauto using checkloops_comp_S_gas;
+                unfold lcheckloops_comp;
+                rewrite_match_subject_in_goal;
+                fold lcheckloops_comp;
+                eauto
+          end
+    end.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

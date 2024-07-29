@@ -2869,7 +2869,12 @@ Ltac specialize_checkloops :=
         specialize (IHx _ Hx)
   end.
 
-(** Coherent for lists of patterns **)
+(** Coherent for lists of patterns
+
+    lcoherent g rs true === all rules in rs are coherent
+    lcoherent g rs false === some rule in rs is not coherent
+
+**)
 
 Inductive lcoherent : grammar -> list pat -> bool -> Prop :=
   | LCNil :
@@ -3014,7 +3019,14 @@ Proof.
     eauto.
 Qed.
 
-(** VerifyRule for lists of patterns **)
+(** VerifyRule for lists of patterns
+
+    Assumes all rules in g and rs are coherent
+
+    lverifyrule g rs true === all rules in rs are not left-recursive
+    lverifyrule g rs false === some rule in rs is left-recursive
+
+**)
 
 Inductive lverifyrule : grammar -> list pat -> bool -> Prop :=
   | LVNil :
@@ -3214,7 +3226,14 @@ Proof.
   eauto using lverifyrule_comp_termination.
 Qed.
 
-(** CheckLoops for lists of patterns **)
+(** CheckLoops for lists of patterns
+
+    Assumes all rules in g and rs are coherent and not left-recursive
+
+    lcheckloops g rs true === some rule in rs has an empty loop
+    lcheckloops g rs false === no rule in rs has an empty loop
+
+**)
 
 Inductive lcheckloops : grammar -> list pat -> bool -> Prop :=
   | LCLNil :

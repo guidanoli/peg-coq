@@ -3706,6 +3706,219 @@ Proof.
     eauto.
 Qed.
 
+(** Verify Grammar and initial pattern
+
+    verifygrammarpat g p true === grammar is safe, and pattern is coherent and has no empty loops
+    verifygrammarpat g p false === grammar is unsafe, or pattern is incoherent or has an empty loop
+
+**)
+
+Inductive verifygrammarpat : grammar -> pat -> bool -> Prop :=
+  | VGPGrammar :
+      forall g p,
+      verifygrammar g false ->
+      verifygrammarpat g p false
+  | VGPIncoherentPat :
+      forall g p,
+      verifygrammar g true ->
+      coherent g p false ->
+      verifygrammarpat g p false
+  | VGPPatWithEmptyLoop :
+      forall g p nleft,
+      verifygrammar g true ->
+      coherent g p true ->
+      checkloops g p nleft (Some true) ->
+      verifygrammarpat g p false
+  | VGPSafe :
+      forall g p nleft,
+      verifygrammar g true ->
+      coherent g p true ->
+      checkloops g p nleft (Some false) ->
+      verifygrammarpat g p true
+  .
+
+Lemma verifygrammarpat_determinism :
+  forall g p b1 b2,
+  verifygrammarpat g p b1 ->
+  verifygrammarpat g p b2 ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1;
+  intros;
+  inversion H2; subst;
+  eauto using verifygrammar_determinism,
+              coherent_determinism,
+              checkloops_determinism,
+              checkloops_Some_determinism.
+Qed.
+
+Lemma verifygrammarpat_true :
+  forall g p,
+  verifygrammarpat g p true ->
+  verifygrammar g true /\ coherent g p true /\ exists nleft, checkloops g p nleft (Some false).
+Proof.
+  intros * H.
+  inversion H;
+  eauto.
+Qed.
+
+Definition verifygrammarpat_comp g p gas :=
+  match verifygrammar_comp g gas with
+  | Some true => match coherent_comp g p gas with
+                 | Some true => match checkloops_comp g p (S (length g)) gas with
+                                | Some (Some false) => Some true
+                                | Some (Some true) => Some false
+                                | _ => None
+                                end
+                 | res => res
+                 end
+  | res => res
+  end.
+
+Lemma verifygrammarpat_comp_soundness :
+  forall g p gas b,
+  verifygrammarpat_comp g p gas = Some b ->
+  verifygrammarpat g p b.
+Proof.
+  intros * H.
+  unfold verifygrammarpat_comp in H;
+  repeat (destruct_match_subject_in_hyp; try discriminate);
+  try destruct1;
+  eauto using verifygrammarpat,
+              verifygrammar_comp_soundness,
+              coherent_comp_soundness,
+              checkloops_comp_soundness.
+Qed.
+
+Lemma verifygrammarpat_comp_S_gas :
+  forall g p gas b,
+  verifygrammarpat_comp g p gas = Some b ->
+  verifygrammarpat_comp g p (S gas) = Some b.
+Proof.
+  intros * H.
+  unfold verifygrammarpat_comp in *;
+  repeat (destruct_match_subject_in_hyp; try discriminate);
+  try destruct1;
+  try match goal with
+    [ Hx: verifygrammar_comp ?g ?gas = Some ?b |- _ ] =>
+        let H := fresh in (
+          assert (verifygrammar_comp g (S gas) = Some b)
+          as H
+          by eauto using verifygrammar_comp_S_gas;
+          rewrite H;
+          auto
+        )
+  end;
+  try match goal with
+    [ Hx: coherent_comp ?g ?p ?gas = Some ?b |- _ ] =>
+        let H := fresh in (
+          assert (coherent_comp g p (S gas) = Some b)
+          as H
+          by eauto using coherent_comp_S_gas;
+          rewrite H;
+          auto
+        )
+  end;
+  try match goal with
+    [ Hx: checkloops_comp ?g ?p ?nleft ?gas = Some ?b |- _ ] =>
+        let H := fresh in (
+          assert (checkloops_comp g p nleft (S gas) = Some b)
+          as H
+          by eauto using checkloops_comp_S_gas;
+          rewrite H;
+          auto
+        )
+  end.
+Qed.
+
+Lemma verifygrammarpat_comp_le_gas :
+  forall g p gas1 gas2 b,
+  verifygrammarpat_comp g p gas1 = Some b ->
+  gas1 <= gas2 ->
+  verifygrammarpat_comp g p gas2 = Some b.
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using verifygrammarpat_comp_S_gas.
+Qed.
+
+Lemma verifygrammarpat_comp_termination :
+  forall g p,
+  exists gas b,
+  verifygrammarpat_comp g p gas = Some b.
+Proof.
+  intros.
+  unfold verifygrammarpat_comp.
+  assert (exists gas b, verifygrammar_comp g gas = Some b)
+  as [gasvg [bvg Hvgc]]
+  by eauto using verifygrammar_comp_termination.
+  assert (verifygrammar g bvg)
+  as Hvg
+  by eauto using verifygrammar_comp_soundness.
+  destruct bvg.
+  - (* true *)
+    specialize (verifygrammar_true _ Hvg) as [? [? ?]].
+    assert (exists gas b, coherent_comp g p gas = Some b)
+    as [gasc [bc ?]]
+    by eauto using coherent_comp_termination.
+    assert (coherent g p bc)
+    by eauto using coherent_comp_soundness.
+    destruct bc.
+    + (* true *)
+      pose (S (length g)) as nleft.
+      assert (exists gas b, checkloops_comp g p nleft gas = Some b)
+      as [gasl [rescl ?]]
+      by eauto using checkloops_comp_termination, lcoherent_true_In.
+      assert (checkloops g p nleft rescl)
+      by eauto using checkloops_comp_soundness.
+      assert (exists nleft b, checkloops g p nleft (Some b))
+      as [nleft' [bl' ?]]
+      by eauto using checkloops_safe_grammar, lcoherent_true_In, lverifyrule_true_In.
+      assert (rescl = Some bl')
+      by eauto using checkloops_Some_convergence, lcoherent_true_In, lverifyrule_true_In.
+      subst rescl.
+      pose (gasvg + gasc + gasl) as gas.
+      assert (gasvg <= gas) by lia.
+      assert (gasc <= gas) by lia.
+      assert (gasl <= gas) by lia.
+      exists gas.
+      assert (verifygrammar_comp g gas = Some true)
+      as Hv'
+      by eauto using verifygrammar_comp_le_gas.
+      rewrite Hv'.
+      assert (coherent_comp g p gas = Some true)
+      as Hc'
+      by eauto using coherent_comp_le_gas.
+      rewrite Hc'.
+      assert (checkloops_comp g p nleft gas = Some (Some bl'))
+      as Hl'
+      by eauto using checkloops_comp_le_gas.
+      subst nleft.
+      rewrite Hl'.
+      destruct bl';
+      eauto.
+    + (* false *)
+      pose (gasvg + gasc) as gas.
+      assert (gasvg <= gas) by lia.
+      assert (gasc <= gas) by lia.
+      exists gas.
+      assert (verifygrammar_comp g gas = Some true)
+      as Hv'
+      by eauto using verifygrammar_comp_le_gas.
+      rewrite Hv'.
+      assert (coherent_comp g p gas = Some false)
+      as Hc'
+      by eauto using coherent_comp_le_gas.
+      rewrite Hc'.
+      eauto.
+  - (* false *)
+    exists gasvg.
+    rewrite Hvgc.
+    eauto.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->
@@ -3835,4 +4048,14 @@ Proof.
   intros * Hvg Hpc Hlp.
   specialize (verifygrammar_true _ Hvg) as [? [? ?]].
   eauto using lpredicates_safe_match.
+Qed.
+
+Theorem verifygrammarpat_safe_match :
+  forall g p s,
+  verifygrammarpat g p true ->
+  exists res, matches g p s res.
+Proof.
+  intros * Hvgp.
+  specialize (verifygrammarpat_true _ _ Hvgp) as [? [? [? ?]]].
+  eauto using verifygrammar_safe_match.
 Qed.

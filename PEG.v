@@ -4257,6 +4257,36 @@ Proof.
   destruct rescl as [[|]|]; eauto.
 Qed.
 
+Lemma verifygrammarpat_comp_gas_bounded_not_none :
+  forall g p gas,
+  gas >= pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g ->
+  verifygrammarpat_comp g p gas <> None.
+Proof.
+  intros.
+  assert (exists b, verifygrammarpat_comp g p gas = Some b)
+  as [? Hvgp]
+  by eauto using verifygrammarpat_comp_gas_bounded.
+  rewrite Hvgp.
+  intro.
+  discriminate.
+Qed.
+
+Definition verifygrammarpat_comp' : grammar -> pat -> bool.
+Proof.
+  refine (
+    fun (g : grammar) (p : pat) =>
+    let gas := pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g in
+     match (verifygrammarpat_comp g p gas) as o
+     return (verifygrammarpat_comp g p gas = o -> bool) with
+     | Some a => fun _ => a
+     | None => fun Heqo : verifygrammarpat_comp g p gas = None => _
+     end eq_refl
+  ).
+  assert (verifygrammarpat_comp g p gas <> None)
+  by eauto using verifygrammarpat_comp_gas_bounded_not_none.
+  contradiction.
+Defined.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

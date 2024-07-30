@@ -4221,6 +4221,42 @@ Proof.
     eauto.
 Qed.
 
+Lemma verifygrammarpat_comp_gas_bounded :
+  forall g p gas,
+  gas >= pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g ->
+  exists b, verifygrammarpat_comp g p gas = Some b.
+Proof.
+  intros.
+  unfold verifygrammarpat_comp.
+  assert (gas >= grammar_size g + S (Datatypes.length g) * grammar_size g) by lia.
+  assert (exists b, verifygrammar_comp g gas = Some b)
+  as [resvg Hvgc] by eauto using verifygrammar_comp_gas_bounded.
+  rewrite Hvgc.
+  destruct resvg; eauto.
+  assert (verifygrammar g true)
+  as Hvg by eauto using verifygrammar_comp_soundness.
+  inversion Hvg; subst.
+  assert (gas >= pat_size p) by lia.
+  assert (exists b, coherent_comp g p gas = Some b)
+  as [respc Hpc] by eauto using coherent_comp_gas_bounded.
+  rewrite Hpc.
+  destruct respc; eauto.
+  assert (coherent g p true)
+  by eauto using coherent_comp_soundness.
+  assert (gas >= pat_size p + S (length g) * grammar_size g) by lia.
+  assert (exists b, checkloops_comp g p (S (length g)) gas = Some b)
+  as [rescl Hcl] by eauto using checkloops_comp_gas_bounded, lcoherent_true_In.
+  assert (exists nleft b, checkloops g p nleft (Some b))
+  as [nleft [b ?]]
+  by eauto using checkloops_safe_grammar, lcoherent_true_In, lverifyrule_true_In.
+  assert (checkloops g p (S (length g)) rescl)
+  by eauto using checkloops_comp_soundness.
+  assert (rescl = Some b)
+  by eauto using checkloops_Some_convergence, lcoherent_true_In, lverifyrule_true_In.
+  rewrite Hcl.
+  destruct rescl as [[|]|]; eauto.
+Qed.
+
 Theorem safe_match :
   forall g p nleft s,
   (forall r, In r g -> coherent g r true) ->

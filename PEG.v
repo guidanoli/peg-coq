@@ -3078,6 +3078,55 @@ Ltac specialize_checkloops :=
         specialize (IHx _ Hx)
   end.
 
+Definition checkloops_comp_gas_bounded :
+  forall g p gas nleft,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  gas >= pat_size p + nleft * (grammar_size g) ->
+  exists res,
+  checkloops_comp g p nleft gas = Some res.
+Proof.
+  intros * Hgc Hpc Hge.
+  generalize dependent gas.
+  induction p; intros;
+  inversion Hpc; subst;
+  simpl in Hge;
+  destruct gas;
+  try match goal with
+    [ Hx: 0 >= S _ |- _ ] =>
+        inversion Hx
+  end;
+  try match goal with
+    [ |- exists _, _ ?g (_ ?p) ?nleft (S ?gas) = _ ] =>
+        assert (gas >= pat_size p + nleft * grammar_size g) by lia
+  end;
+  try match goal with
+    [ |- exists _, _ ?g (_ ?p _) ?nleft (S ?gas) = _ ] =>
+        assert (gas >= pat_size p + nleft * grammar_size g) by lia
+  end;
+  simpl;
+  eauto.
+  - (* PSequence p1 p2 *)
+    assert (exists res, checkloops_comp g p1 nleft gas = Some res)
+    as [res1 Hclp1] by eauto.
+    assert (exists res, checkloops_comp g p2 nleft gas = Some res)
+    as [? ?] by eauto.
+    rewrite Hclp1.
+    destruct res1 as [[|]|]; eauto.
+  - (* PChoice p1 p2 *)
+    assert (exists res, checkloops_comp g p1 nleft gas = Some res)
+    as [res1 Hclp1] by eauto.
+    assert (exists res, checkloops_comp g p2 nleft gas = Some res)
+    as [? ?] by eauto.
+    rewrite Hclp1.
+    destruct res1 as [[|]|]; eauto.
+  - (* PRepetition p *)
+    assert (exists res, nullable_comp g p nleft gas = Some res)
+    as [res Hnp] by eauto using nullable_comp_gas_bounded.
+    rewrite Hnp.
+    destruct res as [[|]|]; eauto.
+Qed.
+
 (** Coherent for lists of patterns
 
     lcoherent g rs true === all rules in rs are coherent

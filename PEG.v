@@ -775,7 +775,7 @@ Proof.
   assert (coherent_comp g p gas <> None)
   by eauto using coherent_comp_gas_bounded_not_none.
   contradiction.
-Qed.
+Defined.
 
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)

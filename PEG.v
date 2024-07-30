@@ -3277,6 +3277,29 @@ Proof.
     eauto.
 Qed.
 
+Lemma lcoherent_comp_gas_bounded :
+  forall g rs gas,
+  gas >= grammar_size rs ->
+  exists b, lcoherent_comp g rs gas = Some b.
+Proof.
+  intros * Hge.
+  generalize dependent gas.
+  induction rs as [|r rs IHrs];
+  intros;
+  simpl;
+  eauto.
+  simpl in Hge.
+  assert (gas >= grammar_size rs) by lia.
+  assert (exists b, lcoherent_comp g rs gas = Some b)
+  as [? ?] by eauto.
+  assert (gas >= pat_size r) by lia.
+  assert (exists b, coherent_comp g r gas = Some b)
+  as [br Hcr] by eauto using coherent_comp_gas_bounded.
+  rewrite Hcr.
+  destruct br;
+  eauto.
+Qed.
+
 (** VerifyRule for lists of patterns
 
     Assumes all rules in g and rs are coherent

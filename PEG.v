@@ -703,33 +703,18 @@ Proof.
   ).
 Qed.
 
-(** Coherent without gas **)
-
-Fixpoint compute_coherent_comp_gas p :=
-  match p with
-  | PEmpty => 1
-  | PChar _ => 1
-  | PAnyChar => 1
-  | PSequence p1 p2 => 1 + compute_coherent_comp_gas p1 + compute_coherent_comp_gas p2
-  | PChoice p1 p2 => 1 + compute_coherent_comp_gas p1 + compute_coherent_comp_gas p2
-  | PRepetition p1 => 1 + compute_coherent_comp_gas p1
-  | PNot p1 => 1 + compute_coherent_comp_gas p1
-  | PNT _ => 1
-  end.
-
 Lemma coherent_comp_gas_bounded :
   forall g p gas,
-  compute_coherent_comp_gas p <= gas ->
-  exists b,
-  coherent_comp g p gas = Some b.
+  gas >= pat_size p ->
+  exists b, coherent_comp g p gas = Some b.
 Proof.
-  intros * Hle.
+  intros * Hge.
   generalize dependent g.
   generalize dependent gas.
   induction p;
   intros;
-  simpl in Hle;
-  induction Hle;
+  simpl in Hge;
+  induction Hge;
   try (
     destruct_exists_hyp;
     eauto using coherent_comp_S_gas;
@@ -743,8 +728,8 @@ Proof.
   try match goal with
     [ |- exists _, coherent_comp _ (_ ?p1 ?p2) _ = _ ] =>
         simpl;
-        remember (compute_coherent_comp_gas p1) as gas1;
-        remember (compute_coherent_comp_gas p2) as gas2;
+        remember (pat_size p1) as gas1;
+        remember (pat_size p2) as gas2;
         assert (gas1 <= gas1 + gas2) by lia;
         assert (gas2 <= gas1 + gas2) by lia;
         assert (exists b, coherent_comp g p1 (gas1 + gas2) = Some b)
@@ -765,7 +750,7 @@ Qed.
 
 Lemma coherent_comp_gas_bounded_not_none :
   forall g p gas,
-  compute_coherent_comp_gas p <= gas ->
+  gas >= pat_size p ->
   coherent_comp g p gas <> None.
 Proof.
   intros.
@@ -781,7 +766,7 @@ Definition coherent_comp' : grammar -> pat -> bool.
 Proof.
   refine (
     fun (g : grammar) (p : pat) =>
-    let gas := compute_coherent_comp_gas p in
+    let gas := pat_size p in
      match (coherent_comp g p gas) as o return (coherent_comp g p gas = o -> bool) with
      | Some a => fun _ => a
      | None => fun Heqo : coherent_comp g p gas = None => _

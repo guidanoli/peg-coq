@@ -2627,7 +2627,7 @@ Qed.
 (* Here, we could have used the max pat_size of the grammar
    instead of summing up the pat_size of each rule of the grammar,
    but the sum makes the proof of lower bound easier *)
-Lemma nullable_comp_termination_lower_bound :
+Lemma nullable_comp_gas_bounded :
   forall g p nleft gas,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
@@ -2682,7 +2682,7 @@ Lemma nullable_comp_termination :
   exists gas b,
   nullable_comp g p nleft gas = Some b.
 Proof.
-  eauto using nullable_comp_termination_lower_bound.
+  eauto using nullable_comp_gas_bounded.
 Qed.
 
 (** CheckLoops predicate **)

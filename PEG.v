@@ -3514,6 +3514,31 @@ Proof.
     eauto.
 Qed.
 
+Lemma lverifyrule_comp_gas_bounded :
+  forall g rs gas,
+  lcoherent g g true ->
+  lcoherent g rs true ->
+  gas >= grammar_size rs + (S (length g)) * (grammar_size g) ->
+  exists b, lverifyrule_comp g rs gas = Some b.
+Proof.
+  intros * Hg Hrs Hge.
+  generalize dependent gas.
+  induction rs as [|r rs];
+  intros;
+  inversion Hrs; subst;
+  simpl;
+  eauto.
+  simpl in Hge.
+  assert (gas >= grammar_size rs + (S (length g)) * grammar_size g) by lia.
+  assert (exists b, lverifyrule_comp g rs gas = Some b)
+  as [? ?] by eauto.
+  assert (gas >= pat_size r + (S (length g)) * grammar_size g) by lia.
+  assert (exists res v, verifyrule_comp g r (S (length g)) false gas = Some (res, v))
+  as [res [? Hv]] by eauto using verifyrule_comp_gas_bounded, lcoherent_true_In.
+  rewrite Hv.
+  destruct res; eauto.
+Qed.
+
 Lemma lverifyrule_comp_termination_grammar :
   forall g,
   lcoherent g g true ->

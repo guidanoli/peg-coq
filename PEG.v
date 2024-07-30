@@ -3745,6 +3745,39 @@ Proof.
     eauto.
 Qed.
 
+Lemma lcheckloops_comp_gas_bounded :
+  forall g rs gas,
+  lcoherent g g true ->
+  lcoherent g rs true ->
+  lverifyrule g g true ->
+  gas >= grammar_size rs + S (length g) * (grammar_size g) ->
+  exists b, lcheckloops_comp g rs gas = Some b.
+Proof.
+  intros * Hgc Hrsc Hgv Hge.
+  generalize dependent gas.
+  induction rs as [|r rs];
+  intros;
+  inversion Hrsc; subst;
+  simpl;
+  eauto.
+  simpl in Hge.
+  assert (gas >= grammar_size rs + S (length g) * grammar_size g) by lia.
+  assert (exists b, lcheckloops_comp g rs gas = Some b) as [? ?] by eauto.
+  assert (gas >= pat_size r + S (length g) * grammar_size g) by lia.
+  assert (exists b, checkloops_comp g r (S (length g)) gas = Some b)
+  as [clres Hcl] by eauto using checkloops_comp_gas_bounded, lcoherent_true_In.
+  rewrite Hcl.
+  assert (exists nleft b, checkloops g r nleft (Some b))
+  as [nleft [b ?]]
+  by eauto using checkloops_safe_grammar, lcoherent_true_In, lverifyrule_true_In.
+  assert (checkloops g r (S (length g)) clres)
+  by eauto using checkloops_comp_soundness.
+  assert (clres = Some b)
+  by eauto using checkloops_Some_convergence, lcoherent_true_In, lverifyrule_true_In.
+  subst clres.
+  destruct b; eauto.
+Qed.
+
 (** Verify Grammar
 
     verifygrammar g true === all rules are coherent, non-LR, and void of empty loops

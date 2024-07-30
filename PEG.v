@@ -3981,6 +3981,33 @@ Proof.
     eauto.
 Qed.
 
+Lemma verifygrammar_comp_gas_bounded :
+  forall g gas,
+  gas >= grammar_size g + S (Datatypes.length g) * grammar_size g ->
+  exists b, verifygrammar_comp g gas = Some b.
+Proof.
+  intros.
+  unfold verifygrammar_comp.
+  assert (gas >= grammar_size g) by lia.
+  assert (exists b, lcoherent_comp g g gas = Some b)
+  as [reslc Hlc] by eauto using lcoherent_comp_gas_bounded.
+  rewrite Hlc.
+  destruct reslc; eauto.
+  assert (lcoherent g g true)
+  by eauto using lcoherent_comp_soundness.
+  assert (gas >= grammar_size g + S (length g) * grammar_size g) by lia.
+  assert (exists b, lverifyrule_comp g g gas = Some b)
+  as [reslv Hlv] by eauto using lverifyrule_comp_gas_bounded.
+  rewrite Hlv.
+  destruct reslv; eauto.
+  assert (lverifyrule g g true)
+  by eauto using lverifyrule_comp_soundness.
+  assert (exists b, lcheckloops_comp g g gas = Some b)
+  as [reslcl Hlcl] by eauto using lcheckloops_comp_gas_bounded.
+  rewrite Hlcl.
+  destruct reslcl; eauto.
+Qed.
+
 (** Verify Grammar and initial pattern
 
     verifygrammarpat g p true === grammar is safe, and pattern is coherent and has no empty loops

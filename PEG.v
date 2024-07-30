@@ -3078,7 +3078,7 @@ Ltac specialize_checkloops :=
         specialize (IHx _ Hx)
   end.
 
-Definition checkloops_comp_gas_bounded :
+Lemma checkloops_comp_gas_bounded :
   forall g p gas nleft,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->

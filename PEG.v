@@ -2356,7 +2356,6 @@ Lemma nullable_convergence :
   nullable g p nleft' res.
 Proof.
   intros * Hgc Hgv Hpc Hlt H Hle.
-  Check verifyrule_comp_termination.
   assert (exists gas res v, verifyrule_comp g p nleft false gas = Some (res, v))
   as [? [? [? ?]]]
   by eauto using verifyrule_comp_termination.

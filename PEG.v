@@ -1939,6 +1939,72 @@ Proof.
       eauto.
 Qed.
 
+Lemma verifyrule_comp_gas_bounded :
+  forall g p gas nleft nb,
+  (forall r, In r g -> coherent g r true) ->
+  coherent g p true ->
+  gas >= pat_size p + nleft * (grammar_size g) ->
+  exists res v,
+  verifyrule_comp g p nleft nb gas = Some (res, v).
+Proof.
+  intros * Hgc Hpc Hge.
+  generalize dependent nb.
+  generalize dependent gas.
+  generalize dependent p.
+  generalize dependent g.
+  induction nleft using strong_induction.
+  intros.
+  generalize dependent nb.
+  generalize dependent nleft.
+  generalize dependent gas.
+  generalize dependent g.
+  induction p; intros;
+  inversion Hpc; subst;
+  simpl in Hge;
+  destruct gas;
+  try match goal with
+    [ Hx: 0 >= S _ |- _ ] =>
+        inversion Hx
+  end;
+  try match goal with
+    [ |- exists _ _, _ ?g (_ ?p) ?nleft _ (S ?gas) = _ ] =>
+        assert (gas >= pat_size p + nleft * grammar_size g) by lia
+  end;
+  try match goal with
+    [ |- exists _ _, _ ?g (_ ?p _) ?nleft _ (S ?gas) = _ ] =>
+        assert (gas >= pat_size p + nleft * grammar_size g) by lia
+  end;
+  simpl;
+  eauto.
+  - (* PSequence p1 p2 *)
+    assert (exists res v, verifyrule_comp g p1 nleft false gas = Some (res, v))
+    as [res1 [? Hvrp1]] by eauto.
+    assert (exists res v, verifyrule_comp g p2 nleft nb gas = Some (res, v))
+    as [? [? ?]] by eauto.
+    rewrite Hvrp1.
+    destruct res1 as [[|]|]; eauto.
+  - (* PChoice p1 p2 *)
+    assert (exists res v, verifyrule_comp g p1 nleft nb gas = Some (res, v))
+    as [res1 [? Hvrp1]] by eauto.
+    assert (exists res v, verifyrule_comp g p2 nleft nb gas = Some (res, v))
+    as [? [? ?]] by eauto.
+    rewrite Hvrp1.
+    destruct res1; eauto.
+  - (* PNT i *)
+    match goal with
+      [ Hx: nth_error _ _ = Some _ |- _ ] =>
+          rewrite Hx
+    end.
+    destruct nleft; eauto.
+    assert (pat_size p <= grammar_size g)
+    by eauto using nth_error_In, pat_size_le_grammar_size.
+    assert (gas >= pat_size p + nleft * grammar_size g) by lia.
+    assert (exists res v, verifyrule_comp g p nleft nb gas = Some (res, v))
+    as [? [? Hvrp]] by eauto using nth_error_In.
+    rewrite Hvrp.
+    eauto.
+Qed.
+
 (** Nullable predicate **)
 (** A "nullable" pattern may match successfully without consuming any characters **)
 

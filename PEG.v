@@ -4221,13 +4221,17 @@ Proof.
     eauto.
 Qed.
 
+Definition verifygrammarpat_comp_min_gas g p :=
+  pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g.
+
 Lemma verifygrammarpat_comp_gas_bounded :
   forall g p gas,
-  gas >= pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g ->
+  gas >= verifygrammarpat_comp_min_gas g p ->
   exists b, verifygrammarpat_comp g p gas = Some b.
 Proof.
   intros.
   unfold verifygrammarpat_comp.
+  unfold verifygrammarpat_comp_min_gas in H.
   assert (gas >= grammar_size g + S (Datatypes.length g) * grammar_size g) by lia.
   assert (exists b, verifygrammar_comp g gas = Some b)
   as [resvg Hvgc] by eauto using verifygrammar_comp_gas_bounded.
@@ -4257,35 +4261,32 @@ Proof.
   destruct rescl as [[|]|]; eauto.
 Qed.
 
-Lemma verifygrammarpat_comp_gas_bounded_not_none :
-  forall g p gas,
-  gas >= pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g ->
-  verifygrammarpat_comp g p gas <> None.
+Definition verifygrammarpat_func g p :=
+  let gas := verifygrammarpat_comp_min_gas g p in
+  match (verifygrammarpat_comp g p gas) with
+  | Some b => b
+  | None => false
+  end.
+
+Lemma verifygrammarpat_func_correct :
+  forall g p b,
+  verifygrammarpat_func g p = b <-> verifygrammarpat g p b.
 Proof.
   intros.
+  unfold verifygrammarpat_func.
+  remember (verifygrammarpat_comp_min_gas g p) as gas.
   assert (exists b, verifygrammarpat_comp g p gas = Some b)
-  as [? Hvgp]
-  by eauto using verifygrammarpat_comp_gas_bounded.
+  as [b' Hvgp] by (eapply verifygrammarpat_comp_gas_bounded; lia).
   rewrite Hvgp.
-  intro.
-  discriminate.
+  assert (verifygrammarpat g p b')
+  by eauto using verifygrammarpat_comp_soundness.
+  split; intro.
+  - (* -> *)
+    subst.
+    eauto using verifygrammarpat_comp_soundness.
+  - (* <- *)
+    eauto using verifygrammarpat_determinism.
 Qed.
-
-Definition verifygrammarpat_func : grammar -> pat -> bool.
-Proof.
-  refine (
-    fun (g : grammar) (p : pat) =>
-    let gas := pat_size p + grammar_size g + S (Datatypes.length g) * grammar_size g in
-     match (verifygrammarpat_comp g p gas) as o
-     return (verifygrammarpat_comp g p gas = o -> bool) with
-     | Some a => fun _ => a
-     | None => fun Heqo : verifygrammarpat_comp g p gas = None => _
-     end eq_refl
-  ).
-  assert (verifygrammarpat_comp g p gas <> None)
-  by eauto using verifygrammarpat_comp_gas_bounded_not_none.
-  contradiction.
-Defined.
 
 Theorem safe_match :
   forall g p nleft s,
@@ -4426,4 +4427,14 @@ Proof.
   intros * Hvgp.
   specialize (verifygrammarpat_true _ _ Hvgp) as [? [? [? ?]]].
   eauto using verifygrammar_safe_match.
+Qed.
+
+Theorem verifygrammarpat_func_safe_match :
+  forall g p s,
+  verifygrammarpat_func g p = true ->
+  exists res, matches g p s res.
+Proof.
+  intros * Hvgp.
+  rewrite verifygrammarpat_func_correct in Hvgp.
+  eauto using verifygrammarpat_safe_match.
 Qed.

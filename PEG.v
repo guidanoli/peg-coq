@@ -4271,7 +4271,7 @@ Proof.
   discriminate.
 Qed.
 
-Definition verifygrammarpat_comp' : grammar -> pat -> bool.
+Definition verifygrammarpat_func : grammar -> pat -> bool.
 Proof.
   refine (
     fun (g : grammar) (p : pat) =>

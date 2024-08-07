@@ -748,35 +748,6 @@ Proof.
   end.
 Qed.
 
-Lemma coherent_comp_gas_bounded_not_none :
-  forall g p gas,
-  gas >= pat_size p ->
-  coherent_comp g p gas <> None.
-Proof.
-  intros.
-  assert (exists b, coherent_comp g p gas = Some b)
-  as [? Hc]
-  by eauto using coherent_comp_gas_bounded.
-  rewrite Hc.
-  intro.
-  discriminate.
-Qed.
-
-Definition coherent_comp' : grammar -> pat -> bool.
-Proof.
-  refine (
-    fun (g : grammar) (p : pat) =>
-    let gas := pat_size p in
-     match (coherent_comp g p gas) as o return (coherent_comp g p gas = o -> bool) with
-     | Some a => fun _ => a
-     | None => fun Heqo : coherent_comp g p gas = None => _
-     end eq_refl
-  ).
-  assert (coherent_comp g p gas <> None)
-  by eauto using coherent_comp_gas_bounded_not_none.
-  contradiction.
-Defined.
-
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The nb parameter is used for tail calls in choices (stands for (N)ulla(B)le) **)

@@ -750,6 +750,7 @@ Qed.
 
 (** VerifyRule predicate **)
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
+(** The d parameter is the call stack (D)epth, used to escape left-recursive rules **)
 (** The nb parameter is used for tail calls in choices (stands for (N)ulla(B)le) **)
 (** The v parameter is the list of (V)isited rules without consuming input **)
 (** res = None -> has LR **)

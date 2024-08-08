@@ -752,7 +752,7 @@ Qed.
 (** Checks whether a pattern is nullable (or not), or contains left recursion **)
 (** The d parameter is the call stack (D)epth, used to escape left-recursive rules **)
 (** The nb parameter is used for tail calls in choices (stands for (N)ulla(B)le) **)
-(** The v parameter is the list of (V)isited rules without consuming input **)
+(** The k parameter is the call stac(K) of rules **)
 (** res = None -> has LR **)
 (** res = Some true -> no LR, nullable **)
 (** res = Some false -> no LR, not nullable **)
@@ -770,43 +770,43 @@ Inductive verifyrule :
       forall g d nb,
       verifyrule g PAnyChar d nb (Some nb) nil
   | VRSequenceNone :
-      forall g p1 p2 d nb v,
-      verifyrule g p1 d false None v ->
-      verifyrule g (PSequence p1 p2) d nb None v
+      forall g p1 p2 d nb k,
+      verifyrule g p1 d false None k ->
+      verifyrule g (PSequence p1 p2) d nb None k
   | VRSequenceSomeTrue :
-      forall g p1 p2 d nb res v1 v2,
-      verifyrule g p1 d false (Some true) v1 ->
-      verifyrule g p2 d nb res v2 ->
-      verifyrule g (PSequence p1 p2) d nb res v2
+      forall g p1 p2 d nb res k1 k2,
+      verifyrule g p1 d false (Some true) k1 ->
+      verifyrule g p2 d nb res k2 ->
+      verifyrule g (PSequence p1 p2) d nb res k2
   | VRSequenceSomeFalse :
-      forall g p1 p2 d nb v,
-      verifyrule g p1 d false (Some false) v ->
-      verifyrule g (PSequence p1 p2) d nb (Some nb) v
+      forall g p1 p2 d nb k,
+      verifyrule g p1 d false (Some false) k ->
+      verifyrule g (PSequence p1 p2) d nb (Some nb) k
   | VRChoiceNone :
-      forall g p1 p2 d nb v,
-      verifyrule g p1 d nb None v ->
-      verifyrule g (PChoice p1 p2) d nb None v
+      forall g p1 p2 d nb k,
+      verifyrule g p1 d nb None k ->
+      verifyrule g (PChoice p1 p2) d nb None k
   | VRChoiceSome :
-      forall g p1 p2 d nb nb' res v1 v2,
-      verifyrule g p1 d nb (Some nb') v1 ->
-      verifyrule g p2 d nb' res v2 ->
-      verifyrule g (PChoice p1 p2) d nb res v2
+      forall g p1 p2 d nb nb' res k1 k2,
+      verifyrule g p1 d nb (Some nb') k1 ->
+      verifyrule g p2 d nb' res k2 ->
+      verifyrule g (PChoice p1 p2) d nb res k2
   | VRRepetition :
-      forall g p d nb res v,
-      verifyrule g p d true res v ->
-      verifyrule g (PRepetition p) d nb res v
+      forall g p d nb res k,
+      verifyrule g p d true res k ->
+      verifyrule g (PRepetition p) d nb res k
   | VRNot :
-      forall g p d nb res v,
-      verifyrule g p d true res v ->
-      verifyrule g (PNot p) d nb res v
+      forall g p d nb res k,
+      verifyrule g p d true res k ->
+      verifyrule g (PNot p) d nb res k
   | VRNTZero :
       forall g i nb,
       verifyrule g (PNT i) O nb None nil
   | VRNTSucc :
-      forall g i p d nb res v,
+      forall g i p d nb res k,
       nth_error g i = Some p ->
-      verifyrule g p d nb res v ->
-      verifyrule g (PNT i) (S d) nb res (i :: v)
+      verifyrule g p d nb res k ->
+      verifyrule g (PNT i) (S d) nb res (i :: k)
   .
 
 Goal
@@ -1036,13 +1036,13 @@ Proof.
 Qed.
 
 Lemma verifyrule_determinism :
-  forall g p d nb res1 res2 v1 v2,
-  verifyrule g p d nb res1 v1 ->
-  verifyrule g p d nb res2 v2 ->
-  res1 = res2 /\ v1 = v2.
+  forall g p d nb res1 res2 k1 k2,
+  verifyrule g p d nb res1 k1 ->
+  verifyrule g p d nb res2 k2 ->
+  res1 = res2 /\ k1 = k2.
 Proof.
   intros * H1 H2.
-  generalize dependent v2.
+  generalize dependent k2.
   generalize dependent res2.
   induction H1; intros;
   inversion H2; subst;
@@ -1050,7 +1050,7 @@ Proof.
   try lia;
   auto;
   try match goal with
-  [ IHx: forall res v, verifyrule ?g ?p ?d ?nb res v -> _ = res /\ _ = v,
+  [ IHx: forall res k, verifyrule ?g ?p ?d ?nb res k -> _ = res /\ _ = k,
     Hx: verifyrule ?g ?p ?d ?nb _ _ |- _ ] =>
       apply IHx in Hx;
       destruct Hx;
@@ -1063,18 +1063,18 @@ Qed.
 
 Ltac pose_verifyrule_determinism :=
   repeat match goal with
-    [ Hx1: verifyrule ?g ?p ?d ?nb ?res1 ?v1,
-      Hx2: verifyrule ?g ?p ?d ?nb ?res2 ?v2 |- _ ] =>
-          assert (res1 = res2 /\ v1 = v2)
+    [ Hx1: verifyrule ?g ?p ?d ?nb ?res1 ?k1,
+      Hx2: verifyrule ?g ?p ?d ?nb ?res2 ?k2 |- _ ] =>
+          assert (res1 = res2 /\ k1 = k2)
           as [? ?]
           by eauto using verifyrule_determinism;
           clear Hx2
   end.
 
 Lemma verifyrule_S_depth :
-  forall g p d nb nb' v,
-  verifyrule g p d nb (Some nb') v ->
-  verifyrule g p (S d) nb (Some nb') v.
+  forall g p d nb nb' k,
+  verifyrule g p d nb (Some nb') k ->
+  verifyrule g p (S d) nb (Some nb') k.
 Proof.
   intros * H.
   remember (Some nb').
@@ -1085,10 +1085,10 @@ Proof.
 Qed.
 
 Lemma verifyrule_depth_le_some_determinism :
-  forall g p d d' nb nb' v,
-  verifyrule g p d nb (Some nb') v ->
+  forall g p d d' nb nb' k,
+  verifyrule g p d nb (Some nb') k ->
   d <= d' ->
-  verifyrule g p d' nb (Some nb') v.
+  verifyrule g p d' nb (Some nb') k.
 Proof.
   intros * H Hle.
   induction Hle;
@@ -1096,19 +1096,19 @@ Proof.
 Qed.
 
 Lemma verifyrule_depth_some_determinism :
-  forall g p d d' nb b b' v v',
-  verifyrule g p d nb (Some b) v ->
-  verifyrule g p d' nb (Some b') v' ->
-  b = b' /\ v = v'.
+  forall g p d d' nb b b' k k',
+  verifyrule g p d nb (Some b) k ->
+  verifyrule g p d' nb (Some b') k' ->
+  b = b' /\ k = k'.
 Proof.
   intros * H H'.
   destruct (Compare_dec.le_ge_dec d d') as [Hle|Hge];
   try unfold ge in *;
   match goal with
     [ Hx: ?d <= ?d',
-      Hy: verifyrule ?g ?p ?d ?nb (Some ?b) ?v,
-      Hz: verifyrule ?g ?p ?d' ?nb (Some ?b') ?v' |- _ ] =>
-          assert (verifyrule g p d' nb (Some b) v)
+      Hy: verifyrule ?g ?p ?d ?nb (Some ?b) ?k,
+      Hz: verifyrule ?g ?p ?d' ?nb (Some ?b') ?k' |- _ ] =>
+          assert (verifyrule g p d' nb (Some b) k)
           by eauto using verifyrule_depth_le_some_determinism
   end;
   pose_verifyrule_determinism;
@@ -1119,27 +1119,27 @@ Qed.
 
 Ltac pose_verifyrule_some_determinism :=
   repeat match goal with
-    [ Hx1: verifyrule ?g ?p ?d1 ?nb (Some ?b1) ?v1,
-      Hx2: verifyrule ?g ?p ?d2 ?nb (Some ?b2) ?v2 |- _ ] =>
-          assert (b1 = b2 /\ v1 = v2)
+    [ Hx1: verifyrule ?g ?p ?d1 ?nb (Some ?b1) ?k1,
+      Hx2: verifyrule ?g ?p ?d2 ?nb (Some ?b2) ?k2 |- _ ] =>
+          assert (b1 = b2 /\ k1 = k2)
           as [? ?]
           by eauto using verifyrule_depth_some_determinism;
           clear Hx2
   end.
 
-Lemma verifyrule_length_v_le_depth :
-  forall g p d nb res v,
-  verifyrule g p d nb res v ->
-  length v <= d.
+Lemma verifyrule_length_k_le_depth :
+  forall g p d nb res k,
+  verifyrule g p d nb res k ->
+  length k <= d.
 Proof.
   intros * H.
   induction H; simpl; lia.
 Qed.
 
-Lemma verifyrule_length_v_eq_depth :
-  forall g p d nb v,
-  verifyrule g p d nb None v ->
-  length v = d.
+Lemma verifyrule_length_k_eq_depth :
+  forall g p d nb k,
+  verifyrule g p d nb None k ->
+  length k = d.
 Proof.
   intros * H.
   remember None.
@@ -1149,10 +1149,10 @@ Proof.
   auto.
 Qed.
 
-Lemma verifyrule_i_in_v_lt_length_g :
-  forall g p d nb res v i,
-  verifyrule g p d nb res v ->
-  In i v ->
+Lemma verifyrule_i_in_k_lt_length_g :
+  forall g p d nb res k i,
+  verifyrule g p d nb res k ->
+  In i k ->
   i < length g.
 Proof.
   intros * H Hin.
@@ -1192,11 +1192,11 @@ Proof.
 Qed.
 
 Lemma verifyrule_depth_decrease :
-  forall g p d nb res v,
-  verifyrule g p (S d) nb res v ->
-  exists res' v',
+  forall g p d nb res k,
+  verifyrule g p (S d) nb res k ->
+  exists res' k',
   coherent_return_type_after_depth_increase res' res /\
-  verifyrule g p d nb res' v'.
+  verifyrule g p d nb res' k'.
 Proof.
   intros * H.
   remember (S d) as d'.
@@ -1223,15 +1223,15 @@ Proof.
 Qed.
 
 Lemma verifyrule_depth_le_coherent_result_type :
-  forall g p d d' nb res v,
-  verifyrule g p d' nb res v ->
+  forall g p d d' nb res k,
+  verifyrule g p d' nb res k ->
   d <= d' ->
-  exists res' v',
+  exists res' k',
   coherent_return_type_after_depth_increase res' res /\
-  verifyrule g p d nb res' v'.
+  verifyrule g p d nb res' k'.
 Proof.
   intros * Hv Hle.
-  generalize dependent v.
+  generalize dependent k.
   generalize dependent res.
   generalize dependent nb.
   generalize dependent p.
@@ -1242,22 +1242,22 @@ Proof.
     destruct res;
     eauto using coherent_return_type_after_depth_increase.
   - (* d <= d', prove for (S d') *)
-    assert (exists res' v',
+    assert (exists res' k',
             coherent_return_type_after_depth_increase res' res /\
-            verifyrule g p d' nb res' v')
-    as [res' [v' [? ?]]]
+            verifyrule g p d' nb res' k')
+    as [res' [k' [? ?]]]
     by eauto using verifyrule_depth_decrease.
-    assert (exists res'' v'',
+    assert (exists res'' k'',
             coherent_return_type_after_depth_increase res'' res' /\
-            verifyrule g p d nb res'' v'')
-    as [res'' [v'' [? ?]]]
+            verifyrule g p d nb res'' k'')
+    as [res'' [k'' [? ?]]]
     by eauto.
     eauto using coherent_return_type_after_depth_increase_transitive.
 Qed.
 
 Lemma verifyrule_res_none_or_some_true :
-  forall g p d res v,
-  verifyrule g p d true res v ->
+  forall g p d res k,
+  verifyrule g p d true res k ->
   res = None \/ res = Some true.
 Proof.
   intros * H.
@@ -1285,9 +1285,9 @@ Inductive same_result_type : bool -> option bool -> bool -> option bool -> Prop 
   .
 
 Lemma verifyrule_nb_change :
-  forall g p d nb nb' res v,
-  verifyrule g p d nb res v ->
-  exists res', same_result_type nb res nb' res' /\ verifyrule g p d nb' res' v.
+  forall g p d nb nb' res k,
+  verifyrule g p d nb res k ->
+  exists res', same_result_type nb res nb' res' /\ verifyrule g p d nb' res' k.
 Proof.
   intros * H.
   generalize dependent nb'.
@@ -1307,7 +1307,7 @@ Proof.
   try match goal with
     [ IHx1: forall _, exists _, _ /\ verifyrule _ ?p1 _ _ _ _,
       IHx2: forall _, exists _, _ /\ verifyrule _ ?p2 _ _ _ _
-      |- exists res, _ /\ verifyrule ?g (PChoice ?p1 ?p2) ?d ?nbx res ?v ] =>
+      |- exists res, _ /\ verifyrule ?g (PChoice ?p1 ?p2) ?d ?nbx res ?k ] =>
           specialize (IHx1 nbx) as [res' [Hsrt1 ?]];
           inversion Hsrt1;
           subst;
@@ -1322,9 +1322,9 @@ Proof.
 Qed.
 
 Lemma verifyrule_nb_change_none :
-  forall g p d nb nb' v,
-  verifyrule g p d nb None v ->
-  verifyrule g p d nb' None v.
+  forall g p d nb nb' k,
+  verifyrule g p d nb None k ->
+  verifyrule g p d nb' None k.
 Proof.
   intros * H.
   eapply verifyrule_nb_change with (nb' := nb') in H as [res' [Hsrt H]].
@@ -1333,9 +1333,9 @@ Proof.
 Qed.
 
 Lemma verifyrule_nb_change_some :
-  forall g p d nb nb' b v,
-  verifyrule g p d nb (Some b) v ->
-  exists b', verifyrule g p d nb' (Some b') v.
+  forall g p d nb nb' b k,
+  verifyrule g p d nb (Some b) k ->
+  exists b', verifyrule g p d nb' (Some b') k.
 Proof.
   intros * H.
   eapply verifyrule_nb_change with (nb' := nb') in H as [res' [Hsrt H]].
@@ -1345,20 +1345,20 @@ Qed.
 
 Ltac pose_verifyrule_nb_none :=
   try match goal with
-    [ Hx1: verifyrule ?g ?p ?d _ None ?v,
+    [ Hx1: verifyrule ?g ?p ?d _ None ?k,
       Hx2: verifyrule ?g ?p ?d ?nb _ _ |- _ ] =>
-          assert (verifyrule g p d nb None v)
+          assert (verifyrule g p d nb None k)
           by eauto using verifyrule_nb_change_none
   end.
 
-Lemma verifyrule_v_independent_from_nb :
-  forall g p d nb nb' res res' v v',
-  verifyrule g p d nb res v ->
-  verifyrule g p d nb' res' v' ->
-  v = v'.
+Lemma verifyrule_k_independent_from_nb :
+  forall g p d nb nb' res res' k k',
+  verifyrule g p d nb res k ->
+  verifyrule g p d nb' res' k' ->
+  k = k'.
 Proof.
   intros * H H'.
-  generalize dependent v'.
+  generalize dependent k'.
   generalize dependent res'.
   generalize dependent nb'.
   induction H;
@@ -1374,14 +1374,14 @@ Proof.
 Qed.
 
 Lemma verifyrule_nullable_approx :
-  forall g p s d nb res v,
+  forall g p s d nb res k,
   matches g p s (Success s) ->
-  verifyrule g p d nb res v ->
+  verifyrule g p d nb res k ->
   res = None \/ res = Some true.
 Proof.
   intros * Hm Hv.
   remember (Success s).
-  generalize dependent v.
+  generalize dependent k.
   generalize dependent res.
   generalize dependent nb.
   generalize dependent d.
@@ -1403,7 +1403,7 @@ Proof.
   try eq_nth_error;
   eauto using verifyrule_res_none_or_some_true;
   try match goal with
-  [ IHx: _ -> forall d nb res v, verifyrule ?g ?p d nb res v -> _,
+  [ IHx: _ -> forall d nb res k, verifyrule ?g ?p d nb res k -> _,
     Hx: verifyrule ?g ?p _ _ _ _ |- _ ] =>
       apply IHx in Hx; auto;
       destruct Hx; try discriminate; try destruct1;
@@ -1413,19 +1413,19 @@ Proof.
 Qed.
 
 Theorem verifyrule_fast_forward_exists :
-  forall g p d nb res v1 i v2,
-  verifyrule g p d nb res (v1 ++ i :: v2) ->
-  exists d' nb' res', verifyrule g (PNT i) d' nb' res' (i :: v2).
+  forall g p d nb res k1 i k2,
+  verifyrule g p d nb res (k1 ++ i :: k2) ->
+  exists d' nb' res', verifyrule g (PNT i) d' nb' res' (i :: k2).
 Proof.
   intros * H.
-  remember (v1 ++ i :: v2) as v.
-  generalize dependent v2.
+  remember (k1 ++ i :: k2) as k.
+  generalize dependent k2.
   generalize dependent i.
-  generalize dependent v1.
+  generalize dependent k1.
   induction H;
   intros;
   eauto using verifyrule;
-  destruct v1;
+  destruct k1;
   simpl in *;
   try discriminate;
   try destruct2;
@@ -1434,19 +1434,19 @@ Proof.
 Qed.
 
 Theorem verifyrule_fast_forward_none_exists :
-  forall g p d nb v1 i v2,
-  verifyrule g p d nb None (v1 ++ i :: v2) ->
-  exists d' nb', verifyrule g (PNT i) d' nb' None (i :: v2).
+  forall g p d nb k1 i k2,
+  verifyrule g p d nb None (k1 ++ i :: k2) ->
+  exists d' nb', verifyrule g (PNT i) d' nb' None (i :: k2).
 Proof.
   intros * H.
-  assert (exists d' nb' res', verifyrule g (PNT i) d' nb' res' (i :: v2))
+  assert (exists d' nb' res', verifyrule g (PNT i) d' nb' res' (i :: k2))
   as [d' [nb' [res' ?]]]
   by eauto using verifyrule_fast_forward_exists.
   destruct res' as [b|]; eauto;
-  remember (v1 ++ i :: v2) as v;
-  generalize dependent v2;
+  remember (k1 ++ i :: k2) as k;
+  generalize dependent k2;
   generalize dependent i;
-  generalize dependent v1;
+  generalize dependent k1;
   generalize dependent nb';
   generalize dependent d';
   generalize dependent b;
@@ -1454,7 +1454,7 @@ Proof.
   induction H;
   intros;
   eauto using verifyrule;
-  destruct v1;
+  destruct k1;
   simpl in *;
   try discriminate;
   try destruct2;
@@ -1462,52 +1462,52 @@ Proof.
 Qed.
 
 Theorem verifyrule_fast_forward_none :
-  forall g p nb nb' d v1 i v2,
-  verifyrule g p d nb None (v1 ++ i :: v2) ->
-  verifyrule g (PNT i) (1 + length v2) nb' None (i :: v2).
+  forall g p nb nb' d k1 i k2,
+  verifyrule g p d nb None (k1 ++ i :: k2) ->
+  verifyrule g (PNT i) (1 + length k2) nb' None (i :: k2).
 Proof.
   intros * H.
-  assert (exists d' nb', verifyrule g (PNT i) d' nb' None (i :: v2))
+  assert (exists d' nb', verifyrule g (PNT i) d' nb' None (i :: k2))
   as [d' [nb'' ?]]
   by eauto using verifyrule_fast_forward_none_exists.
-  assert (length (i :: v2) = d')
-  by eauto using verifyrule_length_v_eq_depth.
+  assert (length (i :: k2) = d')
+  by eauto using verifyrule_length_k_eq_depth.
   subst.
   simpl in *.
   eauto using verifyrule_nb_change_none.
 Qed.
 
 Theorem verifyrule_replace_end :
-  forall g p d d' nb nb' v1 i v2 v3,
-  verifyrule g p d nb None (v1 ++ i :: v2) ->
-  verifyrule g (PNT i) d' nb' None (i :: v3) ->
-  length v2 <= length v3 ->
-  verifyrule g p (1 + length v1 + length v3) nb None (v1 ++ i :: v3).
+  forall g p d d' nb nb' k1 i k2 k3,
+  verifyrule g p d nb None (k1 ++ i :: k2) ->
+  verifyrule g (PNT i) d' nb' None (i :: k3) ->
+  length k2 <= length k3 ->
+  verifyrule g p (1 + length k1 + length k3) nb None (k1 ++ i :: k3).
 Proof.
   intros * Hvp Hvi Hle.
-  assert (d = 1 + length v1 + length v2).
+  assert (d = 1 + length k1 + length k2).
   {
-    apply verifyrule_length_v_eq_depth in Hvp.
+    apply verifyrule_length_k_eq_depth in Hvp.
     rewrite app_length in Hvp.
     simpl in Hvp.
     lia.
   }
   subst d.
-  assert (d' = 1 + length v3).
+  assert (d' = 1 + length k3).
   {
-    apply verifyrule_length_v_eq_depth in Hvi.
+    apply verifyrule_length_k_eq_depth in Hvi.
     simpl in Hvi.
     lia.
   }
   subst d'.
-  assert (1 + length v1 + length v2 <= 1 + length v1 + length v3) by lia.
-  remember (1 + length v1 + length v2) as d.
+  assert (1 + length k1 + length k2 <= 1 + length k1 + length k3) by lia.
+  remember (1 + length k1 + length k2) as d.
   remember None as res.
-  remember (v1 ++ i :: v2) as v.
-  generalize dependent v3.
-  generalize dependent v2.
+  remember (k1 ++ i :: k2) as k.
+  generalize dependent k3.
+  generalize dependent k2.
   generalize dependent i.
-  generalize dependent v1.
+  generalize dependent k1.
   generalize dependent nb'.
   induction Hvp;
   intros;
@@ -1516,23 +1516,23 @@ Proof.
   repeat specialize_eq_refl;
   eauto using verifyrule, verifyrule_depth_le_some_determinism.
   - (* PNT i *)
-    destruct v1;
+    destruct k1;
     simpl in *;
     try destruct1;
     try destruct2;
     eauto using verifyrule, verifyrule_nb_change_none, le_S_n.
 Qed.
 
-Theorem verifyrule_repetition_in_v :
-  forall g p d v1 v2 v3 nb i,
-  verifyrule g p d nb None (v1 ++ i :: v2 ++ i :: v3) ->
-  exists d', verifyrule g p d' nb None (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3).
+Theorem verifyrule_repetition_in_k :
+  forall g p d k1 k2 k3 nb i,
+  verifyrule g p d nb None (k1 ++ i :: k2 ++ i :: k3) ->
+  exists d', verifyrule g p d' nb None (k1 ++ i :: k2 ++ i :: k2 ++ i :: k3).
 Proof.
   intros * H.
-  assert (verifyrule g (PNT i) (1 + length (v2 ++ i :: v3)) false None (i :: v2 ++ i :: v3))
+  assert (verifyrule g (PNT i) (1 + length (k2 ++ i :: k3)) false None (i :: k2 ++ i :: k3))
   by eauto using verifyrule_fast_forward_none.
   assert (
-    length v3 <= length (v2 ++ i :: v3)
+    length k3 <= length (k2 ++ i :: k3)
   ).
   {
     rewrite app_length.
@@ -1540,8 +1540,8 @@ Proof.
     lia.
   }
   assert (
-    v1 ++ i :: v2 ++ i :: v2 ++ i :: v3 =
-    (v1 ++ i :: v2) ++ i :: v2 ++ i :: v3
+    k1 ++ i :: k2 ++ i :: k2 ++ i :: k3 =
+    (k1 ++ i :: k2) ++ i :: k2 ++ i :: k3
   ).
   {
     rewrite <- app_assoc.
@@ -1549,8 +1549,8 @@ Proof.
     trivial.
   }
   assert (
-    v1 ++ i :: v2 ++ i :: v3 =
-    (v1 ++ i :: v2) ++ i :: v3
+    k1 ++ i :: k2 ++ i :: k3 =
+    (k1 ++ i :: k2) ++ i :: k3
   ).
   {
     rewrite <- app_assoc.
@@ -1558,43 +1558,43 @@ Proof.
     trivial.
   }
   match goal with
-    [ Hverifyrule: verifyrule _ _ _ _ _ ?v,
-      Heqv: ?v = _ |- _ ] =>
-          rewrite Heqv in Hverifyrule
+    [ Hverifyrule: verifyrule _ _ _ _ _ ?k,
+      Heqk: ?k = _ |- _ ] =>
+          rewrite Heqk in Hverifyrule
   end.
   match goal with
-    [ Heqv: ?v = _
-      |- exists _, verifyrule _ _ _ _ _ ?v ] =>
-          rewrite Heqv
+    [ Heqk: ?k = _
+      |- exists _, verifyrule _ _ _ _ _ ?k ] =>
+          rewrite Heqk
   end.
   eauto using verifyrule_replace_end.
 Qed.
 
 Theorem verifyrule_convergence_S_depth :
-  forall g p d nb res v,
+  forall g p d nb res k,
   length g < d ->
-  verifyrule g p d nb res v ->
-  exists v', verifyrule g p (S d) nb res v'.
+  verifyrule g p d nb res k ->
+  exists k', verifyrule g p (S d) nb res k'.
 Proof.
   intros * Hlt Hv.
   destruct res.
   - (* Some b *)
     eauto using verifyrule_depth_le_some_determinism.
   - (* None *)
-    assert (length v = d)
-    by eauto using verifyrule_length_v_eq_depth.
+    assert (length k = d)
+    by eauto using verifyrule_length_k_eq_depth.
     subst d.
-    assert (exists i v1 v2 v3, v = v1 ++ i :: v2 ++ i :: v3)
-    as [i [v1 [v2 [v3 Heqv]]]]
-    by eauto using pigeonhole_principle, verifyrule_i_in_v_lt_length_g.
-    subst v.
-    apply verifyrule_repetition_in_v in Hv as [d Hv].
-    assert (length (v1 ++ i :: v2 ++ i :: v2 ++ i :: v3) = d)
-    by eauto using verifyrule_length_v_eq_depth.
+    assert (exists i k1 k2 k3, k = k1 ++ i :: k2 ++ i :: k3)
+    as [i [k1 [k2 [k3 Heqk]]]]
+    by eauto using pigeonhole_principle, verifyrule_i_in_k_lt_length_g.
+    subst k.
+    apply verifyrule_repetition_in_k in Hv as [d Hv].
+    assert (length (k1 ++ i :: k2 ++ i :: k2 ++ i :: k3) = d)
+    by eauto using verifyrule_length_k_eq_depth.
     subst d.
     match goal with
       [ Hx: verifyrule ?g ?p ?d ?nb None _
-        |- exists v, verifyrule ?g ?p ?d' ?nb None v ] =>
+        |- exists k, verifyrule ?g ?p ?d' ?nb None k ] =>
             assert (d' <= d) by (repeat (rewrite app_length; simpl); lia)
     end.
     match goal with
@@ -1609,14 +1609,14 @@ Proof.
 Qed.
 
 Theorem verifyrule_convergence :
-  forall g p d d' nb res v,
+  forall g p d d' nb res k,
   length g < d ->
-  verifyrule g p d nb res v ->
+  verifyrule g p d nb res k ->
   d <= d' ->
-  exists v', verifyrule g p d' nb res v'.
+  exists k', verifyrule g p d' nb res k'.
 Proof.
   intros * Hlt Hv Hle.
-  induction Hle as [|d' Hle [v' IH]];
+  induction Hle as [|d' Hle [k' IH]];
   eauto using verifyrule_convergence_S_depth, Nat.lt_le_trans.
 Qed.
 
@@ -1629,9 +1629,9 @@ Ltac specialize_coherent :=
 Lemma verifyrule_safe_grammar_yields_safe_pattern :
   forall g p nb,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists d b v, verifyrule g r d nb (Some b) v) ->
+  (forall r nb, In r g -> exists d b k, verifyrule g r d nb (Some b) k) ->
   coherent g p true ->
-  exists d b v, verifyrule g p d nb (Some b) v.
+  exists d b k, verifyrule g p d nb (Some b) k.
 Proof.
   intros * Hgc Hgv Hpc.
   generalize dependent nb.
@@ -1646,13 +1646,13 @@ Proof.
       |- exists _ _ _, verifyrule ?g (_ ?p1 ?p2) _ ?nb _ _ ] =>
           specialize (Hx1 false);
           specialize (Hx2 nb);
-          destruct Hx1 as [d1 [b1 [v1 ?]]];
-          destruct Hx2 as [d2 [b2 [v2 ?]]];
+          destruct Hx1 as [d1 [b1 [k1 ?]]];
+          destruct Hx2 as [d2 [b2 [k2 ?]]];
           assert (d1 <= d1 + d2) by lia;
           assert (d2 <= d1 + d2) by lia;
-          assert (verifyrule g p1 (d1 + d2) false (Some b1) v1)
+          assert (verifyrule g p1 (d1 + d2) false (Some b1) k1)
           by eauto using verifyrule_depth_le_some_determinism;
-          assert (verifyrule g p2 (d1 + d2) nb (Some b2) v2)
+          assert (verifyrule g p2 (d1 + d2) nb (Some b2) k2)
           by eauto using verifyrule_depth_le_some_determinism;
           destruct b1;
           eauto using verifyrule;
@@ -1663,14 +1663,14 @@ Proof.
       Hx2: forall nb, exists _ _ _, verifyrule ?g ?p2 _ nb (Some _) _
       |- exists _ _ _, verifyrule ?g (_ ?p1 ?p2) _ ?nb _ _ ] =>
           specialize (Hx1 nb);
-          destruct Hx1 as [d1 [b1 [v1 ?]]];
+          destruct Hx1 as [d1 [b1 [k1 ?]]];
           specialize (Hx2 b1);
-          destruct Hx2 as [d2 [b2 [v2 ?]]];
+          destruct Hx2 as [d2 [b2 [k2 ?]]];
           assert (d1 <= d1 + d2) by lia;
           assert (d2 <= d1 + d2) by lia;
-          assert (verifyrule g p1 (d1 + d2) nb (Some b1) v1)
+          assert (verifyrule g p1 (d1 + d2) nb (Some b1) k1)
           by eauto using verifyrule_depth_le_some_determinism;
-          assert (verifyrule g p2 (d1 + d2) b1 (Some b2) v2)
+          assert (verifyrule g p2 (d1 + d2) b1 (Some b2) k2)
           by eauto using verifyrule_depth_le_some_determinism;
           destruct b1;
           eauto using verifyrule;
@@ -1689,8 +1689,8 @@ Proof.
       |- exists _ _ _, verifyrule g (PNT ?n) _ ?nb _ _ ] =>
         assert (In p g) by eauto using nth_error_In;
         assert (coherent g p true) by eauto;
-        assert (exists d b v, verifyrule g p d nb (Some b) v)
-        as [d [b [v ?]]] by eauto;
+        assert (exists d b k, verifyrule g p d nb (Some b) k)
+        as [d [b [k ?]]] by eauto;
         eauto using verifyrule
   end.
 Qed.
@@ -1706,7 +1706,7 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
               | PAnyChar => Some (Some nb, nil)
               | PSequence p1 p2 => match verifyrule_comp g p1 d false gas' with
                                    | Some (Some true, _) => verifyrule_comp g p2 d nb gas'
-                                   | Some (Some false, v) => Some (Some nb, v)
+                                   | Some (Some false, k) => Some (Some nb, k)
                                    | res => res
                                    end
               | PChoice p1 p2 => match verifyrule_comp g p1 d nb gas' with
@@ -1720,7 +1720,7 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
                          | Some p' => match d with
                                       | O => Some (None, nil)
                                       | S d' => match verifyrule_comp g p' d' nb gas' with
-                                                    | Some (res, v) => Some (res, i :: v)
+                                                    | Some (res, k) => Some (res, i :: k)
                                                     | None => None
                                                     end
                                       end
@@ -1729,12 +1729,12 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
   end.
 
 Lemma verifyrule_comp_soundness :
-  forall g p d nb gas res v,
-  verifyrule_comp g p d nb gas = Some (res, v) ->
-  verifyrule g p d nb res v.
+  forall g p d nb gas res k,
+  verifyrule_comp g p d nb gas = Some (res, k) ->
+  verifyrule g p d nb res k.
 Proof.
   intros * H.
-  generalize dependent v.
+  generalize dependent k.
   generalize dependent res.
   generalize dependent nb.
   generalize dependent d.
@@ -1768,12 +1768,12 @@ Proof.
 Qed.
 
 Lemma verifyrule_comp_S_gas :
-  forall g p d nb res v gas,
-  verifyrule_comp g p d nb gas = Some (res, v) ->
-  verifyrule_comp g p d nb (S gas) = Some (res, v).
+  forall g p d nb res k gas,
+  verifyrule_comp g p d nb gas = Some (res, k) ->
+  verifyrule_comp g p d nb (S gas) = Some (res, k).
 Proof.
   intros.
-  generalize dependent v.
+  generalize dependent k.
   generalize dependent res.
   generalize dependent nb.
   generalize dependent d.
@@ -1808,10 +1808,10 @@ Proof.
 Qed.
 
 Lemma verifyrule_comp_le_gas :
-  forall g p d nb gas1 gas2 res v,
-  verifyrule_comp g p d nb gas1 = Some (res, v) ->
+  forall g p d nb gas1 gas2 res k,
+  verifyrule_comp g p d nb gas1 = Some (res, k) ->
   gas1 <= gas2 ->
-  verifyrule_comp g p d nb gas2 = Some (res, v).
+  verifyrule_comp g p d nb gas2 = Some (res, k).
 Proof.
   intros * H Hle.
   induction Hle;
@@ -1822,8 +1822,8 @@ Lemma verifyrule_comp_termination :
   forall g p d nb,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
-  exists gas res v,
-  verifyrule_comp g p d nb gas = Some (res, v).
+  exists gas res k,
+  verifyrule_comp g p d nb gas = Some (res, k).
 Proof.
   intros * Hgc Hpc.
   generalize dependent nb.
@@ -1839,8 +1839,8 @@ Proof.
   try (exists 1; simpl; eauto; fail);
   try (
     let H := fresh in
-    assert (exists gas res v, verifyrule_comp g p d true gas = Some (res, v))
-    as [gas [res [v H]]] by auto;
+    assert (exists gas res k, verifyrule_comp g p d true gas = Some (res, k))
+    as [gas [res [k H]]] by auto;
     exists (1 + gas);
     simpl;
     rewrite H;
@@ -1848,26 +1848,26 @@ Proof.
     fail
   ).
   - (* PSequence p1 p2 *)
-    assert (exists gas res v, verifyrule_comp g p1 d false gas = Some (res, v))
-    as [gas1 [res1 [v1 ?]]] by auto.
-    assert (exists gas res v, verifyrule_comp g p2 d nb gas = Some (res, v))
-    as [gas2 [res2 [v2 ?]]] by auto.
+    assert (exists gas res k, verifyrule_comp g p1 d false gas = Some (res, k))
+    as [gas1 [res1 [k1 ?]]] by auto.
+    assert (exists gas res k, verifyrule_comp g p2 d nb gas = Some (res, k))
+    as [gas2 [res2 [k2 ?]]] by auto.
     assert (gas1 <= gas1 + gas2) by lia.
     assert (gas2 <= gas1 + gas2) by lia.
-    assert (verifyrule_comp g p2 d nb (gas1 + gas2) = Some (res2, v2))
+    assert (verifyrule_comp g p2 d nb (gas1 + gas2) = Some (res2, k2))
     by eauto using verifyrule_comp_le_gas.
     exists (1 + gas1 + gas2).
     simpl.
     let H := fresh in
-    assert (verifyrule_comp g p1 d false (gas1 + gas2) = Some (res1, v1))
+    assert (verifyrule_comp g p1 d false (gas1 + gas2) = Some (res1, k1))
     as H by eauto using verifyrule_comp_le_gas;
     rewrite H.
     destruct res1 as [[|]|];
     eauto.
   - (* PChoice p1 p2 *)
     let H := fresh in
-    assert (exists gas res v, verifyrule_comp g p1 d nb gas = Some (res, v))
-    as [gas1 [res1 [v1 H]]] by auto;
+    assert (exists gas res k, verifyrule_comp g p1 d nb gas = Some (res, k))
+    as [gas1 [res1 [k1 H]]] by auto;
     destruct res1 as [nb'|];
     try (
       exists (1 + gas1);
@@ -1876,16 +1876,16 @@ Proof.
       eauto;
       fail
     ).
-    assert (exists gas res v, verifyrule_comp g p2 d nb' gas = Some (res, v))
-    as [gas2 [res2 [v2 ?]]] by auto.
+    assert (exists gas res k, verifyrule_comp g p2 d nb' gas = Some (res, k))
+    as [gas2 [res2 [k2 ?]]] by auto.
     assert (gas1 <= gas1 + gas2) by lia.
     assert (gas2 <= gas1 + gas2) by lia.
-    assert (verifyrule_comp g p2 d nb' (gas1 + gas2) = Some (res2, v2))
+    assert (verifyrule_comp g p2 d nb' (gas1 + gas2) = Some (res2, k2))
     by eauto using verifyrule_comp_le_gas.
     exists (1 + gas1 + gas2).
     simpl.
     let H := fresh in
-    assert (verifyrule_comp g p1 d nb (gas1 + gas2) = Some (Some nb', v1))
+    assert (verifyrule_comp g p1 d nb (gas1 + gas2) = Some (Some nb', k1))
     as H by eauto using verifyrule_comp_le_gas;
     rewrite H.
     eauto.
@@ -1899,8 +1899,8 @@ Proof.
       end.
     + (* S d *)
       let H := fresh in
-      assert (exists gas res v, verifyrule_comp g p d nb gas = Some (res, v))
-      as [gas [res [v H]]] by eauto using nth_error_In;
+      assert (exists gas res k, verifyrule_comp g p d nb gas = Some (res, k))
+      as [gas [res [k H]]] by eauto using nth_error_In;
       exists (1 + gas);
       simpl;
       match goal with
@@ -1916,8 +1916,8 @@ Lemma verifyrule_comp_gas_bounded :
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
   gas >= pat_size p + d * (grammar_size g) ->
-  exists res v,
-  verifyrule_comp g p d nb gas = Some (res, v).
+  exists res k,
+  verifyrule_comp g p d nb gas = Some (res, k).
 Proof.
   intros * Hgc Hpc Hge.
   generalize dependent nb.
@@ -1949,16 +1949,16 @@ Proof.
   simpl;
   eauto.
   - (* PSequence p1 p2 *)
-    assert (exists res v, verifyrule_comp g p1 d false gas = Some (res, v))
+    assert (exists res k, verifyrule_comp g p1 d false gas = Some (res, k))
     as [res1 [? Hvrp1]] by eauto.
-    assert (exists res v, verifyrule_comp g p2 d nb gas = Some (res, v))
+    assert (exists res k, verifyrule_comp g p2 d nb gas = Some (res, k))
     as [? [? ?]] by eauto.
     rewrite Hvrp1.
     destruct res1 as [[|]|]; eauto.
   - (* PChoice p1 p2 *)
-    assert (exists res v, verifyrule_comp g p1 d nb gas = Some (res, v))
+    assert (exists res k, verifyrule_comp g p1 d nb gas = Some (res, k))
     as [res1 [? Hvrp1]] by eauto.
-    assert (exists res v, verifyrule_comp g p2 d nb gas = Some (res, v))
+    assert (exists res k, verifyrule_comp g p2 d nb gas = Some (res, k))
     as [? [? ?]] by eauto.
     rewrite Hvrp1.
     destruct res1; eauto.
@@ -1971,7 +1971,7 @@ Proof.
     assert (pat_size p <= grammar_size g)
     by eauto using nth_error_In, pat_size_le_grammar_size.
     assert (gas >= pat_size p + d * grammar_size g) by lia.
-    assert (exists res v, verifyrule_comp g p d nb gas = Some (res, v))
+    assert (exists res k, verifyrule_comp g p d nb gas = Some (res, k))
     as [? [? Hvrp]] by eauto using nth_error_In.
     rewrite Hvrp.
     eauto.
@@ -2283,8 +2283,8 @@ Proof.
 Qed.
 
 Lemma verifyrule_similar_to_nullable :
-  forall g p d b v,
-  verifyrule g p d false (Some b) v ->
+  forall g p d b k,
+  verifyrule g p d false (Some b) k ->
   nullable g p d (Some b).
 Proof.
   intros * H.
@@ -2314,7 +2314,7 @@ Lemma nullable_none_is_verifyrule_none :
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
   nullable g p d None ->
-  exists v, verifyrule g p d false None v.
+  exists k, verifyrule g p d false None k.
 Proof.
   intros * Hcg Hcp Hn.
   remember None as res.
@@ -2340,10 +2340,10 @@ Proof.
   try destruct_exists_hyp;
   eauto using verifyrule;
   try (
-    assert (exists gas res v, verifyrule_comp g p1 d false gas = Some (res, v))
-    as [gas [res' [v Hvcp1]]]
+    assert (exists gas res k, verifyrule_comp g p1 d false gas = Some (res, k))
+    as [gas [res' [k Hvcp1]]]
     by eauto using verifyrule_comp_termination;
-    assert (verifyrule g p1 d false res' v)
+    assert (verifyrule g p1 d false res' k)
     by eauto using verifyrule_comp_soundness;
     destruct res';
     eauto using verifyrule;
@@ -2413,7 +2413,7 @@ Qed.
 Lemma nullable_convergence :
   forall g p d d' res,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists d b v, verifyrule g r d nb (Some b) v) ->
+  (forall r nb, In r g -> exists d b k, verifyrule g r d nb (Some b) k) ->
   coherent g p true ->
   length g < d ->
   nullable g p d res ->
@@ -2421,32 +2421,32 @@ Lemma nullable_convergence :
   nullable g p d' res.
 Proof.
   intros * Hgc Hgv Hpc Hlt H Hle.
-  assert (exists gas res v, verifyrule_comp g p d false gas = Some (res, v))
+  assert (exists gas res k, verifyrule_comp g p d false gas = Some (res, k))
   as [? [? [? ?]]]
   by eauto using verifyrule_comp_termination.
   match goal with
-    [ Hx: verifyrule_comp ?g ?p ?d false ?gas = Some (?res, ?v) |- _ ] =>
-        assert (verifyrule g p d false res v)
+    [ Hx: verifyrule_comp ?g ?p ?d false ?gas = Some (?res, ?k) |- _ ] =>
+        assert (verifyrule g p d false res k)
         by eauto using verifyrule_comp_soundness
   end.
-  assert (exists d b v, verifyrule g p d false (Some b) v)
+  assert (exists d b k, verifyrule g p d false (Some b) k)
   as [? [? [? ?]]]
   by eauto using verifyrule_safe_grammar_yields_safe_pattern.
   match goal with
-    [ Hx: verifyrule ?g ?p ?d1 false (Some ?b) ?v1,
-      Hy: verifyrule ?g ?p ?d2 false ?res ?v2,
+    [ Hx: verifyrule ?g ?p ?d1 false (Some ?b) ?k1,
+      Hy: verifyrule ?g ?p ?d2 false ?res ?k2,
       Hz: length ?g < ?d2 |- _ ] =>
           destruct (Compare_dec.le_ge_dec d1 d2);
           try match goal with
             [ Hw: ?d1 <= ?d2,
               Hv: length ?g < ?d2 |- _ ] =>
-                  assert (verifyrule g p d2 false (Some b) v1)
+                  assert (verifyrule g p d2 false (Some b) k1)
                   by eauto using verifyrule_depth_le_some_determinism
           end;
           try match goal with
             [ Hw: ?d1 >= ?d2 |- _ ] =>
                 assert (d2 <= d1) by lia;
-                assert (exists v', verifyrule g p d1 false res v')
+                assert (exists k', verifyrule g p d1 false res k')
                 as [? ?]
                 by eauto using verifyrule_convergence;
                 pose_verifyrule_determinism;
@@ -2455,12 +2455,12 @@ Proof.
   end;
   match goal with
     [ Hx: nullable ?g ?p ?d ?res,
-      Hy: verifyrule ?g ?p ?d false (Some ?b) ?v |- _ ] =>
+      Hy: verifyrule ?g ?p ?d false (Some ?b) ?k |- _ ] =>
           assert (nullable g p d (Some b))
           by eauto using verifyrule_similar_to_nullable;
           pose_nullable_determinism;
           subst;
-          assert (exists v', verifyrule g p d' false (Some b) v')
+          assert (exists k', verifyrule g p d' false (Some b) k')
           as [? ?]
           by eauto using verifyrule_convergence;
           eauto using verifyrule_similar_to_nullable
@@ -2803,7 +2803,7 @@ Qed.
 Lemma checkloops_safe_grammar :
   forall g p,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists d b v, verifyrule g r d nb (Some b) v) ->
+  (forall r nb, In r g -> exists d b k, verifyrule g r d nb (Some b) k) ->
   coherent g p true ->
   exists d b, checkloops g p d (Some b).
 Proof.
@@ -2830,8 +2830,8 @@ Proof.
     [ Hx: coherent ?g ?p true,
       Hy: checkloops ?g ?p ?d' (Some ?b')
       |- exists _ _, checkloops ?g (PRepetition ?p) _ _ ] =>
-          assert (exists d b v, verifyrule g p d false (Some b) v)
-          as [d [b [v ?]]] by eauto using verifyrule_safe_grammar_yields_safe_pattern;
+          assert (exists d b k, verifyrule g p d false (Some b) k)
+          as [d [b [k ?]]] by eauto using verifyrule_safe_grammar_yields_safe_pattern;
           assert (nullable g p d (Some b))
           by eauto using verifyrule_similar_to_nullable;
           assert (d <= d + d') by lia;
@@ -2857,7 +2857,7 @@ Qed.
 Lemma checkloops_convergence :
   forall g p d d' res,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists d b v, verifyrule g r d nb (Some b) v) ->
+  (forall r nb, In r g -> exists d b k, verifyrule g r d nb (Some b) k) ->
   coherent g p true ->
   length g < d ->
   checkloops g p d res ->
@@ -2875,7 +2875,7 @@ Qed.
 Lemma checkloops_Some_convergence :
   forall g p d d' b res,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists d b v, verifyrule g r d nb (Some b) v) ->
+  (forall r nb, In r g -> exists d b k, verifyrule g r d nb (Some b) k) ->
   coherent g p true ->
   checkloops g p d (Some b) ->
   length g < d' ->
@@ -3286,14 +3286,14 @@ Inductive lverifyrule : grammar -> list pat -> bool -> Prop :=
       forall g,
       lverifyrule g nil true
   | LVConsSome :
-      forall g r rs d nb v b,
-      verifyrule g r d false (Some nb) v ->
+      forall g r rs d nb k b,
+      verifyrule g r d false (Some nb) k ->
       lverifyrule g rs b ->
       lverifyrule g (cons r rs) b
   | LVConsNone :
-      forall g r rs d v,
+      forall g r rs d k,
       length g < d ->
-      verifyrule g r d false None v ->
+      verifyrule g r d false None k ->
       lverifyrule g (cons r rs) false
   .
 
@@ -3308,17 +3308,17 @@ Proof.
   induction H1; intros;
   inversion H2; subst;
   try match goal with
-    [ HSome : verifyrule ?g ?r ?dSome false (Some ?nb') ?vSome,
-      HNone : verifyrule ?g ?r ?dNone false None ?vNone,
+    [ HSome : verifyrule ?g ?r ?dSome false (Some ?nb') ?kSome,
+      HNone : verifyrule ?g ?r ?dNone false None ?kNone,
       Hlt : length ?g < ?dNone |- _ ] =>
           destruct (Compare_dec.le_ge_dec dSome dNone);
           match goal with
           | [ Hle : ?dSome <= ?dNone |- _ ] =>
-                assert (verifyrule g r dNone false (Some nb') vSome)
+                assert (verifyrule g r dNone false (Some nb') kSome)
                 by eauto using verifyrule_depth_le_some_determinism
           | [ Hle : ?dSome >= ?dNone |- _ ] =>
                 assert (dNone <= dSome) by lia;
-                assert (exists v, verifyrule g r dSome false None v)
+                assert (exists k, verifyrule g r dSome false None k)
                 as [? ?] by eauto using verifyrule_convergence
           end;
           pose_verifyrule_determinism;
@@ -3332,8 +3332,8 @@ Lemma lverifyrule_true_In_false :
   forall g rs r,
   lverifyrule g rs true ->
   In r rs ->
-  exists d b v,
-  verifyrule g r d false (Some b) v.
+  exists d b k,
+  verifyrule g r d false (Some b) k.
 Proof.
   intros * Hlv HIn.
   generalize dependent r.
@@ -3357,14 +3357,14 @@ Lemma lverifyrule_true_In :
   forall g rs r nb,
   lverifyrule g rs true ->
   In r rs ->
-  exists d b v,
-  verifyrule g r d nb (Some b) v.
+  exists d b k,
+  verifyrule g r d nb (Some b) k.
 Proof.
   intros * Hlv HIn.
-  assert (exists d b v, verifyrule g r d false (Some b) v)
-  as [d [? [v ?]]]
+  assert (exists d b k, verifyrule g r d false (Some b) k)
+  as [d [? [k ?]]]
   by eauto using lverifyrule_true_In_false.
-  assert (exists b', verifyrule g r d nb (Some b') v)
+  assert (exists b', verifyrule g r d nb (Some b') k)
   as [? ?]
   by eauto using verifyrule_nb_change_some.
   eauto.
@@ -3403,8 +3403,8 @@ Proof.
           try destruct1;
           try discriminate;
           try match goal with
-            [ Hx: verifyrule_comp ?g ?r ?d false ?gas = Some (?res, ?v) |- _ ] =>
-                assert (verifyrule g r d false res v)
+            [ Hx: verifyrule_comp ?g ?r ?d false ?gas = Some (?res, ?k) |- _ ] =>
+                assert (verifyrule g r d false res k)
                 by eauto using verifyrule_comp_soundness
           end;
           eauto using lverifyrule
@@ -3470,15 +3470,15 @@ Proof.
       [ Hx: lcoherent ?g ?rs true -> _, Hy: lcoherent ?g ?rs true |- _ ] =>
           specialize (Hx Hy) as [gas1 [resrs ?]]
     end.
-    assert (exists gas res v, verifyrule_comp g r (S (length g)) false gas = Some (res, v))
-    as [gas2 [res [v Hv]]]
+    assert (exists gas res k, verifyrule_comp g r (S (length g)) false gas = Some (res, k))
+    as [gas2 [res [k Hv]]]
     by eauto using verifyrule_comp_termination, lcoherent_true_In.
     simpl.
     assert (gas1 <= gas1 + gas2) by lia.
     assert (gas2 <= gas1 + gas2) by lia.
     assert (lverifyrule_comp g rs (gas1 + gas2) = Some resrs)
     as Hlv' by eauto using lverifyrule_comp_le_gas.
-    assert (verifyrule_comp g r (S (length g)) false (gas1 + gas2) = Some (res, v))
+    assert (verifyrule_comp g r (S (length g)) false (gas1 + gas2) = Some (res, k))
     as Hv' by eauto using verifyrule_comp_le_gas.
     exists (gas1 + gas2).
     rewrite Hv'.
@@ -3505,7 +3505,7 @@ Proof.
   assert (exists b, lverifyrule_comp g rs gas = Some b)
   as [? ?] by eauto.
   assert (gas >= pat_size r + S (length g) * grammar_size g) by lia.
-  assert (exists res v, verifyrule_comp g r (S (length g)) false gas = Some (res, v))
+  assert (exists res k, verifyrule_comp g r (S (length g)) false gas = Some (res, k))
   as [res [? Hv]] by eauto using verifyrule_comp_gas_bounded, lcoherent_true_In.
   rewrite Hv.
   destruct res; eauto.
@@ -4263,7 +4263,7 @@ Qed.
 Theorem safe_match :
   forall g p d s,
   (forall r, In r g -> coherent g r true) ->
-  (forall r nb, In r g -> exists d b v, verifyrule g r d nb (Some b) v) ->
+  (forall r nb, In r g -> exists d b k, verifyrule g r d nb (Some b) k) ->
   (forall r, In r g -> exists d, checkloops g r d (Some false)) ->
   coherent g p true ->
   checkloops g p d (Some false) ->
@@ -4277,7 +4277,7 @@ Proof.
   generalize dependent g.
   induction n using strong_induction;
   intros.
-  assert (exists nb d' b v, verifyrule g p d' nb (Some b) v)
+  assert (exists nb d' b k, verifyrule g p d' nb (Some b) k)
   as [nb [? [b [? Hvp]]]]
   by (exists true; eauto using verifyrule_safe_grammar_yields_safe_pattern).
   remember (Some b) as res in Hvp.

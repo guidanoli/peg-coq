@@ -4018,16 +4018,6 @@ Proof.
               checkloops_Some_determinism.
 Qed.
 
-Lemma verifygrammarpat_true :
-  forall g p,
-  verifygrammarpat g p true ->
-  verifygrammar g true /\ coherent g p true /\ exists d, checkloops g p d (Some false).
-Proof.
-  intros * H.
-  inversion H;
-  eauto.
-Qed.
-
 Definition verifygrammarpat_comp g p gas :=
   match verifygrammar_comp g gas with
   | Some true => match coherent_comp g p gas with
@@ -4387,7 +4377,7 @@ Theorem verifygrammarpat_safe_match :
   exists res, matches g p s res.
 Proof.
   intros * Hvgp.
-  specialize (verifygrammarpat_true _ _ Hvgp) as [? [? [? ?]]].
+  inversion Hvgp; subst.
   eauto using verifygrammar_safe_match.
 Qed.
 

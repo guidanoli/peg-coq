@@ -3798,16 +3798,6 @@ Proof.
               lcheckloops_determinism.
 Qed.
 
-Lemma verifygrammar_true :
-  forall g,
-  verifygrammar g true ->
-  lcoherent g g true /\ lverifyrule g g true /\ lcheckloops g g false.
-Proof.
-  intros * H.
-  inversion H;
-  eauto.
-Qed.
-
 Definition verifygrammar_comp g gas :=
   match lcoherent_comp g g gas with
   | Some true => match lverifyrule_comp g g gas with
@@ -4133,7 +4123,7 @@ Proof.
   by eauto using verifygrammar_comp_soundness.
   destruct bvg.
   - (* true *)
-    specialize (verifygrammar_true _ Hvg) as [? [? ?]].
+    inversion Hvg; subst.
     assert (exists gas b, coherent_comp g p gas = Some b)
     as [gasc [bc ?]]
     by eauto using coherent_comp_termination.
@@ -4387,7 +4377,7 @@ Theorem verifygrammar_safe_match :
   exists res, matches g p s res.
 Proof.
   intros * Hvg Hpc Hlp.
-  specialize (verifygrammar_true _ Hvg) as [? [? ?]].
+  inversion Hvg; subst.
   eauto using lpredicates_safe_match.
 Qed.
 

@@ -49,7 +49,6 @@ Ltac destruct_and_hyp :=
 Inductive pat : Type :=
   | PEmpty : pat                          (* ε            *)
   | PChar : ascii -> pat                  (* 'a'          *)
-  | PAnyChar : pat                        (* .            *)
   | PSequence : pat -> pat -> pat         (* p1 p2        *)
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
@@ -66,7 +65,6 @@ Fixpoint pat_size p :=
   match p with
   | PEmpty => 1
   | PChar _ => 1
-  | PAnyChar => 1
   | PSequence p1 p2 => 1 + pat_size p1 + pat_size p2
   | PChoice p1 p2 => 1 + pat_size p1 + pat_size p2
   | PRepetition p => 1 + pat_size p
@@ -125,12 +123,6 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g a1 a2 s,
       a1 <> a2 ->
       matches g (PChar a1) (String a2 s) Failure
-  | MAnyCharSuccess :
-      forall g a s,
-      matches g PAnyChar (String a s) (Success s)
-  | MAnyCharFailure :
-      forall g,
-      matches g PAnyChar EmptyString Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
       matches g p1 s (Success s') ->
@@ -275,10 +267,6 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                                              then Some (Success s')
                                              else Some Failure
                            end
-              | PAnyChar => match s with
-                            | EmptyString => Some Failure
-                            | String _ s' => Some (Success s')
-                            end
               | PSequence p1 p2 => match matches_comp g p1 s gas' with
                                    | Some (Success s') => matches_comp g p2 s' gas'
                                    | res => res
@@ -321,10 +309,6 @@ Proof with eauto using matches.
   - (* PChar a *)
     destruct s as [|a' s'];
     try destruct (ascii_dec a a');
-    destruct1;
-    eauto using matches.
-  - (* PAnyChar *)
-    destruct s as [|a' s'];
     destruct1;
     eauto using matches.
   - (* PSequence p1 p2 *)
@@ -498,9 +482,6 @@ Inductive coherent : grammar -> pat -> bool -> Prop :=
   | CChar :
       forall g a,
       coherent g (PChar a) true
-  | CAnyChar :
-      forall g,
-      coherent g PAnyChar true
   | CSequenceFalse :
       forall g p1 p2,
       coherent g p1 false ->
@@ -576,7 +557,6 @@ Fixpoint coherent_comp (g : grammar) p gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some true
               | PChar _ => Some true
-              | PAnyChar => Some true
               | PSequence p1 p2 => match coherent_comp g p1 gas' with
                                    | Some true => coherent_comp g p2 gas'
                                    | res => res
@@ -766,9 +746,6 @@ Inductive verifyrule :
   | VRChar :
       forall g a d nb,
       verifyrule g (PChar a) d nb (Some nb) nil
-  | VRAnyChar :
-      forall g d nb,
-      verifyrule g PAnyChar d nb (Some nb) nil
   | VRSequenceNone :
       forall g p1 p2 d nb k,
       verifyrule g p1 d false None k ->
@@ -825,28 +802,21 @@ Qed.
 
 Goal
   forall g nb d,
-  verifyrule g PAnyChar d nb (Some nb) nil.
-Proof.
-  eauto using verifyrule.
-Qed.
-
-Goal
-  forall g nb d,
   verifyrule g (PSequence PEmpty PEmpty) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d,
-  verifyrule g (PSequence PAnyChar PEmpty) d nb (Some nb) nil.
+  forall g nb d a,
+  verifyrule g (PSequence (PChar a) PEmpty) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d,
-  verifyrule g (PSequence PEmpty PAnyChar) d nb (Some nb) nil.
+  forall g nb d a,
+  verifyrule g (PSequence PEmpty (PChar a)) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -895,22 +865,22 @@ Proof.
 Qed.
 
 Goal
-  forall g nb d,
-  verifyrule g (PChoice PAnyChar PEmpty) d nb (Some true) nil.
+  forall g nb d a,
+  verifyrule g (PChoice (PChar a) PEmpty) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d,
-  verifyrule g (PChoice PEmpty PAnyChar) d nb (Some true) nil.
+  forall g nb d a,
+  verifyrule g (PChoice PEmpty (PChar a)) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d,
-  verifyrule g (PChoice PAnyChar PAnyChar) d nb (Some nb) nil.
+  forall g nb d a,
+  verifyrule g (PChoice (PChar a) (PChar a)) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -941,9 +911,9 @@ Proof.
 Qed.
 
 Goal
-  forall nb,
+  forall nb a,
   verifyrule
-  [PAnyChar; PAnyChar]
+  [(PChar a); (PChar a)]
   (PChoice (PNT 0) (PNT 1)) 1 nb (Some nb) [1].
 Proof.
   intros.
@@ -952,9 +922,9 @@ Proof.
 Qed.
 
 Goal
-  forall nb,
+  forall nb a,
   verifyrule
-  [PNT 7; PAnyChar]
+  [PNT 7; (PChar a)]
   (PChoice (PNT 0) (PNT 1)) 1 nb None [0].
 Proof.
   intros.
@@ -970,8 +940,8 @@ Proof.
 Qed.
 
 Goal
-  forall g nb,
-  verifyrule g (PRepetition PAnyChar) 0 nb (Some true) nil.
+  forall g nb a,
+  verifyrule g (PRepetition (PChar a)) 0 nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -1000,8 +970,8 @@ Proof.
 Qed.
 
 Goal
-  forall g nb,
-  verifyrule g (PNot PAnyChar) 0 nb (Some true) nil.
+  forall g nb a,
+  verifyrule g (PNot (PChar a)) 0 nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -1703,7 +1673,6 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some (Some true, nil)
               | PChar _ => Some (Some nb, nil)
-              | PAnyChar => Some (Some nb, nil)
               | PSequence p1 p2 => match verifyrule_comp g p1 d false gas' with
                                    | Some (Some true, _) => verifyrule_comp g p2 d nb gas'
                                    | Some (Some false, k) => Some (Some nb, k)
@@ -1987,9 +1956,6 @@ Inductive nullable : grammar -> pat -> nat -> option bool -> Prop :=
   | NChar :
       forall g a d,
       nullable g (PChar a) d (Some false)
-  | NAnyChar :
-      forall g d,
-      nullable g PAnyChar d (Some false)
   | NSequenceNone :
       forall g p1 p2 d,
       nullable g p1 d None ->
@@ -2065,17 +2031,8 @@ Qed.
 
 (* ! G |= 'a' *)
 Example nullable_ex3 :
-  forall g a d,
+  forall g d a,
   nullable g (PChar a) d (Some false).
-Proof.
-  intros.
-  eauto using nullable.
-Qed.
-
-(* ! G |= . *)
-Example nullable_ex4 :
-  forall g d,
-  nullable g PAnyChar d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -2092,8 +2049,8 @@ Qed.
 
 (* ! G |= . ε *)
 Example nullable_ex6 :
-  forall g d,
-  nullable g (PSequence PAnyChar PEmpty) d (Some false).
+  forall g d a,
+  nullable g (PSequence (PChar a) PEmpty) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -2101,8 +2058,8 @@ Qed.
 
 (* ! G |= ε . *)
 Example nullable_ex7 :
-  forall g d,
-  nullable g (PSequence PEmpty PAnyChar) d (Some false).
+  forall g d a,
+  nullable g (PSequence PEmpty (PChar a)) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -2110,8 +2067,8 @@ Qed.
 
 (* ! G |= . . *)
 Example nullable_ex8 :
-  forall g d,
-  nullable g (PSequence PAnyChar PAnyChar) d (Some false).
+  forall g d a,
+  nullable g (PSequence (PChar a) (PChar a)) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -2128,8 +2085,8 @@ Qed.
 
 (* G |= . / ε *)
 Example nullable_ex10 :
-  forall g d,
-  nullable g (PChoice PAnyChar PEmpty) d (Some true).
+  forall g d a,
+  nullable g (PChoice (PChar a) PEmpty) d (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2137,8 +2094,8 @@ Qed.
 
 (* G |= ε / . *)
 Example nullable_ex11 :
-  forall g d,
-  nullable g (PChoice PEmpty PAnyChar) d (Some true).
+  forall g d a,
+  nullable g (PChoice PEmpty (PChar a)) d (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -2146,8 +2103,8 @@ Qed.
 
 (* ! G |= . / . *)
 Example nullable_ex12 :
-  forall g d,
-  nullable g (PChoice PAnyChar PAnyChar) d (Some false).
+  forall g d a,
+  nullable g (PChoice (PChar a) (PChar a)) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -2173,9 +2130,9 @@ Qed.
 
 (* ! { P <- . P } |= P *)
 Example nullable_ex15 :
-  forall d,
+  forall d a,
   nullable
-    [PSequence PAnyChar (PNT 0)]
+    [PSequence (PChar a) (PNT 0)]
     (PNT 0)
     (S d)
     (Some false).
@@ -2187,9 +2144,9 @@ Qed.
 
 (* { P <- . P / ε } |= P *)
 Example nullable_ex16 :
-  forall d,
+  forall d a,
   nullable
-    [PChoice (PSequence PAnyChar (PNT 0)) PEmpty]
+    [PChoice (PSequence (PChar a) (PNT 0)) PEmpty]
     (PNT 0)
     (S d)
     (Some true).
@@ -2475,7 +2432,6 @@ Fixpoint nullable_comp g p d gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some (Some true)
               | PChar _ => Some (Some false)
-              | PAnyChar => Some (Some false)
               | PSequence p1 p2 => match nullable_comp g p1 d gas' with
                                    | Some (Some true) => nullable_comp g p2 d gas'
                                    | ob => ob
@@ -2667,9 +2623,6 @@ Inductive checkloops : grammar -> pat -> nat -> option bool -> Prop :=
   | CLChar :
       forall g a d,
       checkloops g (PChar a) d (Some false)
-  | CLAnyChar :
-      forall g d,
-      checkloops g PAnyChar d (Some false)
   | CLSequenceNone :
       forall g p1 p2 d,
       checkloops g p1 d None ->
@@ -2906,7 +2859,6 @@ Fixpoint checkloops_comp g p d gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some (Some false)
               | PChar _ => Some (Some false)
-              | PAnyChar => Some (Some false)
               | PSequence p1 p2 => match checkloops_comp g p1 d gas' with
                                    | Some (Some false) => checkloops_comp g p2 d gas'
                                    | res => res
@@ -4280,9 +4232,6 @@ Proof.
         destruct (ascii_dec a a');
         subst
     end;
-    eauto using matches.
-  - (* PAnyChar *)
-    destruct s;
     eauto using matches.
   - (* PSequence p1 p2, with nullable p1 *)
     assert (exists res, matches g p1 s res) as [res1 ?] by eauto.

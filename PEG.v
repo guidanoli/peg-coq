@@ -120,9 +120,9 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g a,
       matches g (PChar a) EmptyString Failure
   | MCharFailureString :
-      forall g a1 a2 s,
-      a1 <> a2 ->
-      matches g (PChar a1) (String a2 s) Failure
+      forall g a b s,
+      a <> b ->
+      matches g (PChar a) (String b s) Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
       matches g p1 s (Success s') ->
@@ -263,9 +263,9 @@ Fixpoint matches_comp g p s gas {struct gas} :=
               | PEmpty => Some (Success s)
               | PChar a => match s with
                            | EmptyString => Some Failure
-                           | String a' s' => if ascii_dec a a'
-                                             then Some (Success s')
-                                             else Some Failure
+                           | String b s' => if ascii_dec a b
+                                            then Some (Success s')
+                                            else Some Failure
                            end
               | PSequence p1 p2 => match matches_comp g p1 s gas' with
                                    | Some (Success s') => matches_comp g p2 s' gas'
@@ -307,8 +307,8 @@ Proof with eauto using matches.
   - (* PEmpty *)
     destruct1...
   - (* PChar a *)
-    destruct s as [|a' s'];
-    try destruct (ascii_dec a a');
+    destruct s as [|b s'];
+    try destruct (ascii_dec a b);
     destruct1;
     eauto using matches.
   - (* PSequence p1 p2 *)
@@ -468,7 +468,7 @@ Proof.
   - (* MCharSuccess *)
     exists 1. simpl. destruct (ascii_dec a a); auto; contradiction.
   - (* MCharFailureString *)
-    exists 1. simpl. destruct (ascii_dec a1 a2); auto; contradiction.
+    exists 1. simpl. destruct (ascii_dec a b); auto; contradiction.
 Qed.
 
 (** Coherent predicate **)
@@ -4228,8 +4228,8 @@ Proof.
   - (* PChar a *)
     destruct s;
     try match goal with
-      [ |- exists _, matches _ (PChar ?a) (String ?a' _) _ ] =>
-        destruct (ascii_dec a a');
+      [ |- exists _, matches _ (PChar ?a) (String ?b _) _ ] =>
+        destruct (ascii_dec a b);
         subst
     end;
     eauto using matches.

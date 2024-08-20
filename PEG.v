@@ -551,181 +551,42 @@ Ltac pose_coherent_determinism :=
 
 (** Coherent function **)
 
-Fixpoint coherent_comp (g : grammar) p gas {struct gas} :=
-  match gas with
-  | O => None
-  | S gas' => match p with
-              | PEmpty => Some true
-              | PChar _ => Some true
-              | PSequence p1 p2 => match coherent_comp g p1 gas' with
-                                   | Some true => coherent_comp g p2 gas'
-                                   | res => res
-                                   end
-              | PChoice p1 p2 => match coherent_comp g p1 gas' with
-                                 | Some true => coherent_comp g p2 gas'
-                                 | res => res
-                                 end
-              | PRepetition p => coherent_comp g p gas'
-              | PNot p => coherent_comp g p gas'
-              | PNT i => match nth_error g i with
-                         | Some _ => Some true
-                         | None => Some false
-                         end
-              end
+Fixpoint coherent_func (g : grammar) p {struct p} :=
+  match p with
+  | PEmpty => true
+  | PChar _ => true
+  | PSequence p1 p2 => coherent_func g p1 && coherent_func g p2
+  | PChoice p1 p2 => coherent_func g p1 && coherent_func g p2
+  | PRepetition p => coherent_func g p
+  | PNot p => coherent_func g p
+  | PNT i => match nth_error g i with
+             | Some _ => true
+             | None => false
+             end
   end.
 
-Lemma coherent_comp_soundness :
-  forall g p gas b,
-  coherent_comp g p gas = Some b ->
+Lemma coherent_func_soundness :
+  forall g p b,
+  coherent_func g p = b ->
   coherent g p b.
 Proof.
   intros * H.
   generalize dependent b.
-  generalize dependent p.
   generalize dependent g.
-  induction gas; intros; try discriminate.
-  destruct p;
-  simpl in H;
-  repeat match goal with
-    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
-        destruct x eqn:?
-  end;
-  try discriminate;
-  try destruct1;
-  eauto using coherent.
-Qed.
-
-Lemma coherent_comp_S_gas :
-  forall g p gas b,
-  coherent_comp g p gas = Some b ->
-  coherent_comp g p (S gas) = Some b.
-Proof.
-  intros * H.
-  generalize dependent b.
-  generalize dependent p.
-  generalize dependent g.
-  induction gas;
-  intros;
-  try discriminate.
-  simpl in H.
-  destruct p;
-  try destruct1;
-  remember (S gas);
-  simpl;
-  repeat match goal with
-    [ Hx: match ?x with | _ => _ end = _ |- _ ] =>
-        destruct x eqn:?
-  end;
-  try discriminate;
-  subst;
-  try match goal with
-    [ Hx: coherent_comp ?g ?p ?gas = Some ?b
-      |- match coherent_comp ?g ?p (S ?gas) with | _ => _ end = _ ] =>
-      apply IHgas in Hx;
-      rewrite Hx
-  end;
-  auto.
-Qed.
-
-Lemma coherent_comp_le_gas :
-  forall g p gas1 gas2 b,
-  coherent_comp g p gas1 = Some b ->
-  gas1 <= gas2 ->
-  coherent_comp g p gas2 = Some b.
-Proof.
-  intros * H Hle.
-  induction Hle;
-  auto using coherent_comp_S_gas.
-Qed.
-
-Lemma coherent_comp_termination :
-  forall g p,
-  exists gas b,
-  coherent_comp g p gas = Some b.
-Proof.
-  intros.
-  generalize dependent g.
-  induction p; intros;
-  (* Zero recursive calls *)
-  try (
-    exists 1;
-    simpl;
-    try match goal with
-      [ |- exists _, match ?x with | _ => _ end = _ ] =>
-        destruct x eqn:?
-    end;
-    eauto;
-    fail
-  );
-  (* One recursive call *)
-  try (
-    destruct (IHp g) as [gas [b H]];
-    exists (1 + gas);
-    eauto;
-    fail
-  );
-  (* Two recursive calls *)
-  try (
-    destruct (IHp1 g) as [gas1 [b1 H1]];
-    destruct (IHp2 g) as [gas2 [b2 H2]];
-    assert (gas1 <= gas1 + gas2) as Hle1 by lia;
-    assert (gas2 <= gas1 + gas2) as Hle2 by lia;
-    assert (coherent_comp g p1 (gas1 + gas2) = Some b1) as H1'
-    by eauto using coherent_comp_le_gas;
-    assert (coherent_comp g p2 (gas1 + gas2) = Some b2) as H2'
-    by eauto using coherent_comp_le_gas;
-    exists (1 + gas1 + gas2);
-    simpl;
-    rewrite H1';
-    destruct b1;
-    eauto;
-    fail
-  ).
-Qed.
-
-Lemma coherent_comp_gas_bounded :
-  forall g p gas,
-  gas >= pat_size p ->
-  exists b, coherent_comp g p gas = Some b.
-Proof.
-  intros * Hge.
-  generalize dependent g.
-  generalize dependent gas.
   induction p;
   intros;
-  simpl in Hge;
-  induction Hge;
-  try (
-    destruct_exists_hyp;
-    eauto using coherent_comp_S_gas;
-    fail
-  );
-  try (
-    simpl;
-    eauto;
-    fail
-  );
+  simpl in H;
+  subst;
   try match goal with
-    [ |- exists _, coherent_comp _ (_ ?p1 ?p2) _ = _ ] =>
-        simpl;
-        remember (pat_size p1) as gas1;
-        remember (pat_size p2) as gas2;
-        assert (gas1 <= gas1 + gas2) by lia;
-        assert (gas2 <= gas1 + gas2) by lia;
-        assert (exists b, coherent_comp g p1 (gas1 + gas2) = Some b)
-        as [b1 Hc1] by eauto;
-        rewrite Hc1;
-        destruct b1;
-        eauto;
-        fail
+    [ |- coherent ?g (_ ?p1 ?p2) _ ] =>
+      destruct (coherent_func g p1) as [|] eqn:?;
+      destruct (coherent_func g p2) as [|] eqn:?
   end;
   try match goal with
-    [ |- exists _, coherent_comp ?g (PNT ?i) _ = _ ] =>
-        simpl;
-        destruct (nth_error g i);
-        eauto;
-        fail
-  end.
+    [ |- coherent ?g (PNT ?i) _ ] =>
+      destruct (nth_error g i) as [|] eqn:?
+  end;
+  eauto using coherent.
 Qed.
 
 (** VerifyRule predicate **)
@@ -3107,121 +2968,32 @@ Proof.
     eauto.
 Qed.
 
-Fixpoint lcoherent_comp g rs gas :=
+Fixpoint lcoherent_func g rs :=
   match rs with
-  | nil => Some true
-  | cons r rs' => match coherent_comp g r gas with
-                  | Some true => lcoherent_comp g rs' gas
-                  | res => res
-                  end
+  | nil => true
+  | cons r rs' => coherent_func g r && lcoherent_func g rs'
   end.
 
-Lemma lcoherent_comp_soundness :
-  forall g rs gas b,
-  lcoherent_comp g rs gas = Some b ->
+Lemma lcoherent_func_soundness :
+  forall g rs b,
+  lcoherent_func g rs = b ->
   lcoherent g rs b.
 Proof.
   intros * H.
   generalize dependent b.
-  generalize dependent gas.
   generalize dependent g.
   induction rs as [|r rs];
   intros.
   - (* nil *)
     simpl in H.
-    destruct1.
+    subst.
     eauto using lcoherent.
   - (* cons r rs *)
     simpl in H.
-    destruct (coherent_comp g r gas) as [[|]|] eqn:?;
-    try discriminate;
-    try destruct1;
-    eauto using lcoherent, coherent_comp_soundness.
-Qed.
-
-Lemma lcoherent_comp_S_gas :
-  forall g rs gas b,
-  lcoherent_comp g rs gas = Some b ->
-  lcoherent_comp g rs (S gas) = Some b.
-Proof.
-  intros * H.
-  generalize dependent b.
-  generalize dependent gas.
-  generalize dependent g.
-  induction rs as [|r rs]; intros.
-  - (* nil *)
-    eauto.
-  - (* cons r rs *)
-    unfold lcoherent_comp in H.
-    destruct (coherent_comp g r gas) as [[|]|] eqn:Haux;
-    fold lcoherent_comp in H;
-    try discriminate;
-    unfold lcoherent_comp;
-    apply coherent_comp_S_gas in Haux;
-    rewrite Haux;
-    eauto.
-Qed.
-
-Lemma lcoherent_comp_le_gas :
-  forall g rs gas1 gas2 b,
-  lcoherent_comp g rs gas1 = Some b ->
-  gas1 <= gas2 ->
-  lcoherent_comp g rs gas2 = Some b.
-Proof.
-  intros * H Hle.
-  induction Hle;
-  eauto using lcoherent_comp_S_gas.
-Qed.
-
-Lemma lcoherent_comp_termination :
-  forall g rs,
-  exists gas b,
-  lcoherent_comp g rs gas = Some b.
-Proof.
-  intros.
-  induction rs as [|r rs [gasrs [brs ?]]].
-  - (* nil *)
-    exists 0.
-    simpl.
-    eauto.
-  - (* cons r rs *)
-    simpl.
-    assert (exists gas b, coherent_comp g r gas = Some b)
-    as [gasr [br Hr]]
-    by eauto using coherent_comp_termination.
-    assert (gasr <= gasr + gasrs) by lia.
-    assert (gasrs <= gasr + gasrs) by lia.
-    assert (lcoherent_comp g rs (gasr + gasrs) = Some brs)
-    as Hcg by eauto using lcoherent_comp_le_gas.
-    assert (coherent_comp g r (gasr + gasrs) = Some br)
-    as Hc by eauto using coherent_comp_le_gas.
-    exists (gasr + gasrs).
-    rewrite Hc.
-    destruct br;
-    eauto.
-Qed.
-
-Lemma lcoherent_comp_gas_bounded :
-  forall g rs gas,
-  gas >= grammar_size rs ->
-  exists b, lcoherent_comp g rs gas = Some b.
-Proof.
-  intros * Hge.
-  generalize dependent gas.
-  induction rs as [|r rs IHrs];
-  intros;
-  simpl;
-  eauto.
-  simpl in Hge.
-  assert (gas >= grammar_size rs) by lia.
-  assert (exists b, lcoherent_comp g rs gas = Some b)
-  as [? ?] by eauto.
-  assert (gas >= pat_size r) by lia.
-  assert (exists b, coherent_comp g r gas = Some b)
-  as [br Hcr] by eauto using coherent_comp_gas_bounded.
-  rewrite Hcr.
-  destruct br;
-  eauto.
+    destruct (coherent_func g r) as [|] eqn:?;
+    simpl in H;
+    subst;
+    eauto using lcoherent, coherent_func_soundness.
 Qed.
 
 (** VerifyRule for lists of patterns
@@ -3751,16 +3523,16 @@ Proof.
 Qed.
 
 Definition verifygrammar_comp g gas :=
-  match lcoherent_comp g g gas with
-  | Some true => match lverifyrule_comp g g gas with
-                 | Some true => match lcheckloops_comp g g gas with
-                                | Some false => Some true
-                                | Some true => Some false
-                                | None => None
-                                end
-                 | res => res
-                 end
-  | res => res
+  match lcoherent_func g g with
+  | true => match lverifyrule_comp g g gas with
+            | Some true => match lcheckloops_comp g g gas with
+                           | Some false => Some true
+                           | Some true => Some false
+                           | None => None
+                           end
+            | res => res
+            end
+  | false => Some false
   end.
 
 Lemma verifygrammar_comp_soundness :
@@ -3773,7 +3545,7 @@ Proof.
   repeat (destruct_match_subject_in_hyp; try discriminate);
   try destruct1;
   eauto using verifygrammar,
-              lcoherent_comp_soundness,
+              lcoherent_func_soundness,
               lverifyrule_comp_soundness,
               lcheckloops_comp_soundness.
 Qed.
@@ -3787,16 +3559,7 @@ Proof.
   unfold verifygrammar_comp in *.
   repeat (destruct_match_subject_in_hyp; try discriminate);
   try destruct1;
-  try match goal with
-    [ Hx: lcoherent_comp ?g ?g ?gas = Some ?b |- _ ] =>
-        let H := fresh in (
-          assert (lcoherent_comp g g (S gas) = Some b)
-          as H
-          by eauto using lcoherent_comp_S_gas;
-          rewrite H;
-          auto
-        )
-  end;
+  auto;
   try match goal with
     [ Hx: lverifyrule_comp ?g ?g ?gas = Some ?b |- _ ] =>
         let H := fresh in (
@@ -3837,12 +3600,8 @@ Lemma verifygrammar_comp_termination :
 Proof.
   intros.
   unfold verifygrammar_comp.
-  assert (exists gas b, lcoherent_comp g g gas = Some b)
-  as [gasc [bc Hc]]
-  by eauto using lcoherent_comp_termination.
-  assert (lcoherent g g bc)
-  by eauto using lcoherent_comp_soundness.
-  destruct bc.
+  destruct (lcoherent_func g g) eqn:Hc;
+  apply lcoherent_func_soundness in Hc as ?.
   + (* true *)
     assert (exists gas b, lverifyrule_comp g g gas = Some b)
     as [gasv [bv Hv]]
@@ -3856,15 +3615,10 @@ Proof.
       by eauto using lcheckloops_comp_termination.
       assert (lcheckloops g g bl)
       by eauto using lcheckloops_comp_soundness.
-      pose (gasc + gasv + gasl) as gas.
-      assert (gasc <= gas) by lia.
+      pose (gasv + gasl) as gas.
       assert (gasv <= gas) by lia.
       assert (gasl <= gas) by lia.
       exists gas.
-      assert (lcoherent_comp g g gas = Some true)
-      as Hc'
-      by eauto using lcoherent_comp_le_gas.
-      rewrite Hc'.
       assert (lverifyrule_comp g g gas = Some true)
       as Hv'
       by eauto using lverifyrule_comp_le_gas.
@@ -3876,22 +3630,14 @@ Proof.
       destruct bl;
       eauto.
     - (* false *)
-      pose (gasc + gasv) as gas.
-      assert (gasc <= gas) by lia.
-      assert (gasv <= gas) by lia.
-      exists gas.
-      assert (lcoherent_comp g g gas = Some true)
-      as Hc'
-      by eauto using lcoherent_comp_le_gas.
-      rewrite Hc'.
-      assert (lverifyrule_comp g g gas = Some false)
+      exists gasv.
+      assert (lverifyrule_comp g g gasv = Some false)
       as Hv'
       by eauto using lverifyrule_comp_le_gas.
       rewrite Hv'.
       eauto.
   + (* false *)
-    exists gasc.
-    rewrite Hc.
+    exists 0.
     eauto.
 Qed.
 
@@ -3902,13 +3648,9 @@ Lemma verifygrammar_comp_gas_bounded :
 Proof.
   intros.
   unfold verifygrammar_comp.
-  assert (gas >= grammar_size g) by lia.
-  assert (exists b, lcoherent_comp g g gas = Some b)
-  as [reslc Hlc] by eauto using lcoherent_comp_gas_bounded.
-  rewrite Hlc.
-  destruct reslc; eauto.
+  destruct (lcoherent_func g g) eqn:?; eauto.
   assert (lcoherent g g true)
-  by eauto using lcoherent_comp_soundness.
+  by eauto using lcoherent_func_soundness.
   assert (gas >= grammar_size g + S (length g) * grammar_size g) by lia.
   assert (exists b, lverifyrule_comp g g gas = Some b)
   as [reslv Hlv] by eauto using lverifyrule_comp_gas_bounded.
@@ -3972,13 +3714,13 @@ Qed.
 
 Definition verifygrammarpat_comp g p gas :=
   match verifygrammar_comp g gas with
-  | Some true => match coherent_comp g p gas with
-                 | Some true => match checkloops_comp g p (S (length g)) gas with
-                                | Some (Some false) => Some true
-                                | Some (Some true) => Some false
-                                | _ => None
-                                end
-                 | res => res
+  | Some true => match coherent_func g p with
+                 | true => match checkloops_comp g p (S (length g)) gas with
+                           | Some (Some false) => Some true
+                           | Some (Some true) => Some false
+                           | _ => None
+                           end
+                 | false => Some false
                  end
   | res => res
   end.
@@ -3994,7 +3736,7 @@ Proof.
   try destruct1;
   eauto using verifygrammarpat,
               verifygrammar_comp_soundness,
-              coherent_comp_soundness,
+              coherent_func_soundness,
               checkloops_comp_soundness.
 Qed.
 
@@ -4013,16 +3755,6 @@ Proof.
           assert (verifygrammar_comp g (S gas) = Some b)
           as H
           by eauto using verifygrammar_comp_S_gas;
-          rewrite H;
-          auto
-        )
-  end;
-  try match goal with
-    [ Hx: coherent_comp ?g ?p ?gas = Some ?b |- _ ] =>
-        let H := fresh in (
-          assert (coherent_comp g p (S gas) = Some b)
-          as H
-          by eauto using coherent_comp_S_gas;
           rewrite H;
           auto
         )
@@ -4066,12 +3798,8 @@ Proof.
   destruct bvg.
   - (* true *)
     inversion Hvg; subst.
-    assert (exists gas b, coherent_comp g p gas = Some b)
-    as [gasc [bc ?]]
-    by eauto using coherent_comp_termination.
-    assert (coherent g p bc)
-    by eauto using coherent_comp_soundness.
-    destruct bc.
+    destruct (coherent_func g p) eqn:Hcp;
+    apply coherent_func_soundness in Hcp as ?.
     + (* true *)
       pose (S (length g)) as d.
       assert (exists gas b, checkloops_comp g p d gas = Some b)
@@ -4085,19 +3813,14 @@ Proof.
       assert (rescl = Some bl')
       by eauto using checkloops_Some_convergence, lcoherent_true_In, lverifyrule_true_In.
       subst rescl.
-      pose (gasvg + gasc + gasl) as gas.
+      pose (gasvg + gasl) as gas.
       assert (gasvg <= gas) by lia.
-      assert (gasc <= gas) by lia.
       assert (gasl <= gas) by lia.
       exists gas.
       assert (verifygrammar_comp g gas = Some true)
       as Hv'
       by eauto using verifygrammar_comp_le_gas.
       rewrite Hv'.
-      assert (coherent_comp g p gas = Some true)
-      as Hc'
-      by eauto using coherent_comp_le_gas.
-      rewrite Hc'.
       assert (checkloops_comp g p d gas = Some (Some bl'))
       as Hl'
       by eauto using checkloops_comp_le_gas.
@@ -4106,18 +3829,11 @@ Proof.
       destruct bl';
       eauto.
     + (* false *)
-      pose (gasvg + gasc) as gas.
-      assert (gasvg <= gas) by lia.
-      assert (gasc <= gas) by lia.
-      exists gas.
-      assert (verifygrammar_comp g gas = Some true)
+      exists gasvg.
+      assert (verifygrammar_comp g gasvg = Some true)
       as Hv'
       by eauto using verifygrammar_comp_le_gas.
       rewrite Hv'.
-      assert (coherent_comp g p gas = Some false)
-      as Hc'
-      by eauto using coherent_comp_le_gas.
-      rewrite Hc'.
       eauto.
   - (* false *)
     exists gasvg.
@@ -4144,13 +3860,9 @@ Proof.
   assert (verifygrammar g true)
   as Hvg by eauto using verifygrammar_comp_soundness.
   inversion Hvg; subst.
-  assert (gas >= pat_size p) by lia.
-  assert (exists b, coherent_comp g p gas = Some b)
-  as [respc Hpc] by eauto using coherent_comp_gas_bounded.
-  rewrite Hpc.
-  destruct respc; eauto.
+  destruct (coherent_func g p) eqn:?; eauto.
   assert (coherent g p true)
-  by eauto using coherent_comp_soundness.
+  by eauto using coherent_func_soundness.
   assert (gas >= pat_size p + S (length g) * grammar_size g) by lia.
   assert (exists b, checkloops_comp g p (S (length g)) gas = Some b)
   as [rescl Hcl] by eauto using checkloops_comp_gas_bounded, lcoherent_true_In.

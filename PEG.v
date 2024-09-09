@@ -462,7 +462,7 @@ Proof.
     simpl;
     specialize (Nat.le_add_r gas1 gas2) as Hle1;
     rewrite (matches_comp_gas_some_le _ _ _ _ _ _ H1 Hle1);
-    specialize (Plus.le_plus_r gas1 gas2) as Hle2;
+    specialize (Nat.le_add_l gas2 gas1) as Hle2;
     eauto using matches_comp_gas_some_le
   ).
   - (* MCharSuccess *)

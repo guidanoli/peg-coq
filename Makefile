@@ -5,4 +5,3 @@ all:
 	$(COQC) Suffix.v
 	$(COQC) Pigeonhole.v
 	$(COQC) PEG.v
-	$(COQC) Smallstep.v

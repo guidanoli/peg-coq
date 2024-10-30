@@ -48,7 +48,7 @@ approach that ensures termination.
 
 This repository contains some `.v` files:
 
-- `PEG.v`: the main file, which defines the syntax and the semantics of PEGs, and the well-formedness algorithm
+- `PEG.v`: defines the syntax and the semantics of PEGs, and the well-formedness algorithm
 - `Pigeonhole.v`: states and proves the pigeonhole principle
 - `Strong.v`: states and proves the strong induction primitive
 - `Suffix.v`: defines the suffix and proper suffix relations, and proves some results about them

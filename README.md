@@ -44,6 +44,15 @@ the problem of identifying complete PEGs
 is undecidable, so this is a conservative
 approach that ensures termination.
 
+## Files
+
+This repository contains some `.v` files:
+
+- `PEG.v`: the main file, which defines the syntax and the semantics of PEGs, and the well-formedness algorithm
+- `Pigeonhole.v`: states and proves the pigeonhole principle
+- `Strong.v`: states and proves the strong induction primitive
+- `Suffix.v`: defines the suffix and proper suffix relations, and proves some results about them
+
 [PEGs]: https://doi.org/10.1145/964001.964011
 [Coq]: https://coq.inria.fr/
 [LPeg]: https://www.inf.puc-rio.br/~roberto/lpeg/

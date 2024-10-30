@@ -1,3 +1,5 @@
+(* Author: Roberto Ierusalimschy *)
+
 From Coq Require Import Arith.PeanoNat.
 
 Definition pre (P : nat -> Prop) n := forall m, m < n -> P m.

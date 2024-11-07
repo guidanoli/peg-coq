@@ -46,9 +46,20 @@ approach that ensures termination.
 
 ## Files
 
-This repository contains some `.v` files:
+The main files are:
 
-- `PEG.v`: defines the syntax and the semantics of PEGs, and the well-formedness algorithm
+- `Pattern.v`: patterns (a.k.a. expressions)
+- `Grammar.v`: PEG syntax
+- `Match.v`: PEG semantics
+- `Coherent.v`: valid nonterminals
+- `Verifyrule.v`: left-recursive rules
+- `Nullable.v`: nullable patterns
+- `Checkloops.v`: degenerate loops
+- `Verifygrammar.v`: well-formedness
+
+Auxiliar files are:
+
+- `Tactics.v`: auxiliary proof tactics
 - `Pigeonhole.v`: states and proves the pigeonhole principle
 - `Strong.v`: states and proves the strong induction primitive
 - `Suffix.v`: defines the suffix and proper suffix relations, and proves some results about them

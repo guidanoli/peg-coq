@@ -10,7 +10,7 @@ Correctness here implies in termination of the parsing procedure.
 ## Syntax
 
 We define use the desugared syntax of PEGs
-first established by (Ford, 2024).
+first established by Ford.
 It contains the empty pattern, terminals,
 non-terminals, repetitions, not-predicates,
 sequences, and choices.

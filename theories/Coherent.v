@@ -1,8 +1,7 @@
 From Coq Require Import Lists.List.
 From Coq Require Import Bool.Bool.
 From Peg Require Import Tactics.
-From Peg Require Import Grammar.
-From Peg Require Import Pattern.
+From Peg Require Import Syntax.
 
 (** Coherent predicate **)
 (** A pattern in a grammar is coherent

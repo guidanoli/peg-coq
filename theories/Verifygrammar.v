@@ -2,8 +2,7 @@ From Coq Require Import Lia.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Coq Require Import Lists.List.
-From Peg Require Import Grammar.
-From Peg Require Import Pattern.
+From Peg Require Import Syntax.
 From Peg Require Import Match.
 From Peg Require Import Coherent.
 From Peg Require Import Verifyrule.

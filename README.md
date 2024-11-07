@@ -48,8 +48,7 @@ approach that ensures termination.
 
 The main files are:
 
-- `Pattern.v`: patterns (a.k.a. expressions)
-- `Grammar.v`: PEG syntax
+- `Syntax.v`: PEG syntax
 - `Match.v`: PEG semantics
 - `Coherent.v`: valid nonterminals
 - `Verifyrule.v`: left-recursive rules

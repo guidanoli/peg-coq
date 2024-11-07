@@ -66,11 +66,7 @@ Auxiliar files are:
 
 ## Building the project
 
-In order to build the project, please run the following command on the root of the project.
-
-```sh
-make -f CoqMakefile
-```
+In order to build the project, please run `make` on the root of the project.
 
 [PEGs]: https://doi.org/10.1145/964001.964011
 [Coq]: https://coq.inria.fr/

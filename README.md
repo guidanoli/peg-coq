@@ -64,6 +64,14 @@ Auxiliar files are:
 - `Strong.v`: states and proves the strong induction primitive
 - `Suffix.v`: defines the suffix and proper suffix relations, and proves some results about them
 
+## Building the project
+
+In order to build the project, please run the following command on the root of the project.
+
+```sh
+make -f CoqMakefile
+```
+
 [PEGs]: https://doi.org/10.1145/964001.964011
 [Coq]: https://coq.inria.fr/
 [LPeg]: https://www.inf.puc-rio.br/~roberto/lpeg/

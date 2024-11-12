@@ -65,7 +65,12 @@ Auxiliar files are:
 
 ## Building the project
 
-In order to build the project, please run `make` on the root of the project.
+In order to build the project, you first need to make sure you have the following dependencies installed on your system.
+
+- Coq 8.18.0 or later
+- GNU Make
+
+Then, you can build the project by running `make` on the root of the project.
 
 [PEGs]: https://doi.org/10.1145/964001.964011
 [Coq]: https://coq.inria.fr/

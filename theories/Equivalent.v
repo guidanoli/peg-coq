@@ -105,12 +105,11 @@ Lemma fail_is_choice_neutral_left :
 Proof.
   unfold equivalent.
   intros.
-  assert (matches g (PNot PEmpty) s Failure)
-  as Hfail by eauto using matches.
   split; intro H.
   - (* -> *)
     inversion H; subst;
-    try (pose_matches_determinism; discriminate);
+    try invert_matches (PNot PEmpty);
+    try invert_matches PEmpty;
     eauto using matches.
   - (* <- *)
     eauto using matches.
@@ -123,12 +122,11 @@ Lemma fail_is_choice_neutral_right :
 Proof.
   unfold equivalent.
   intros.
-  assert (matches g (PNot PEmpty) s Failure)
-  as Hfail by eauto using matches.
   split; intro H.
   - (* -> *)
     inversion H; subst;
-    try (pose_matches_determinism; discriminate);
+    try invert_matches (PNot PEmpty);
+    try invert_matches PEmpty;
     eauto using matches.
   - (* <- *)
     eauto using matches.

@@ -100,3 +100,38 @@ Proof.
               empty_in_sequence_is_commutable,
               empty_is_sequence_neutral_element_right.
 Qed.
+
+
+(* !ε / p ≡ p / !ε *)
+Lemma fail_in_choice_is_commutable :
+  forall g p,
+  equivalent g (PChoice (PNot PEmpty) p) (PChoice p (PNot PEmpty)).
+Proof.
+  unfold equivalent.
+  intros.
+  split; intro.
+  - (* -> *)
+    inversion H; subst.
+    + (* !ε succeeds *)
+      match goal with
+        [ Hx: matches _ (PNot PEmpty) _ (Success _) |- _ ] =>
+            inversion Hx; subst
+      end.
+      match goal with
+        [ Hx: matches _ PEmpty _ Failure |- _ ] =>
+            inversion Hx; subst
+      end.
+    + (* !ε fails *)
+      destruct res;
+      eauto using matches.
+  - (* <- *)
+    inversion H; subst.
+    + (* p succeeds *)
+      eauto using matches.
+    + (* p fails *)
+      match goal with
+        [ Hx: matches _ (PNot PEmpty) _ _ |- _ ] =>
+            inversion Hx; subst
+      end;
+      eauto using matches.
+Qed.

@@ -101,37 +101,38 @@ Proof.
               empty_is_sequence_neutral_element_right.
 Qed.
 
-
-(* !ε / p ≡ p / !ε *)
-Lemma fail_in_choice_is_commutable :
+(* !ε / p ≡ p *)
+Lemma fail_is_choice_neutral_left :
   forall g p,
-  equivalent g (PChoice (PNot PEmpty) p) (PChoice p (PNot PEmpty)).
+  equivalent g (PChoice (PNot PEmpty) p) p.
 Proof.
   unfold equivalent.
   intros.
-  split; intro.
+  assert (matches g (PNot PEmpty) s Failure)
+  as Hfail by eauto using matches.
+  split; intro H.
   - (* -> *)
-    inversion H; subst.
-    + (* !ε succeeds *)
-      match goal with
-        [ Hx: matches _ (PNot PEmpty) _ (Success _) |- _ ] =>
-            inversion Hx; subst
-      end.
-      match goal with
-        [ Hx: matches _ PEmpty _ Failure |- _ ] =>
-            inversion Hx; subst
-      end.
-    + (* !ε fails *)
-      destruct res;
-      eauto using matches.
+    inversion H; subst;
+    try (pose_matches_determinism; discriminate);
+    eauto using matches.
   - (* <- *)
-    inversion H; subst.
-    + (* p succeeds *)
-      eauto using matches.
-    + (* p fails *)
-      match goal with
-        [ Hx: matches _ (PNot PEmpty) _ _ |- _ ] =>
-            inversion Hx; subst
-      end;
-      eauto using matches.
+    eauto using matches.
+Qed.
+
+(* p / !ε ≡ p *)
+Lemma fail_is_choice_neutral_right :
+  forall g p,
+  equivalent g (PChoice (PNot PEmpty) p) p.
+Proof.
+  unfold equivalent.
+  intros.
+  assert (matches g (PNot PEmpty) s Failure)
+  as Hfail by eauto using matches.
+  split; intro H.
+  - (* -> *)
+    inversion H; subst;
+    try (pose_matches_determinism; discriminate);
+    eauto using matches.
+  - (* <- *)
+    eauto using matches.
 Qed.

@@ -41,8 +41,6 @@ Qed.
 
 (**
 
- fail / p ≡ p / fail ≡ p
- (a . b) . c ≡ a . (b . c)
  (a / b) / c ≡ a / (b / c)
  p? . p? ≡ (p . p?)?
 
@@ -141,4 +139,23 @@ Proof.
               equivalent_trans,
               fail_is_choice_neutral_left,
               fail_is_choice_neutral_right.
+Qed.
+
+
+(* (a . b) . c ≡ a . (b . c) *)
+Lemma sequence_is_associative :
+  forall g p1 p2 p3,
+  equivalent g (PSequence (PSequence p1 p2) p3) (PSequence p1 (PSequence p2 p3)).
+Proof.
+  unfold equivalent.
+  intros.
+  split; intro H.
+  - (* -> *)
+    inversion H; subst;
+    invert_matches (PSequence p1 p2);
+    eauto using matches.
+  - (* <- *)
+    inversion H; subst;
+    try invert_matches (PSequence p2 p3);
+    eauto using matches.
 Qed.

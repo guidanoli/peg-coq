@@ -54,25 +54,6 @@ Ltac invert_matches P :=
         inversion Hx; subst
   end.
 
-(* ε . p ≡ p . ε *)
-Lemma empty_in_sequence_is_commutable :
-  forall g p,
-  equivalent g (PSequence PEmpty p) (PSequence p PEmpty).
-Proof.
-  unfold equivalent.
-  intros.
-  split; intro.
-  - (* -> *)
-    inversion H; subst;
-    invert_matches PEmpty;
-    destruct res;
-    eauto using matches.
-  - (* <- *)
-    inversion H; subst;
-    try invert_matches PEmpty;
-    eauto using matches.
-Qed.
-
 (* p ≡ p . ε *)
 Lemma empty_is_sequence_neutral_element_right :
   forall g p,
@@ -95,9 +76,25 @@ Lemma empty_is_sequence_neutral_element_left :
   forall g p,
   equivalent g p (PSequence PEmpty p).
 Proof.
-  eauto using equivalent_trans,
-              equivalent_refl,
-              empty_in_sequence_is_commutable,
+  unfold equivalent.
+  intros.
+  split; intro.
+  - (* -> *)
+    eauto using matches.
+  - (* <- *)
+    inversion H; subst;
+    try invert_matches PEmpty;
+    eauto using matches.
+Qed.
+
+(* ε . p ≡ p . ε *)
+Lemma empty_in_sequence_is_commutable :
+  forall g p,
+  equivalent g (PSequence PEmpty p) (PSequence p PEmpty).
+Proof.
+  eauto using equivalent_refl,
+              equivalent_trans,
+              empty_is_sequence_neutral_element_left,
               empty_is_sequence_neutral_element_right.
 Qed.
 
@@ -135,4 +132,15 @@ Proof.
     eauto using matches.
   - (* <- *)
     eauto using matches.
+Qed.
+
+(* !ε / p ≡ p / !ε *)
+Lemma fail_in_choice_is_commutative :
+  forall g p,
+  equivalent g (PChoice (PNot PEmpty) p) (PChoice (PNot PEmpty) p).
+Proof.
+  eauto using equivalent_refl,
+              equivalent_trans,
+              fail_is_choice_neutral_left,
+              fail_is_choice_neutral_right.
 Qed.

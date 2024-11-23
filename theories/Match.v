@@ -103,7 +103,7 @@ Ltac pose_matches_determinism :=
   match goal with
   [ H1: matches ?g ?p ?s ?r1,
     H2: matches ?g ?p ?s ?r2 |- _ ] =>
-        pose (matches_determinism g p s r1 r2 H1 H2)
+        assert (r1 = r2) by eauto using matches_determinism
   end.
 
 Example infinite_loop :

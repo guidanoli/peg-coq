@@ -39,12 +39,6 @@ Proof.
     auto.
 Qed.
 
-(**
-
-(**  p? . p? ≡ (p . p?)? **)
-
- **)
-
 Ltac invert_matches P :=
   match goal with
     [ Hx: matches _ P _ _ |- _ ] =>
@@ -181,4 +175,52 @@ Proof.
     inversion H; subst;
     try invert_matches (PChoice p2 p3);
     eauto using matches.
+Qed.
+
+Definition POptional p := PChoice p PEmpty.
+
+Lemma optional_always_succeeds :
+  forall g p s res,
+  matches g (POptional p) s res ->
+  exists s', res = Success s'.
+Proof.
+  intros.
+  invert_matches (POptional p);
+  try invert_matches PEmpty;
+  eauto.
+Qed.
+
+(* p? . p? ≡ (p . p?)? *)
+Lemma bounded_repetition_optional :
+  forall g p,
+  equivalent g (PSequence (POptional p) (POptional p))
+               (POptional (PSequence p (POptional p))).
+Proof.
+  intros.
+  unfold equivalent.
+  intros.
+  split; intro H.
+  - (* -> *)
+    inversion H; subst.
+    + (* p? succeeds *)
+      repeat invert_matches (POptional p);
+      repeat invert_matches PEmpty;
+      try (pose_matches_determinism; discriminate);
+      eauto using matches.
+    + (* p? fails *)
+      invert_matches (POptional p).
+      invert_matches PEmpty.
+  - (* <- *)
+    inversion H; subst.
+    + (* (p . p?) succeeds *)
+      invert_matches (PSequence p (POptional p)).
+      eauto using matches.
+    + (* (p . p?) fails and ε succeeds *)
+      invert_matches PEmpty.
+      invert_matches (PSequence p (POptional p)).
+      -- (* p succeeds but p? fails *)
+        invert_matches (POptional p).
+        invert_matches PEmpty.
+      -- (* p fails *)
+         eauto using matches.
 Qed.

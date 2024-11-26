@@ -41,8 +41,7 @@ Qed.
 
 (**
 
- (a / b) / c ≡ a / (b / c)
- p? . p? ≡ (p . p?)?
+(**  p? . p? ≡ (p . p?)? **)
 
  **)
 
@@ -160,5 +159,24 @@ Proof.
   - (* <- *)
     inversion H; subst;
     try invert_matches (PSequence p2 p3);
+    eauto using matches.
+Qed.
+
+
+(**  (a / b) / c ≡ a / (b / c) **)
+Lemma choice_is_associative :
+  associative PChoice.
+Proof.
+  unfold associative.
+  unfold equivalent.
+  intros.
+  split; intro H.
+  - (* -> *)
+    inversion H; subst;
+    invert_matches (PChoice p1 p2);
+    eauto using matches.
+  - (* <- *)
+    inversion H; subst;
+    try invert_matches (PChoice p2 p3);
     eauto using matches.
 Qed.

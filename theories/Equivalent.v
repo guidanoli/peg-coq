@@ -95,17 +95,19 @@ Proof.
               empty_is_sequence_neutral_element_right.
 Qed.
 
+Definition PFail := PNot PEmpty.
+
 (* !ε / p ≡ p *)
 Lemma fail_is_choice_neutral_left :
   forall g p,
-  equivalent g (PChoice (PNot PEmpty) p) p.
+  equivalent g (PChoice PFail p) p.
 Proof.
   unfold equivalent.
   intros.
   split; intro H.
   - (* -> *)
     inversion H; subst;
-    try invert_matches (PNot PEmpty);
+    try invert_matches PFail;
     try invert_matches PEmpty;
     eauto using matches.
   - (* <- *)
@@ -115,14 +117,14 @@ Qed.
 (* p / !ε ≡ p *)
 Lemma fail_is_choice_neutral_right :
   forall g p,
-  equivalent g (PChoice (PNot PEmpty) p) p.
+  equivalent g (PChoice PFail p) p.
 Proof.
   unfold equivalent.
   intros.
   split; intro H.
   - (* -> *)
     inversion H; subst;
-    try invert_matches (PNot PEmpty);
+    try invert_matches PFail;
     try invert_matches PEmpty;
     eauto using matches.
   - (* <- *)
@@ -132,7 +134,7 @@ Qed.
 (* !ε / p ≡ p / !ε *)
 Lemma fail_in_choice_is_commutative :
   forall g p,
-  equivalent g (PChoice (PNot PEmpty) p) (PChoice (PNot PEmpty) p).
+  equivalent g (PChoice PFail p) (PChoice PFail p).
 Proof.
   eauto using equivalent_refl,
               equivalent_trans,

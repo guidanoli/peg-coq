@@ -165,7 +165,7 @@ Proof.
 Qed.
 
 
-(**  (a / b) / c ≡ a / (b / c) **)
+(* (a / b) / c ≡ a / (b / c) *)
 Lemma choice_is_associative :
   associative PChoice.
 Proof.

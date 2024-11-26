@@ -141,12 +141,15 @@ Proof.
               fail_is_choice_neutral_right.
 Qed.
 
+Definition associative (P : pat -> pat -> pat) :=
+  forall g p1 p2 p3,
+  equivalent g (P (P p1 p2) p3) (P p1 (P p2 p3)).
 
 (* (a . b) . c ≡ a . (b . c) *)
 Lemma sequence_is_associative :
-  forall g p1 p2 p3,
-  equivalent g (PSequence (PSequence p1 p2) p3) (PSequence p1 (PSequence p2 p3)).
+  associative PSequence.
 Proof.
+  unfold associative.
   unfold equivalent.
   intros.
   split; intro H.

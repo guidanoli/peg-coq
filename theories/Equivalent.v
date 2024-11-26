@@ -48,7 +48,7 @@ Qed.
 Ltac invert_matches P :=
   match goal with
     [ Hx: matches _ P _ _ |- _ ] =>
-        inversion Hx; subst
+        inversion Hx; clear Hx; subst
   end.
 
 (* p ≡ p . ε *)

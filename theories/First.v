@@ -2,10 +2,16 @@ From Coq Require Import Lists.List.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Peg Require Import Syntax.
+From Peg Require Import Match.
+From Peg Require Import Tactics.
 
 Import ListNotations.
 
 Definition charset : Type := (ascii -> bool).
+
+(* Full charset *)
+Definition fullcharset : charset :=
+  (fun _ => true).
 
 (* Charset with a single char *)
 Definition singlecharset a : charset :=
@@ -85,3 +91,30 @@ Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) ->
       first g p cs d res ->
       first g (PNT i) cs (S d) res
   .
+
+Theorem first_correct :
+  forall g p d b cs a s,
+  first g p fullcharset d (Some (b, cs)) ->
+  cs a = false ->
+  matches g p (String a s) Failure.
+Proof.
+  intros * Hfirst Hcseq.
+  generalize dependent s.
+  generalize dependent a.
+  remember (Some (b, cs)) as res.
+  generalize dependent cs.
+  generalize dependent b.
+  remember fullcharset as flw.
+  induction Hfirst;
+  intros;
+  try destruct1;
+  unfold fullcharset in Hcseq;
+  try discriminate.
+  - (* FCharSet *)
+    destruct p;
+    try discriminate;
+    simpl in *;
+    destruct1;
+    rewrite Ascii.eqb_neq in Hcseq;
+    eauto using matches.
+  - Abort.

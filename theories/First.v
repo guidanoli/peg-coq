@@ -3,6 +3,7 @@ From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Peg Require Import Syntax.
 From Peg Require Import Match.
+From Peg Require Import Nullable.
 From Peg Require Import Tactics.
 
 Import ListNotations.
@@ -39,17 +40,29 @@ Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) ->
       forall g p cs cs' d,
       tocharset p = Some cs' ->
       first g p cs d (Some (false, cs'))
-  | FSequenceNone :
+  | FSequenceNullableNone :
       forall g p1 p2 cs d,
+      nullable g p1 d None ->
+      first g (PSequence p1 p2) cs d None
+  | FSequenceNullableSomeFalse :
+      forall g p1 p2 cs d res,
+      nullable g p1 d (Some false) ->
+      first g p1 fullcharset d res ->
+      first g (PSequence p1 p2) cs d res
+  | FSequenceNullableSomeTrueFirst2None :
+      forall g p1 p2 cs d,
+      nullable g p1 d (Some true) ->
       first g p2 cs d None ->
       first g (PSequence p1 p2) cs d None
-  | FSequenceSomeNone :
-      forall g p1 p2 cs cs2 d b2,
+  | FSequenceNullableSomeTrueFirst2SomeFirst1None :
+      forall g p1 p2 cs d b2 cs2,
+      nullable g p1 d (Some true) ->
       first g p2 cs d (Some (b2, cs2)) ->
       first g p1 cs2 d None ->
       first g (PSequence p1 p2) cs d None
-  | FSequenceSomeSome :
-      forall g p1 p2 cs cs2 cs1 d b2 b1,
+  | FSequenceNullableSomeTrueFirst2SomeFirst1Some :
+      forall g p1 p2 cs d b1 b2 cs1 cs2,
+      nullable g p1 d (Some true) ->
       first g p2 cs d (Some (b2, cs2)) ->
       first g p1 cs2 d (Some (b1, cs1)) ->
       first g (PSequence p1 p2) cs d (Some (andb b1 b2, cs1))

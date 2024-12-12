@@ -21,6 +21,9 @@ Inductive nullable : grammar -> pat -> nat -> option bool -> Prop :=
   | NChar :
       forall g a d,
       nullable g (PChar a) d (Some false)
+  | NSet :
+      forall g f d,
+      nullable g (PSet f) d (Some false)
   | NSequenceNone :
       forall g p1 p2 d,
       nullable g p1 d None ->
@@ -497,6 +500,7 @@ Fixpoint nullable_comp g p d gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some (Some true)
               | PChar _ => Some (Some false)
+              | PSet _ => Some (Some false)
               | PSequence p1 p2 => match nullable_comp g p1 d gas' with
                                    | Some (Some true) => nullable_comp g p2 d gas'
                                    | ob => ob

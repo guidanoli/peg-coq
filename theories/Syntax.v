@@ -7,6 +7,7 @@ From Coq Require Import Lia.
 Inductive pat : Type :=
   | PEmpty : pat                          (* ε            *)
   | PChar : ascii -> pat                  (* 'a'          *)
+  | PSet : (ascii -> bool) -> pat         (* [set]        *)
   | PSequence : pat -> pat -> pat         (* p1 p2        *)
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
@@ -18,6 +19,7 @@ Fixpoint pat_size p :=
   match p with
   | PEmpty => 1
   | PChar _ => 1
+  | PSet _ => 1
   | PSequence p1 p2 => 1 + pat_size p1 + pat_size p2
   | PChoice p1 p2 => 1 + pat_size p1 + pat_size p2
   | PRepetition p => 1 + pat_size p

@@ -16,6 +16,9 @@ Inductive checkloops : grammar -> pat -> nat -> option bool -> Prop :=
   | CLChar :
       forall g a d,
       checkloops g (PChar a) d (Some false)
+  | CLSet :
+      forall g f d,
+      checkloops g (PSet f) d (Some false)
   | CLSequenceNone :
       forall g p1 p2 d,
       checkloops g p1 d None ->
@@ -252,6 +255,7 @@ Fixpoint checkloops_comp g p d gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some (Some false)
               | PChar _ => Some (Some false)
+              | PSet _ => Some (Some false)
               | PSequence p1 p2 => match checkloops_comp g p1 d gas' with
                                    | Some (Some false) => checkloops_comp g p2 d gas'
                                    | res => res

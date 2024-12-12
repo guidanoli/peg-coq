@@ -483,6 +483,14 @@ Proof.
         subst
     end;
     eauto using matches.
+  - (* PSet f *)
+    destruct s;
+    try match goal with
+      [ |- exists _, matches _ (PSet ?f) (String ?a _) _ ] =>
+        destruct (f a) eqn:?;
+        subst
+    end;
+    eauto using matches.
   - (* PSequence p1 p2, with nullable p1 *)
     assert (exists res, matches g p1 s res) as [res1 ?] by eauto.
     destruct res1 as [|s'];

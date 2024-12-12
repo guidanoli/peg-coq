@@ -25,6 +25,17 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g a b s,
       a <> b ->
       matches g (PChar a) (String b s) Failure
+  | MSetSuccess :
+      forall g f a s,
+      f a = true ->
+      matches g (PSet f) (String a s) (Success s)
+  | MSetFailureEmptyString :
+      forall g f,
+      matches g (PSet f) EmptyString Failure
+  | MSetFailureString :
+      forall g f a s,
+      f a = false ->
+      matches g (PSet f) (String a s) Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
       matches g p1 s (Success s') ->
@@ -96,6 +107,13 @@ Proof.
   try destruct1;
   try apply_matches_IH;
   try destruct2sep;
+  try match goal with
+    [ Hfalse: ?x = false,
+      Htrue: ?x = true
+      |- _ ] =>
+        rewrite Hfalse in Htrue;
+        discriminate
+  end;
   auto.
 Qed.
 
@@ -150,6 +168,12 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                                             then Some (Success s')
                                             else Some Failure
                            end
+              | PSet f => match s with
+                          | EmptyString => Some Failure
+                          | String a s' => if f a
+                                           then Some (Success s')
+                                           else Some Failure
+                          end
               | PSequence p1 p2 => match matches_comp g p1 s gas' with
                                    | Some (Success s') => matches_comp g p2 s' gas'
                                    | res => res
@@ -194,6 +218,14 @@ Proof with eauto using matches.
     try destruct (ascii_dec a b);
     destruct1;
     eauto using matches.
+  - (* PSet f *)
+    match goal with
+      [ |- matches g (PSet ?f) s res ] =>
+        destruct s as [|a s'];
+        try destruct (f a) eqn:?;
+        try destruct1;
+        eauto using matches
+    end.
   - (* PSequence p1 p2 *)
     destruct (matches_comp g p1 s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.
@@ -346,4 +378,8 @@ Proof.
     exists 1. simpl. destruct (ascii_dec a a); auto; contradiction.
   - (* MCharFailureString *)
     exists 1. simpl. destruct (ascii_dec a b); auto; contradiction.
+  - (* MSetSuccess *)
+    exists 1. simpl. destruct (f a); auto; discriminate.
+  - (* MSetFailureString *)
+    exists 1. simpl. destruct (f a); auto; discriminate.
 Qed.

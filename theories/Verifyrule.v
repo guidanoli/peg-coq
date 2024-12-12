@@ -30,6 +30,9 @@ Inductive verifyrule :
   | VRChar :
       forall g a d nb,
       verifyrule g (PChar a) d nb (Some nb) nil
+  | VRSet :
+      forall g f d nb,
+      verifyrule g (PSet f) d nb (Some nb) nil
   | VRSequenceNone :
       forall g p1 p2 d nb k,
       verifyrule g p1 d false None k ->
@@ -80,6 +83,13 @@ Qed.
 Goal
   forall g a nb d,
   verifyrule g (PChar a) d nb (Some nb) nil.
+Proof.
+  eauto using verifyrule.
+Qed.
+
+Goal
+  forall g f nb d,
+  verifyrule g (PSet f) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -957,6 +967,7 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
   | S gas' => match p with
               | PEmpty => Some (Some true, nil)
               | PChar _ => Some (Some nb, nil)
+              | PSet _ => Some (Some nb, nil)
               | PSequence p1 p2 => match verifyrule_comp g p1 d false gas' with
                                    | Some (Some true, _) => verifyrule_comp g p2 d nb gas'
                                    | Some (Some false, k) => Some (Some nb, k)

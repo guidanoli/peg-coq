@@ -29,6 +29,7 @@ Definition complementcharset cs : charset :=
 Definition tocharset p : option charset :=
   match p with
   | PChar a => Some (singlecharset a)
+  | PSet f => Some f
   | _ => None
   end.
 
@@ -104,30 +105,3 @@ Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) ->
       first g p cs d res ->
       first g (PNT i) cs (S d) res
   .
-
-Theorem first_correct :
-  forall g p d b cs a s,
-  first g p fullcharset d (Some (b, cs)) ->
-  cs a = false ->
-  matches g p (String a s) Failure.
-Proof.
-  intros * Hfirst Hcseq.
-  generalize dependent s.
-  generalize dependent a.
-  remember (Some (b, cs)) as res.
-  generalize dependent cs.
-  generalize dependent b.
-  remember fullcharset as flw.
-  induction Hfirst;
-  intros;
-  try destruct1;
-  unfold fullcharset in Hcseq;
-  try discriminate.
-  - (* FCharSet *)
-    destruct p;
-    try discriminate;
-    simpl in *;
-    destruct1;
-    rewrite Ascii.eqb_neq in Hcseq;
-    eauto using matches.
-  - Abort.

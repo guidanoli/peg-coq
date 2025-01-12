@@ -32,10 +32,9 @@ Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) ->
   | FEmpty :
       forall g cs d,
       first g PEmpty cs d (Some (true, cs))
-  | FCharSet :
-      forall g p cs cs' d,
-      tocharset p = Some cs' ->
-      first g p cs d (Some (false, cs'))
+  | FSet :
+      forall g cs cs' d,
+      first g (PSet cs') cs d (Some (false, cs'))
   | FSequenceNullableNone :
       forall g p1 p2 cs d,
       nullable g p1 d None ->

@@ -14,10 +14,6 @@ Definition charset : Type := (ascii -> bool).
 Definition fullcharset : charset :=
   (fun _ => true).
 
-(* Charset with a single char *)
-Definition singlecharset a : charset :=
-  (fun b => (a =? b)%char).
-
 (* Union of charsets *)
 Definition unioncharset cs1 cs2 : charset :=
   (fun a => orb (cs1 a) (cs2 a)).

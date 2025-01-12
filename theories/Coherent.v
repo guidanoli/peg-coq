@@ -11,9 +11,6 @@ Inductive coherent : grammar -> pat -> bool -> Prop :=
   | CEmpty :
       forall g,
       coherent g PEmpty true
-  | CChar :
-      forall g a,
-      coherent g (PChar a) true
   | CSet :
       forall g f,
       coherent g (PSet f) true
@@ -89,7 +86,6 @@ Ltac pose_coherent_determinism :=
 Fixpoint coherent_func (g : grammar) p {struct p} :=
   match p with
   | PEmpty => true
-  | PChar _ => true
   | PSet _ => true
   | PSequence p1 p2 => coherent_func g p1 && coherent_func g p2
   | PChoice p1 p2 => coherent_func g p1 && coherent_func g p2

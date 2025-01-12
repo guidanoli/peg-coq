@@ -15,16 +15,6 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
   | MEmptySuccess :
       forall g s,
       matches g PEmpty s (Success s)
-  | MCharSuccess :
-      forall g a s,
-      matches g (PChar a) (String a s) (Success s)
-  | MCharFailureEmptyString :
-      forall g a,
-      matches g (PChar a) EmptyString Failure
-  | MCharFailureString :
-      forall g a b s,
-      a <> b ->
-      matches g (PChar a) (String b s) Failure
   | MSetSuccess :
       forall g f a s,
       f a = true ->
@@ -162,12 +152,6 @@ Fixpoint matches_comp g p s gas {struct gas} :=
   | O => None
   | S gas' => match p with
               | PEmpty => Some (Success s)
-              | PChar a => match s with
-                           | EmptyString => Some Failure
-                           | String b s' => if ascii_dec a b
-                                            then Some (Success s')
-                                            else Some Failure
-                           end
               | PSet f => match s with
                           | EmptyString => Some Failure
                           | String a s' => if f a
@@ -213,11 +197,6 @@ Proof with eauto using matches.
   destruct p; simpl in H; eauto using matches.
   - (* PEmpty *)
     destruct1...
-  - (* PChar a *)
-    destruct s as [|b s'];
-    try destruct (ascii_dec a b);
-    destruct1;
-    eauto using matches.
   - (* PSet f *)
     match goal with
       [ |- matches g (PSet ?f) s res ] =>
@@ -374,10 +353,6 @@ Proof.
     specialize (Nat.le_add_l gas2 gas1) as Hle2;
     eauto using matches_comp_gas_some_le
   ).
-  - (* MCharSuccess *)
-    exists 1. simpl. destruct (ascii_dec a a); auto; contradiction.
-  - (* MCharFailureString *)
-    exists 1. simpl. destruct (ascii_dec a b); auto; contradiction.
   - (* MSetSuccess *)
     exists 1. simpl. destruct (f a); auto; discriminate.
   - (* MSetFailureString *)

@@ -475,14 +475,6 @@ Proof.
   try discriminate.
   - (* PEmpty *)
     eauto using matches.
-  - (* PChar a *)
-    destruct s;
-    try match goal with
-      [ |- exists _, matches _ (PChar ?a) (String ?b _) _ ] =>
-        destruct (ascii_dec a b);
-        subst
-    end;
-    eauto using matches.
   - (* PSet f *)
     destruct s;
     try match goal with

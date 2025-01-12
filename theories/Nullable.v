@@ -18,9 +18,6 @@ Inductive nullable : grammar -> pat -> nat -> option bool -> Prop :=
   | NEmpty :
       forall g d,
       nullable g PEmpty d (Some true)
-  | NChar :
-      forall g a d,
-      nullable g (PChar a) d (Some false)
   | NSet :
       forall g f d,
       nullable g (PSet f) d (Some false)
@@ -97,10 +94,13 @@ Proof.
   eauto using nullable.
 Qed.
 
-(* ! G |= 'a' *)
+Example dot_charset : (ascii -> bool) :=
+  (fun _ => true).
+
+(* ! G |= . *)
 Example nullable_ex3 :
-  forall g d a,
-  nullable g (PChar a) d (Some false).
+  forall g d,
+  nullable g (PSet dot_charset) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -117,8 +117,8 @@ Qed.
 
 (* ! G |= . ε *)
 Example nullable_ex6 :
-  forall g d a,
-  nullable g (PSequence (PChar a) PEmpty) d (Some false).
+  forall g d,
+  nullable g (PSequence (PSet dot_charset) PEmpty) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -126,8 +126,8 @@ Qed.
 
 (* ! G |= ε . *)
 Example nullable_ex7 :
-  forall g d a,
-  nullable g (PSequence PEmpty (PChar a)) d (Some false).
+  forall g d,
+  nullable g (PSequence PEmpty (PSet dot_charset)) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -135,8 +135,8 @@ Qed.
 
 (* ! G |= . . *)
 Example nullable_ex8 :
-  forall g d a,
-  nullable g (PSequence (PChar a) (PChar a)) d (Some false).
+  forall g d,
+  nullable g (PSequence (PSet dot_charset) (PSet dot_charset)) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -153,8 +153,8 @@ Qed.
 
 (* G |= . / ε *)
 Example nullable_ex10 :
-  forall g d a,
-  nullable g (PChoice (PChar a) PEmpty) d (Some true).
+  forall g d,
+  nullable g (PChoice (PSet dot_charset) PEmpty) d (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -162,8 +162,8 @@ Qed.
 
 (* G |= ε / . *)
 Example nullable_ex11 :
-  forall g d a,
-  nullable g (PChoice PEmpty (PChar a)) d (Some true).
+  forall g d,
+  nullable g (PChoice PEmpty (PSet dot_charset)) d (Some true).
 Proof.
   intros.
   eauto using nullable.
@@ -171,8 +171,8 @@ Qed.
 
 (* ! G |= . / . *)
 Example nullable_ex12 :
-  forall g d a,
-  nullable g (PChoice (PChar a) (PChar a)) d (Some false).
+  forall g d,
+  nullable g (PChoice (PSet dot_charset) (PSet dot_charset)) d (Some false).
 Proof.
   intros.
   eauto using nullable.
@@ -198,9 +198,9 @@ Qed.
 
 (* ! { P <- . P } |= P *)
 Example nullable_ex15 :
-  forall d a,
+  forall d,
   nullable
-    [PSequence (PChar a) (PNT 0)]
+    [PSequence (PSet dot_charset) (PNT 0)]
     (PNT 0)
     (S d)
     (Some false).
@@ -212,9 +212,9 @@ Qed.
 
 (* { P <- . P / ε } |= P *)
 Example nullable_ex16 :
-  forall d a,
+  forall d,
   nullable
-    [PChoice (PSequence (PChar a) (PNT 0)) PEmpty]
+    [PChoice (PSequence (PSet dot_charset) (PNT 0)) PEmpty]
     (PNT 0)
     (S d)
     (Some true).
@@ -235,11 +235,11 @@ Proof.
   try discriminate.
 Qed.
 
-(* { A <- 'a' A | ε ; B <- A A } |= A B *)
+(* { A <- . A | ε ; B <- A A } |= A B *)
 Example nullable_ex18 :
   forall d,
   nullable
-  [PChoice (PSequence (PChar "a") (PNT 0)) PEmpty; PSequence (PNT 0) (PNT 0)]
+  [PChoice (PSequence (PSet dot_charset) (PNT 0)) PEmpty; PSequence (PNT 0) (PNT 0)]
   (PSequence (PNT 0) (PNT 1))
   (S (S d))
   (Some true).
@@ -499,7 +499,6 @@ Fixpoint nullable_comp g p d gas {struct gas} :=
   | O => None
   | S gas' => match p with
               | PEmpty => Some (Some true)
-              | PChar _ => Some (Some false)
               | PSet _ => Some (Some false)
               | PSequence p1 p2 => match nullable_comp g p1 d gas' with
                                    | Some (Some true) => nullable_comp g p2 d gas'

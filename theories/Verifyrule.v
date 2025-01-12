@@ -27,9 +27,6 @@ Inductive verifyrule :
   | VREmpty :
       forall g d nb,
       verifyrule g PEmpty d nb (Some true) nil
-  | VRChar :
-      forall g a d nb,
-      verifyrule g (PChar a) d nb (Some nb) nil
   | VRSet :
       forall g f d nb,
       verifyrule g (PSet f) d nb (Some nb) nil
@@ -81,13 +78,6 @@ Proof.
 Qed.
 
 Goal
-  forall g a nb d,
-  verifyrule g (PChar a) d nb (Some nb) nil.
-Proof.
-  eauto using verifyrule.
-Qed.
-
-Goal
   forall g f nb d,
   verifyrule g (PSet f) d nb (Some nb) nil.
 Proof.
@@ -102,15 +92,15 @@ Proof.
 Qed.
 
 Goal
-  forall g nb d a,
-  verifyrule g (PSequence (PChar a) PEmpty) d nb (Some nb) nil.
+  forall g nb d f,
+  verifyrule g (PSequence (PSet f) PEmpty) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d a,
-  verifyrule g (PSequence PEmpty (PChar a)) d nb (Some nb) nil.
+  forall g nb d f,
+  verifyrule g (PSequence PEmpty (PSet f)) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -159,22 +149,22 @@ Proof.
 Qed.
 
 Goal
-  forall g nb d a,
-  verifyrule g (PChoice (PChar a) PEmpty) d nb (Some true) nil.
+  forall g nb d f,
+  verifyrule g (PChoice (PSet f) PEmpty) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d a,
-  verifyrule g (PChoice PEmpty (PChar a)) d nb (Some true) nil.
+  forall g nb d f,
+  verifyrule g (PChoice PEmpty (PSet f)) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d a,
-  verifyrule g (PChoice (PChar a) (PChar a)) d nb (Some nb) nil.
+  forall g nb d f,
+  verifyrule g (PChoice (PSet f) (PSet f)) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -205,9 +195,9 @@ Proof.
 Qed.
 
 Goal
-  forall nb a,
+  forall nb f,
   verifyrule
-  [(PChar a); (PChar a)]
+  [(PSet f); (PSet f)]
   (PChoice (PNT 0) (PNT 1)) 1 nb (Some nb) [1].
 Proof.
   intros.
@@ -216,9 +206,9 @@ Proof.
 Qed.
 
 Goal
-  forall nb a,
+  forall nb f,
   verifyrule
-  [PNT 7; (PChar a)]
+  [PNT 7; (PSet f)]
   (PChoice (PNT 0) (PNT 1)) 1 nb None [0].
 Proof.
   intros.
@@ -234,8 +224,8 @@ Proof.
 Qed.
 
 Goal
-  forall g nb a,
-  verifyrule g (PRepetition (PChar a)) 0 nb (Some true) nil.
+  forall g nb f,
+  verifyrule g (PRepetition (PSet f)) 0 nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -264,8 +254,8 @@ Proof.
 Qed.
 
 Goal
-  forall g nb a,
-  verifyrule g (PNot (PChar a)) 0 nb (Some true) nil.
+  forall g nb f,
+  verifyrule g (PNot (PSet f)) 0 nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -966,7 +956,6 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
   | O => None
   | S gas' => match p with
               | PEmpty => Some (Some true, nil)
-              | PChar _ => Some (Some nb, nil)
               | PSet _ => Some (Some nb, nil)
               | PSequence p1 p2 => match verifyrule_comp g p1 d false gas' with
                                    | Some (Some true, _) => verifyrule_comp g p2 d nb gas'

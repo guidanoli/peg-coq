@@ -28,7 +28,6 @@ Definition complementcharset cs : charset :=
 
 Definition tocharset p : option charset :=
   match p with
-  | PChar a => Some (singlecharset a)
   | PSet f => Some f
   | _ => None
   end.

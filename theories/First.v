@@ -99,3 +99,36 @@ Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) ->
       first g p cs d res ->
       first g (PNT i) cs (S d) res
   .
+
+Theorem first_deterministic :
+  forall g p cs d res1 res2,
+  first g p cs d res1 ->
+  first g p cs d res2 ->
+  res1 = res2.
+Proof.
+  intros * H1 H2.
+  generalize dependent res2.
+  induction H1; intros;
+  inversion H2; subst;
+  try pose_nullable_determinism;
+  try match goal with
+    [ Hx1: nth_error ?g ?i = _,
+      Hx2: nth_error ?g ?i = _ |- _ ] =>
+          rewrite Hx1 in Hx2;
+          try destruct1
+  end;
+  try match goal with
+    [ Hx1: tocharset ?p = _,
+      Hx2: tocharset ?p = _ |- _ ] =>
+        rewrite Hx1 in Hx2;
+        try destruct1
+  end;
+  repeat match goal with
+    [ IHx: forall resx, first ?g ?p ?cs ?d resx -> _ = resx,
+      Hx: first ?g ?p ?cs ?d _ |- _ ] =>
+          apply IHx in Hx;
+          try destruct1
+  end;
+  try discriminate;
+  eauto using first.
+Qed.

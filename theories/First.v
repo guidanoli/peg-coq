@@ -49,13 +49,13 @@ Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) ->
       nullable g p1 d (Some true) ->
       first g p2 cs d None ->
       first g (PSequence p1 p2) cs d None
-  | FSequenceNullableSomeTrueFirst2SomeFirst1None :
+  | FSequenceNullableSomeTrueFirst1None :
       forall g p1 p2 cs d b2 cs2,
       nullable g p1 d (Some true) ->
       first g p2 cs d (Some (b2, cs2)) ->
       first g p1 cs2 d None ->
       first g (PSequence p1 p2) cs d None
-  | FSequenceNullableSomeTrueFirst2SomeFirst1Some :
+  | FSequenceNullableSomeTrueFirstSome :
       forall g p1 p2 cs d b1 b2 cs1 cs2,
       nullable g p1 d (Some true) ->
       first g p2 cs d (Some (b2, cs2)) ->

@@ -1,9 +1,11 @@
+From Coq Require Import Bool.
 From Coq Require Import Lists.List.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
-From Peg Require Import Syntax.
 From Peg Require Import Match.
 From Peg Require Import Nullable.
+From Peg Require Import Suffix.
+From Peg Require Import Syntax.
 From Peg Require Import Tactics.
 
 Import ListNotations.
@@ -131,4 +133,39 @@ Proof.
   end;
   try discriminate;
   eauto using first.
+Qed.
+
+Theorem first_nullable :
+  forall g p cs cs' d b,
+  matches g p EmptyString (Success EmptyString) ->
+  first g p cs d (Some (b, cs')) ->
+  b = true.
+Proof.
+  intros * Hm Hf.
+  remember (Some (b, cs')).
+  generalize dependent cs'.
+  generalize dependent b.
+  induction Hf;
+  intros;
+  inversion Hm; subst;
+  try destruct2;
+  try discriminate;
+  try match goal with
+    [ Hx: matches ?g ?p ?s (Success EmptyString) |- _ ] =>
+        let H := fresh "H" in (
+          assert (suffix EmptyString s) as H
+          by eauto using matches_suffix;
+          inversion H; subst
+        )
+  end;
+  try match goal with
+    [ Hx: matches ?g ?p EmptyString (Success (String ?a ?s)) |- _ ] =>
+        let H := fresh "H" in (
+          assert (suffix (String a s) EmptyString) as H
+          by eauto using matches_suffix;
+          inversion H; subst
+        )
+  end;
+  try destruct2sep;
+  eauto using matches, andb_true_intro, orb_true_intro.
 Qed.

@@ -1,12 +1,17 @@
 From Coq Require Import Bool.
+From Coq Require Import Lia.
 From Coq Require Import Lists.List.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
+From Peg Require Import Checkloops.
+From Peg Require Import Coherent.
 From Peg Require Import Match.
 From Peg Require Import Nullable.
 From Peg Require Import Suffix.
 From Peg Require Import Syntax.
 From Peg Require Import Tactics.
+From Peg Require Import Verifygrammar.
+From Peg Require Import Verifyrule.
 
 Import ListNotations.
 
@@ -168,4 +173,94 @@ Proof.
   end;
   try destruct2sep;
   eauto using matches, andb_true_intro, orb_true_intro.
+Qed.
+
+Theorem first_Some_S_depth :
+  forall g p cs d res,
+  first g p cs d (Some res) ->
+  first g p cs (S d) (Some res).
+Proof.
+  intros * H.
+  remember (Some res).
+  generalize dependent res.
+  induction H; intros;
+  subst;
+  try discriminate;
+  eauto using first, nullable_Some_S_depth.
+Qed.
+
+Theorem first_Some_depth_le :
+  forall g p cs d d' res,
+  first g p cs d (Some res) ->
+  d <= d' ->
+  first g p cs d' (Some res).
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using first_Some_S_depth.
+Qed.
+
+Theorem first_complete :
+  forall g p cs,
+  verifygrammarpat g p true ->
+  exists d res, first g p cs d (Some res).
+Proof.
+  intros * Hvgp.
+  assert (exists nb d b k, verifyrule g p d nb (Some b) k)
+  as [nb [d [b [k Hvr]]]] by eauto using verifygrammarpat_verifyrule.
+  remember (Some b) as res.
+  generalize dependent b.
+  clear Hvgp.
+  generalize dependent cs.
+  induction Hvr; intros;
+  try discriminate;
+  try destruct1;
+  try (exists 0; eauto using first; fail).
+  - (* PSequence p1 p2; where p1 is nullable *)
+    assert (exists d, nullable g p1 d (Some true))
+    as [d1n ?] by eauto using verifyrule_similar_to_nullable.
+    assert (exists d res, first g p2 cs d (Some res))
+    as [d2f [[b2 cs2] ?]] by eauto.
+    assert (exists d res, first g p1 cs2 d (Some res))
+    as [d1f [[b1 cs1] ?]] by eauto.
+    pose (d1n + d1f + d2f) as dsum.
+    assert (d1n <= dsum) by lia.
+    assert (d1f <= dsum) by lia.
+    assert (d2f <= dsum) by lia.
+    exists dsum.
+    assert (nullable g p1 dsum (Some true))
+    by eauto using nullable_Some_depth_le.
+    eauto using first, first_Some_depth_le.
+  - (* PSequence p1 p2; where p1 is non-nullable *)
+    assert (exists d, nullable g p1 d (Some false))
+    as [d1n ?] by eauto using verifyrule_similar_to_nullable.
+    assert (exists d res, first g p1 fullcharset d (Some res))
+    as [d1f [[b1 cs1] ?]] by eauto.
+    pose (d1n + d1f) as dsum.
+    assert (d1n <= dsum) by lia.
+    assert (d1f <= dsum) by lia.
+    exists dsum.
+    eauto using first, first_Some_depth_le, nullable_Some_depth_le.
+  - (* PChoice p1 p2 *)
+    assert (exists d res, first g p1 cs d (Some res))
+    as [d1f [[b1 cs1] ?]] by eauto.
+    assert (exists d res, first g p2 cs d (Some res))
+    as [d2f [[b2 cs2] ?]] by eauto.
+    pose (d1f + d2f) as dsum.
+    assert (d1f <= dsum) by lia.
+    assert (d2f <= dsum) by lia.
+    exists dsum.
+    eauto using first, first_Some_depth_le.
+  - (* PRepetition p *)
+    assert (exists d res, first g p cs d (Some res))
+    as [d' [[? ?] ?]] by eauto.
+    eauto using first.
+  - (* PNot p *)
+    exists 0.
+    destruct (tocharset p) eqn:?;
+    eauto using first.
+  - (* PNT i *)
+    assert (exists d res, first g p cs d (Some res))
+    as [d' [[? ?] ?]] by eauto.
+    eauto using first.
 Qed.

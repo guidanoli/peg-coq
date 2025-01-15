@@ -589,3 +589,20 @@ Proof.
   rewrite verifygrammarpat_func_correct in Hvgp.
   eauto using verifygrammarpat_safe_match.
 Qed.
+
+Theorem verifygrammarpat_verifyrule :
+  forall g p,
+  verifygrammarpat g p true ->
+  exists nb d b k, verifyrule g p d nb (Some b) k.
+Proof.
+  intros * H.
+  inversion H; subst.
+  match goal with
+    [ Hx: verifygrammar _ true |- _ ] =>
+        inversion Hx; subst
+  end.
+  exists true.
+  eauto using verifyrule_safe_grammar_yields_safe_pattern,
+              lcoherent_true_In,
+              lverifyrule_true_In.
+Qed.

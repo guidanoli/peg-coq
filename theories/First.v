@@ -35,121 +35,80 @@ Definition tocharset p : option charset :=
   | _ => None
   end.
 
-Inductive first : grammar -> pat -> charset -> nat -> option (bool * charset) -> Prop :=
+Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
   | FEmpty :
-      forall g cs d,
-      first g PEmpty cs d (Some (true, cs))
+      forall g cs,
+      first g PEmpty cs true cs
   | FSet :
-      forall g cs cs' d,
-      first g (PSet cs') cs d (Some (false, cs'))
-  | FSequenceNullableNone :
-      forall g p1 p2 cs d,
-      nullable g p1 d None ->
-      first g (PSequence p1 p2) cs d None
+      forall g cs cs',
+      first g (PSet cs') cs false cs'
   | FSequenceNullableSomeFalse :
-      forall g p1 p2 cs d res,
+      forall g p1 p2 cs d b cs',
       nullable g p1 d (Some false) ->
-      first g p1 fullcharset d res ->
-      first g (PSequence p1 p2) cs d res
-  | FSequenceNullableSomeTrueFirst2None :
-      forall g p1 p2 cs d,
-      nullable g p1 d (Some true) ->
-      first g p2 cs d None ->
-      first g (PSequence p1 p2) cs d None
-  | FSequenceNullableSomeTrueFirst1None :
-      forall g p1 p2 cs d b2 cs2,
-      nullable g p1 d (Some true) ->
-      first g p2 cs d (Some (b2, cs2)) ->
-      first g p1 cs2 d None ->
-      first g (PSequence p1 p2) cs d None
-  | FSequenceNullableSomeTrueFirstSome :
+      first g p1 fullcharset b cs' ->
+      first g (PSequence p1 p2) cs b cs'
+  | FSequenceNullableSomeTrue :
       forall g p1 p2 cs d b1 b2 cs1 cs2,
       nullable g p1 d (Some true) ->
-      first g p2 cs d (Some (b2, cs2)) ->
-      first g p1 cs2 d (Some (b1, cs1)) ->
-      first g (PSequence p1 p2) cs d (Some (andb b1 b2, cs1))
-  | FChoiceNone1 :
-      forall g p1 p2 cs d,
-      first g p1 cs d None ->
-      first g (PChoice p1 p2) cs d None
-  | FChoiceNone2 :
-      forall g p1 p2 cs d,
-      first g p2 cs d None ->
-      first g (PChoice p1 p2) cs d None
-  | FChoiceSome :
-      forall g p1 p2 cs cs1 cs2 d b1 b2,
-      first g p1 cs d (Some (b1, cs1)) ->
-      first g p2 cs d (Some (b2, cs2)) ->
-      first g (PChoice p1 p2) cs d (Some (orb b1 b2, unioncharset cs1 cs2))
-  | FRepetitionNone :
-      forall g p cs d,
-      first g p cs d None ->
-      first g (PRepetition p) cs d None
-  | FRepetitionSome :
-      forall g p cs d b cs',
-      first g p cs d (Some (b, cs')) ->
-      first g (PRepetition p) cs d (Some (true, unioncharset cs cs'))
+      first g p2 cs b2 cs2 ->
+      first g p1 cs2 b1 cs1 ->
+      first g (PSequence p1 p2) cs (andb b1 b2) cs1
+  | FChoice :
+      forall g p1 p2 cs cs1 cs2 b1 b2,
+      first g p1 cs b1 cs1 ->
+      first g p2 cs b2 cs2 ->
+      first g (PChoice p1 p2) cs (orb b1 b2) (unioncharset cs1 cs2)
+  | FRepetition :
+      forall g p cs b cs',
+      first g p cs b cs' ->
+      first g (PRepetition p) cs true (unioncharset cs cs')
   | FNotNone :
-      forall g p cs d,
+      forall g p cs,
       tocharset p = None ->
-      first g (PNot p) cs d (Some (true, cs))
+      first g (PNot p) cs true cs
   | FNotSome :
-      forall g p cs cs' d,
+      forall g p cs cs',
       tocharset p = Some cs' ->
-      first g (PNot p) cs d (Some (true, complementcharset cs'))
-  | FNTZero :
-      forall g i cs,
-      first g (PNT i) cs 0 None
-  | FNTSucc :
-      forall g i p cs d res,
+      first g (PNot p) cs true (complementcharset cs')
+  | FNT :
+      forall g i p cs b cs',
       nth_error g i = Some p ->
-      first g p cs d res ->
-      first g (PNT i) cs (S d) res
+      first g p cs b cs' ->
+      first g (PNT i) cs b cs'
   .
 
 Theorem first_deterministic :
-  forall g p cs d res1 res2,
-  first g p cs d res1 ->
-  first g p cs d res2 ->
-  res1 = res2.
+  forall g p cs b1 b2 cs1 cs2,
+  first g p cs b1 cs1 ->
+  first g p cs b2 cs2 ->
+  b1 = b2 /\ cs1 = cs2.
 Proof.
   intros * H1 H2.
-  generalize dependent res2.
+  generalize dependent cs2.
+  generalize dependent b2.
   induction H1; intros;
   inversion H2; subst;
-  try pose_nullable_determinism;
-  try match goal with
-    [ Hx1: nth_error ?g ?i = _,
-      Hx2: nth_error ?g ?i = _ |- _ ] =>
-          rewrite Hx1 in Hx2;
-          try destruct1
-  end;
-  try match goal with
-    [ Hx1: tocharset ?p = _,
-      Hx2: tocharset ?p = _ |- _ ] =>
-        rewrite Hx1 in Hx2;
-        try destruct1
-  end;
+  try pose_nullable_Some_determinism;
+  try destruct2sep;
+  try destruct1sep;
   repeat match goal with
-    [ IHx: forall resx, first ?g ?p ?cs ?d resx -> _ = resx,
-      Hx: first ?g ?p ?cs ?d _ |- _ ] =>
+    [ IHx: forall bx csx, first ?g ?p ?cs bx csx -> _ = bx /\ _ = csx,
+      Hx: first ?g ?p ?cs _ _ |- _ ] =>
           apply IHx in Hx;
-          try destruct1
+          destruct Hx;
+          subst
   end;
   try discriminate;
   eauto using first.
 Qed.
 
 Theorem first_nullable :
-  forall g p cs cs' d b,
+  forall g p cs cs' b,
   matches g p EmptyString (Success EmptyString) ->
-  first g p cs d (Some (b, cs')) ->
+  first g p cs b cs' ->
   b = true.
 Proof.
   intros * Hm Hf.
-  remember (Some (b, cs')).
-  generalize dependent cs'.
-  generalize dependent b.
   induction Hf;
   intros;
   inversion Hm; subst;
@@ -175,92 +134,51 @@ Proof.
   eauto using matches, andb_true_intro, orb_true_intro.
 Qed.
 
-Theorem first_Some_S_depth :
-  forall g p cs d res,
-  first g p cs d (Some res) ->
-  first g p cs (S d) (Some res).
-Proof.
-  intros * H.
-  remember (Some res).
-  generalize dependent res.
-  induction H; intros;
-  subst;
-  try discriminate;
-  eauto using first, nullable_Some_S_depth.
-Qed.
-
-Theorem first_Some_depth_le :
-  forall g p cs d d' res,
-  first g p cs d (Some res) ->
-  d <= d' ->
-  first g p cs d' (Some res).
-Proof.
-  intros * H Hle.
-  induction Hle;
-  eauto using first_Some_S_depth.
-Qed.
-
 Theorem first_complete :
   forall g p cs,
   verifygrammarpat g p true ->
-  exists d res, first g p cs d (Some res).
+  exists b cs', first g p cs b cs'.
 Proof.
   intros * Hvgp.
   assert (exists nb d b k, verifyrule g p d nb (Some b) k)
   as [nb [d [b [k Hvr]]]] by eauto using verifygrammarpat_verifyrule.
   remember (Some b) as res.
+  generalize dependent cs.
   generalize dependent b.
   clear Hvgp.
-  generalize dependent cs.
   induction Hvr; intros;
   try discriminate;
   try destruct1;
-  try (exists 0; eauto using first; fail).
+  try (eauto using first; fail).
   - (* PSequence p1 p2; where p1 is nullable *)
     assert (exists d, nullable g p1 d (Some true))
-    as [d1n ?] by eauto using verifyrule_similar_to_nullable.
-    assert (exists d res, first g p2 cs d (Some res))
-    as [d2f [[b2 cs2] ?]] by eauto.
-    assert (exists d res, first g p1 cs2 d (Some res))
-    as [d1f [[b1 cs1] ?]] by eauto.
-    pose (d1n + d1f + d2f) as dsum.
-    assert (d1n <= dsum) by lia.
-    assert (d1f <= dsum) by lia.
-    assert (d2f <= dsum) by lia.
-    exists dsum.
-    assert (nullable g p1 dsum (Some true))
-    by eauto using nullable_Some_depth_le.
-    eauto using first, first_Some_depth_le.
+    as [? ?] by eauto using verifyrule_similar_to_nullable.
+    assert (exists b cs', first g p2 cs b cs')
+    as [? [cs2 ?]] by eauto.
+    assert (exists b cs', first g p1 cs2 b cs')
+    as [? [? ?]] by eauto.
+    eauto using first.
   - (* PSequence p1 p2; where p1 is non-nullable *)
     assert (exists d, nullable g p1 d (Some false))
-    as [d1n ?] by eauto using verifyrule_similar_to_nullable.
-    assert (exists d res, first g p1 fullcharset d (Some res))
-    as [d1f [[b1 cs1] ?]] by eauto.
-    pose (d1n + d1f) as dsum.
-    assert (d1n <= dsum) by lia.
-    assert (d1f <= dsum) by lia.
-    exists dsum.
-    eauto using first, first_Some_depth_le, nullable_Some_depth_le.
+    as [? ?] by eauto using verifyrule_similar_to_nullable.
+    assert (exists b cs', first g p1 fullcharset b cs')
+    as [? [? ?]] by eauto.
+    eauto using first.
   - (* PChoice p1 p2 *)
-    assert (exists d res, first g p1 cs d (Some res))
-    as [d1f [[b1 cs1] ?]] by eauto.
-    assert (exists d res, first g p2 cs d (Some res))
-    as [d2f [[b2 cs2] ?]] by eauto.
-    pose (d1f + d2f) as dsum.
-    assert (d1f <= dsum) by lia.
-    assert (d2f <= dsum) by lia.
-    exists dsum.
-    eauto using first, first_Some_depth_le.
+    assert (exists b cs', first g p1 cs b cs')
+    as [? [? ?]] by eauto.
+    assert (exists b cs', first g p2 cs b cs')
+    as [? [? ?]] by eauto.
+    eauto using first.
   - (* PRepetition p *)
-    assert (exists d res, first g p cs d (Some res))
-    as [d' [[? ?] ?]] by eauto.
+    assert (exists b cs', first g p cs b cs')
+    as [? [? ?]] by eauto.
     eauto using first.
   - (* PNot p *)
-    exists 0.
     destruct (tocharset p) eqn:?;
     eauto using first.
   - (* PNT i *)
-    assert (exists d res, first g p cs d (Some res))
-    as [d' [[? ?] ?]] by eauto.
+    assert (exists b cs', first g p cs b cs')
+    as [? [? ?]] by eauto.
     eauto using first.
 Qed.

@@ -40,6 +40,15 @@ Ltac destruct2 :=
       injection H as H; subst
   end.
 
+Ltac destruct1sep :=
+  match goal with [
+    Hx1: ?C ?a = _,
+    Hx2: ?C ?a = _ |- _ ] =>
+        rewrite Hx1 in Hx2;
+        try (injection Hx2 as Hx2; subst);
+        try discriminate
+  end.
+
 Ltac destruct2sep :=
   match goal with [
     Hx1: ?C ?a ?b = _,

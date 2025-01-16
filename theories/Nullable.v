@@ -307,6 +307,34 @@ Proof.
   eauto using nullable_Some_S_depth.
 Qed.
 
+Lemma nullable_Some_determinism :
+  forall g p d1 d2 b1 b2,
+  nullable g p d1 (Some b1) ->
+  nullable g p d2 (Some b2) ->
+  b1 = b2.
+Proof.
+  intros.
+  pose (d1 + d2) as dsum.
+  assert (d1 <= dsum) by lia.
+  assert (d2 <= dsum) by lia.
+  assert (nullable g p dsum (Some b1))
+  by eauto using nullable_Some_depth_le.
+  assert (nullable g p dsum (Some b2))
+  by eauto using nullable_Some_depth_le.
+  pose_nullable_determinism.
+  destruct1.
+  eauto.
+Qed.
+
+Ltac pose_nullable_Some_determinism :=
+  match goal with
+    [ Hx1: nullable ?g ?p _ (Some ?b1),
+      Hx2: nullable ?g ?p _ (Some ?b2) |- _ ] =>
+          assert (b1 = b2)
+          by eauto using nullable_Some_determinism;
+          clear Hx2
+  end.
+
 Lemma verifyrule_similar_to_nullable :
   forall g p d b k,
   verifyrule g p d false (Some b) k ->

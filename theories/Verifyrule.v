@@ -526,6 +526,19 @@ Proof.
   end.
 Qed.
 
+Lemma verifyrule_true_res_some_true :
+  forall g p d b k,
+  verifyrule g p d true (Some b) k ->
+  b = true.
+Proof.
+  intros * H.
+  apply verifyrule_res_none_or_some_true in H.
+  destruct H;
+  try discriminate;
+  try destruct1;
+  auto.
+Qed.
+
 Inductive same_result_type : bool -> option bool -> bool -> option bool -> Prop :=
   | SRTLeftRecursive :
       forall nb nb',
@@ -874,6 +887,37 @@ Proof.
   eauto using verifyrule_convergence_S_depth, Nat.lt_le_trans.
 Qed.
 
+Theorem verifyrule_Some_min_depth :
+  forall g p d nb b k,
+  verifyrule g p d nb (Some b) k ->
+  exists k',
+  verifyrule g p (S (Datatypes.length g)) nb (Some b) k'.
+Proof.
+  intros * H.
+  pose (S (Datatypes.length g)) as dmin.
+  destruct (Compare_dec.le_ge_dec d dmin);
+  unfold ge in *.
+  - (* d <= dmin *)
+    eauto using verifyrule_depth_le_some_determinism.
+  - (* dmin <= d *)
+    assert (
+      exists res' k',
+      coherent_return_type_after_depth_increase res' (Some b) /\
+      verifyrule g p dmin nb res' k'
+    )
+    as [res' [? [Hcrt ?]]]
+    by eauto using verifyrule_depth_le_coherent_result_type.
+    inversion Hcrt; subst.
+    + (* res' = None *)
+      assert (Datatypes.length g < dmin) by lia.
+      assert (exists k', verifyrule g p d nb None k')
+      as [? ?] by eauto using verifyrule_convergence.
+      pose_verifyrule_determinism.
+      discriminate.
+    + (* res' = Some b *)
+      eauto.
+Qed.
+
 Ltac specialize_coherent :=
   match goal with
     [ Hx: coherent ?g ?p ?b, IHx: coherent ?g ?p ?b -> _ |- _ ] =>
@@ -1071,7 +1115,7 @@ Proof.
   auto using verifyrule_comp_S_gas.
 Qed.
 
-Lemma verifyrule_comp_termination :
+Lemma verifyrule_comp_gas_exists :
   forall g p d nb,
   (forall r, In r g -> coherent g r true) ->
   coherent g p true ->
@@ -1409,7 +1453,7 @@ Proof.
   eauto using lverifyrule_comp_S_gas.
 Qed.
 
-Lemma lverifyrule_comp_termination :
+Lemma lverifyrule_comp_gas_exists :
   forall g rs,
   lcoherent g g true ->
   lcoherent g rs true ->
@@ -1430,7 +1474,7 @@ Proof.
     end.
     assert (exists gas res k, verifyrule_comp g r (S (length g)) false gas = Some (res, k))
     as [gas2 [res [k Hv]]]
-    by eauto using verifyrule_comp_termination, lcoherent_true_In.
+    by eauto using verifyrule_comp_gas_exists, lcoherent_true_In.
     simpl.
     assert (gas1 <= gas1 + gas2) by lia.
     assert (gas2 <= gas1 + gas2) by lia.
@@ -1469,12 +1513,12 @@ Proof.
   destruct res; eauto.
 Qed.
 
-Lemma lverifyrule_comp_termination_grammar :
+Lemma lverifyrule_comp_gas_exists_grammar :
   forall g,
   lcoherent g g true ->
   exists gas b,
   lverifyrule_comp g g gas = Some b.
 Proof.
   intros.
-  eauto using lverifyrule_comp_termination.
+  eauto using lverifyrule_comp_gas_exists.
 Qed.

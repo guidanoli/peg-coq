@@ -51,13 +51,13 @@ Proof. intros *. destdec. Qed.
 Lemma In_Neq: forall l (a x: nat), In x (a :: l) -> a <> x -> In x l.
 Proof. intros * HIn HNeq. destruct HIn; trivial. contradiction. Qed.
 
-  
+
 Lemma In_count: forall (x : nat) l, In x l -> 0 < count l x.
-Proof. 
+Proof.
   induction l; intros * H.
   - contradiction.
   - destdec.
-    + lia. 
+    + lia.
     + eauto using In_Neq.
  Qed.
 
@@ -71,7 +71,7 @@ Proof.
 Qed.
 
 
-Lemma count_In: forall (x : nat) l, 0 < count l x -> In x l. 
+Lemma count_In: forall (x : nat) l, 0 < count l x -> In x l.
 Proof.
   induction l; simpl; intros * H.
   - lia.

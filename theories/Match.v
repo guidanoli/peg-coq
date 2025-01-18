@@ -325,10 +325,11 @@ Proof.
   eauto using matches_comp_S_gas_none.
 Qed.
 
-Theorem matches_comp_termination :
+Theorem matches_comp_gas_exists :
   forall g p s res,
   matches g p s res ->
-  (exists gas, matches_comp g p s gas = Some res).
+  exists gas,
+  matches_comp g p s gas = Some res.
 Proof.
   intros * H.
   induction H;

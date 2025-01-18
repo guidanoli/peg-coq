@@ -43,13 +43,13 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       forall g cs cs',
       first g (PSet cs') cs false cs'
   | FSequenceNullableSomeFalse :
-      forall g p1 p2 cs d b cs',
-      nullable g p1 d (Some false) ->
+      forall g p1 p2 cs b cs',
+      nullable g p1 false ->
       first g p1 fullcharset b cs' ->
       first g (PSequence p1 p2) cs b cs'
   | FSequenceNullableSomeTrue :
-      forall g p1 p2 cs d b1 b2 cs1 cs2,
-      nullable g p1 d (Some true) ->
+      forall g p1 p2 cs b1 b2 cs1 cs2,
+      nullable g p1 true ->
       first g p2 cs b2 cs2 ->
       first g p1 cs2 b1 cs1 ->
       first g (PSequence p1 p2) cs (andb b1 b2) cs1
@@ -88,7 +88,7 @@ Proof.
   generalize dependent b2.
   induction H1; intros;
   inversion H2; subst;
-  try pose_nullable_Some_determinism;
+  try pose_nullable_determinism;
   try destruct2sep;
   try destruct1sep;
   repeat match goal with
@@ -151,16 +151,16 @@ Proof.
   try destruct1;
   try (eauto using first; fail).
   - (* PSequence p1 p2; where p1 is nullable *)
-    assert (exists d, nullable g p1 d (Some true))
-    as [? ?] by eauto using verifyrule_similar_to_nullable.
+    assert (nullable g p1 true)
+    by eauto using verifyrule_similar_to_nullable.
     assert (exists b cs', first g p2 cs b cs')
     as [? [cs2 ?]] by eauto.
     assert (exists b cs', first g p1 cs2 b cs')
     as [? [? ?]] by eauto.
     eauto using first.
   - (* PSequence p1 p2; where p1 is non-nullable *)
-    assert (exists d, nullable g p1 d (Some false))
-    as [? ?] by eauto using verifyrule_similar_to_nullable.
+    assert (nullable g p1 false)
+    by eauto using verifyrule_similar_to_nullable.
     assert (exists b cs', first g p1 fullcharset b cs')
     as [? [? ?]] by eauto.
     eauto using first.

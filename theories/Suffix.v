@@ -102,3 +102,31 @@ Proof.
   induction H;
   eauto using proper_suffix.
 Qed.
+
+Lemma suffix_is_refl_or_proper_suffix :
+  forall s1 s2,
+  suffix s1 s2 ->
+  s1 = s2 \/ proper_suffix s1 s2.
+Proof.
+  intros * H.
+  inversion H; subst;
+  eauto using suffix_is_proper_suffix_with_char.
+Qed.
+
+Lemma proper_suffix_exists_append :
+  forall s1 s2,
+  proper_suffix s1 s2 ->
+  exists a s0, String a (s0 ++ s1) = s2.
+Proof.
+  intros * H.
+  induction H as [? a|? ? a ? [a' [s' ?]]].
+  - (* ProperSuffixBase *)
+    exists a.
+    exists EmptyString.
+    auto.
+  - (* ProperSuffixRec *)
+    subst.
+    exists a.
+    exists (String a' s').
+    auto.
+Qed.

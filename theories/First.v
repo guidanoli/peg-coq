@@ -182,3 +182,52 @@ Proof.
     as [? [? ?]] by eauto.
     eauto using first.
 Qed.
+
+Lemma first_false :
+  forall g p cs cs',
+  verifygrammarpat g p true ->
+  first g p cs false cs' ->
+  matches g p EmptyString Failure.
+Proof.
+  intros * Hvgp Hf.
+  remember false as b in Hf.
+  induction Hf;
+  try match goal with
+    [ Hx: ?b1 && ?b2 = false |- _ ] =>
+        destruct b1;
+        destruct b2;
+        simpl in Hx
+  end;
+  try match goal with
+    [ Hx: ?b1 || ?b2 = false |- _ ] =>
+        destruct b1;
+        destruct b2;
+        simpl in Hx
+  end;
+  try match goal with
+    [ _: verifygrammarpat ?g (_ ?p1 ?p2) true |- _ ] =>
+      assert (verifygrammarpat g p1 true)
+      by eauto using pat_le, verifygrammarpat_true_le;
+      assert (verifygrammarpat g p2 true)
+      by eauto using pat_le, verifygrammarpat_true_le;
+      assert (exists res, matches g p1 EmptyString res)
+      as [[|?] ?] by eauto using verifygrammarpat_safe_match
+  end;
+  try match goal with
+    [ _: matches _ _ EmptyString (Success ?s) |- _ ] =>
+        let H := fresh "H" in (
+          assert (suffix s EmptyString)
+          as H by eauto using matches_suffix;
+          inversion H; subst
+        )
+  end;
+  try match goal with
+    [ Hvgp: verifygrammarpat ?g (PNT ?i) true,
+      _: nth_error ?g ?i = Some ?p |- _ ] =>
+          inversion Hvgp; subst;
+          assert (verifygrammarpat g p true)
+          by eauto using nth_error_In, verifygrammarpat_true_In
+  end;
+  try discriminate;
+  eauto using matches.
+Qed.

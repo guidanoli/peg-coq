@@ -590,3 +590,65 @@ Proof.
               lcoherent_true_In,
               lverifyrule_true_In.
 Qed.
+
+Lemma verifygrammarpat_true_In :
+  forall g p,
+  verifygrammar g true ->
+  In p g ->
+  verifygrammarpat g p true.
+Proof.
+  intros * Hvg HIn.
+  inversion Hvg; subst.
+  eauto using verifygrammarpat,
+              lcoherent_true_In,
+              lcheckloops_false_In.
+Qed.
+
+Inductive pat_le (p : pat) : pat -> Prop :=
+  | PLERefl :
+      pat_le p p
+  | PLESequence1 :
+      forall p1 p2,
+      pat_le p p1 ->
+      pat_le p (PSequence p1 p2)
+  | PLESequence2 :
+      forall p1 p2,
+      pat_le p p2 ->
+      pat_le p (PSequence p1 p2)
+  | PLEChoice1 :
+      forall p1 p2,
+      pat_le p p1 ->
+      pat_le p (PChoice p1 p2)
+  | PLEChoice2 :
+      forall p1 p2,
+      pat_le p p2 ->
+      pat_le p (PChoice p1 p2)
+  | PLERepetition :
+      forall p1,
+      pat_le p p1 ->
+      pat_le p (PRepetition p1)
+  | PLENot :
+      forall p1,
+      pat_le p p1 ->
+      pat_le p (PNot p1)
+  .
+
+Lemma verifygrammarpat_true_le :
+  forall g p1 p2,
+  verifygrammarpat g p2 true ->
+  pat_le p1 p2 ->
+  verifygrammarpat g p1 true.
+Proof.
+  intros * Hvgp Hle.
+  inversion Hvgp; subst.
+  generalize dependent p1.
+  induction p2; intros;
+  inversion Hle; subst;
+  match goal with
+    [ Hc: coherent _ _ true,
+      Hcl: checkloops _ _ false |- _ ] =>
+        inversion Hc; subst;
+        inversion Hcl; subst
+  end;
+  eauto using verifygrammarpat, pat_le.
+Qed.

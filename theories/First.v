@@ -102,38 +102,6 @@ Proof.
   eauto using first.
 Qed.
 
-Theorem first_nullable :
-  forall g p cs cs' b,
-  matches g p EmptyString (Success EmptyString) ->
-  first g p cs b cs' ->
-  b = true.
-Proof.
-  intros * Hm Hf.
-  induction Hf;
-  intros;
-  inversion Hm; subst;
-  try destruct2;
-  try discriminate;
-  try match goal with
-    [ Hx: matches ?g ?p ?s (Success EmptyString) |- _ ] =>
-        let H := fresh "H" in (
-          assert (suffix EmptyString s) as H
-          by eauto using matches_suffix;
-          inversion H; subst
-        )
-  end;
-  try match goal with
-    [ Hx: matches ?g ?p EmptyString (Success (String ?a ?s)) |- _ ] =>
-        let H := fresh "H" in (
-          assert (suffix (String a s) EmptyString) as H
-          by eauto using matches_suffix;
-          inversion H; subst
-        )
-  end;
-  try destruct2sep;
-  eauto using matches, andb_true_intro, orb_true_intro.
-Qed.
-
 Theorem first_complete :
   forall g p cs,
   verifygrammarpat g p true ->

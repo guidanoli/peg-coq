@@ -231,3 +231,22 @@ Proof.
   try discriminate;
   eauto using matches.
 Qed.
+
+Lemma first_true :
+  forall g p cs,
+  verifygrammarpat g p true ->
+  matches g p EmptyString (Success EmptyString) ->
+  exists cs', first g p cs true cs'.
+Proof.
+  intros * Hvgp Hm.
+  assert (exists b cs', first g p cs b cs')
+  as [b [cs' ?]] by eauto using first_complete.
+  destruct b.
+  - (* true *)
+    eauto.
+  - (* false *)
+    assert (matches g p EmptyString Failure)
+    by eauto using first_false.
+    pose_matches_determinism.
+    discriminate.
+Qed.

@@ -25,6 +25,35 @@ Fixpoint pat_size p :=
   | PNT _ => 1
   end.
 
+Inductive pat_le (p : pat) : pat -> Prop :=
+  | PLERefl :
+      pat_le p p
+  | PLESequence1 :
+      forall p1 p2,
+      pat_le p p1 ->
+      pat_le p (PSequence p1 p2)
+  | PLESequence2 :
+      forall p1 p2,
+      pat_le p p2 ->
+      pat_le p (PSequence p1 p2)
+  | PLEChoice1 :
+      forall p1 p2,
+      pat_le p p1 ->
+      pat_le p (PChoice p1 p2)
+  | PLEChoice2 :
+      forall p1 p2,
+      pat_le p p2 ->
+      pat_le p (PChoice p1 p2)
+  | PLERepetition :
+      forall p1,
+      pat_le p p1 ->
+      pat_le p (PRepetition p1)
+  | PLENot :
+      forall p1,
+      pat_le p p1 ->
+      pat_le p (PNot p1)
+  .
+
 (** Grammar **)
 
 Definition grammar : Type := list pat.

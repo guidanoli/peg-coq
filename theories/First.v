@@ -25,6 +25,8 @@ Definition fullcharset : charset :=
 Definition unioncharset cs1 cs2 : charset :=
   (fun a => orb (cs1 a) (cs2 a)).
 
+Notation "cs1 'U' cs2" := (unioncharset cs1 cs2) (at level 120, right associativity).
+
 (* Set complement of a charset *)
 Definition complementcharset cs : charset :=
   (fun a => negb (cs a)).
@@ -57,11 +59,11 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       forall g p1 p2 cs cs1 cs2 b1 b2,
       first g p1 cs b1 cs1 ->
       first g p2 cs b2 cs2 ->
-      first g (PChoice p1 p2) cs (orb b1 b2) (unioncharset cs1 cs2)
+      first g (PChoice p1 p2) cs (orb b1 b2) (cs1 U cs2)
   | FRepetition :
       forall g p cs b cs',
       first g p cs b cs' ->
-      first g (PRepetition p) cs true (unioncharset cs cs')
+      first g (PRepetition p) cs true (cs U cs')
   | FNotNone :
       forall g p cs,
       tocharset p = None ->

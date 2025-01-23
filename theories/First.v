@@ -104,6 +104,14 @@ Proof.
   eauto using first.
 Qed.
 
+Ltac pose_first_determinism :=
+  match goal with
+    [ _: first ?g ?p ?cs ?b1 ?cs1,
+      _: first ?g ?p ?cs ?b2 ?cs2 |- _ ] =>
+            assert (b1 = b2 /\ cs1 = cs2)
+            as [? ?] by eauto using first_determinism
+  end.
+
 Theorem first_complete :
   forall g p cs,
   verifygrammarpat g p true ->

@@ -7,6 +7,7 @@ From Peg Require Import Checkloops.
 From Peg Require Import Coherent.
 From Peg Require Import Match.
 From Peg Require Import Nullable.
+From Peg Require Import Strong.
 From Peg Require Import Suffix.
 From Peg Require Import Syntax.
 From Peg Require Import Tactics.
@@ -227,4 +228,507 @@ Proof.
     by eauto using first_false.
     pose_matches_determinism.
     discriminate.
+Qed.
+
+Inductive startswith : string -> charset -> Prop :=
+  | SWEmpty :
+      forall cs,
+      startswith EmptyString cs
+  | SWChar :
+      forall a s cs,
+      cs a = true ->
+      startswith (String a s) cs
+  .
+
+Lemma startswith_fullcharset :
+  forall s,
+  startswith s fullcharset.
+Proof.
+  intros.
+  unfold fullcharset.
+  destruct s;
+  eauto using startswith.
+Qed.
+
+Lemma startswith_unioncharset :
+  forall s cs1 cs2,
+  startswith s cs1 \/ startswith s cs2 ->
+  startswith s (cs1 U cs2).
+Proof.
+  intros * H.
+  destruct s.
+  - (* EmptyString *)
+    auto using startswith.
+  - (* String a s *)
+    destruct H;
+    inversion H; subst;
+    eauto using orb_true_intro, unioncharset, startswith.
+Qed.
+
+Lemma startswith_complementcharset :
+  forall cs a s,
+  cs a = false ->
+  startswith (String a s) (complementcharset cs).
+Proof.
+  intros * H.
+  unfold complementcharset.
+  econstructor.
+  rewrite H.
+  auto.
+Qed.
+
+Lemma first_b_independence :
+  forall g p cs1 cs1' cs2 cs2' b1 b2,
+  first g p cs1 b1 cs1' ->
+  first g p cs2 b2 cs2' ->
+  b1 = b2.
+Proof.
+  intros * H1 H2.
+  generalize dependent cs2'.
+  generalize dependent b2.
+  generalize dependent cs2.
+  induction H1; intros;
+  inversion H2; subst;
+  try destruct2sep;
+  try pose_nullable_determinism;
+  try pose_first_determinism;
+  try discriminate;
+  repeat match goal with
+    [ IHx: forall csx bx csx', first ?g ?p csx bx csx' -> _ = bx,
+      Hx: first ?g ?p _ _ _ |- _ ] =>
+          apply IHx in Hx
+  end;
+  subst;
+  auto.
+Qed.
+
+Ltac pose_first_b_independence :=
+  match goal with
+    [ _: first ?g ?p ?cs1 ?b1 ?cs1',
+      _: first ?g ?p ?cs2 ?b2 ?cs2' |- _ ] =>
+          assert (b1 = b2)
+          by eauto using first_b_independence
+  end.
+
+Inductive charseteq : charset -> charset -> Prop :=
+  | CSEq :
+      forall cs1 cs2,
+      (forall a, cs1 a = cs2 a) ->
+      charseteq cs1 cs2.
+
+Lemma charseteq_refl :
+  forall cs,
+  charseteq cs cs.
+Proof.
+  eauto using charseteq.
+Qed.
+
+Lemma charseteq_comm :
+  forall cs1 cs2,
+  charseteq cs1 cs2 ->
+  charseteq cs2 cs1.
+Proof.
+  intros * H.
+  inversion H; subst.
+  econstructor.
+  auto.
+Qed.
+
+Lemma charseteq_trans :
+  forall cs1 cs2 cs3,
+  charseteq cs1 cs2 ->
+  charseteq cs2 cs3 ->
+  charseteq cs1 cs3.
+Proof.
+  intros * H12 H23.
+  inversion H12; subst;
+  inversion H23; subst;
+  eauto using charseteq.
+Qed.
+
+Lemma startswith_charseteq :
+  forall s cs1 cs2,
+  startswith s cs1 ->
+  charseteq cs1 cs2 ->
+  startswith s cs2.
+Proof.
+  intros * Hsw Hcseq.
+  inversion Hcseq; subst;
+  inversion Hsw; subst;
+  eauto using startswith.
+Qed.
+
+Ltac pose_charseteq_trans :=
+  match goal with
+    [ _: charseteq ?cs1 ?cs2,
+      _: charseteq ?cs2 ?cs3 |- _ ] =>
+          assert (charseteq cs1 cs3)
+          by eauto using charseteq_trans
+  end.
+
+Lemma unioncharset_diag :
+  forall cs,
+  charseteq (cs U cs) cs.
+Proof.
+  eauto using orb_diag, charseteq.
+Qed.
+
+Lemma unioncharset_assoc :
+  forall cs1 cs2 cs3,
+  charseteq (cs1 U (cs2 U cs3))
+            ((cs1 U cs2) U cs3).
+Proof.
+  eauto using orb_assoc, charseteq.
+Qed.
+
+Lemma unioncharset_comm :
+  forall cs1 cs2,
+  charseteq (cs1 U cs2)
+            (cs2 U cs1).
+Proof.
+  eauto using orb_comm, charseteq.
+Qed.
+
+Lemma unioncharset_distrib :
+  forall cs1 cs1' cs2 cs2',
+  charseteq cs1 cs1' ->
+  charseteq cs2 cs2' ->
+  charseteq (cs1 U cs2) (cs1' U cs2').
+Proof.
+  intros * H1 H2.
+  unfold unioncharset.
+  inversion H1; subst.
+  inversion H2; subst.
+  econstructor.
+  intros.
+  repeat match goal with
+    [ Hx: forall a, _ a = _ a |- _ ] =>
+        rewrite Hx;
+        clear Hx
+  end.
+  auto.
+Qed.
+
+Ltac pose_charseteq_union_distrib :=
+  match goal with
+    [ _: charseteq ?cs1 ?cs1',
+      _: charseteq ?cs2 ?cs2' |- _ ] =>
+          assert (charseteq (cs1 U cs2)
+                            (cs1' U cs2'))
+          by eauto using unioncharset_distrib
+  end.
+
+Lemma unioncharset_rep_l :
+  forall cs1 cs2 cs3,
+  charseteq ((cs1 U cs3) U (cs2 U cs3))
+            ((cs1 U cs2) U cs3).
+Proof with (eauto 3 using
+  unioncharset_assoc,
+  unioncharset_comm,
+  unioncharset_distrib,
+  unioncharset_diag,
+  charseteq_comm,
+  charseteq_refl,
+  charseteq_trans
+).
+  intros.
+  assert (charseteq ((cs1 U cs3) U (cs2 U cs3)) (cs1 U (cs3 U (cs2 U cs3))))...
+  assert (charseteq (cs1 U (cs3 U (cs2 U cs3))) (cs1 U ((cs3 U cs2) U cs3)))...
+  assert (charseteq (cs1 U ((cs3 U cs2) U cs3)) (cs1 U ((cs2 U cs3) U cs3)))...
+  assert (charseteq (cs1 U ((cs2 U cs3) U cs3)) (cs1 U (cs2 U (cs3 U cs3))))...
+  assert (charseteq (cs1 U (cs2 U (cs3 U cs3))) (cs1 U (cs2 U cs3)))...
+  assert (charseteq (cs1 U (cs2 U cs3)) ((cs1 U cs2) U cs3))...
+  eauto 6 using charseteq_trans, charseteq_comm.
+Qed.
+
+Lemma first_charseteq_determinism :
+  forall g p cs1 cs1' cs2 cs2' b1 b2,
+  first g p cs1 b1 cs1' ->
+  first g p cs2 b2 cs2' ->
+  charseteq cs1 cs2 ->
+  b1 = b2 /\ charseteq cs1' cs2'.
+Proof.
+  intros * H1 H2 Hcseq.
+  generalize dependent cs2'.
+  generalize dependent b2.
+  generalize dependent cs2.
+  induction H1; intros;
+  inversion H2; subst;
+  try destruct1sep;
+  try pose_nullable_determinism;
+  try pose_first_determinism;
+  try discriminate;
+  subst;
+  repeat match goal with
+  [ Hx: charseteq ?cs ?csx,
+    Hy: first ?g ?p ?csx ?bx ?csx',
+    IHx: forall csx, charseteq ?cs csx ->
+         forall bx csx', first ?g ?p csx bx csx' ->
+         ?b = bx /\ charseteq ?cs' csx' |- _ ] =>
+              assert (b = bx /\ charseteq cs' csx')
+              as [? ?] by eauto;
+              subst;
+              clear IHx
+  end;
+  auto using charseteq, unioncharset_distrib.
+Qed.
+
+Ltac pose_first_charseteq_determinism :=
+  match goal with
+    [ _: first ?g ?p ?cs1 ?b1 ?cs1',
+      _: first ?g ?p ?cs2 ?b2 ?cs2',
+      _: charseteq ?cs1 ?cs2 |- _ ] =>
+          assert (b1 = b2 /\ charseteq cs1' cs2')
+          as [? ?] by eauto using first_charseteq_determinism
+  end.
+
+Lemma first_exists_if_follow_changes :
+  forall g p csfollow csfollow' b csfirst,
+  first g p csfollow b csfirst ->
+  exists csfirst', first g p csfollow' b csfirst'.
+Proof.
+  intros.
+  generalize dependent csfollow'.
+  induction H; intros;
+  eauto using first.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    destruct (IHfirst1 csfollow') as [csmid ?].
+    destruct (IHfirst2 csmid) as [? ?].
+    eauto using first.
+  - (* PChoice p1 p2 *)
+    destruct (IHfirst1 csfollow') as [? ?].
+    destruct (IHfirst2 csfollow') as [? ?].
+    eauto using first.
+  - (* PRepetition p *)
+    destruct (IHfirst csfollow') as [? ?].
+    eauto using first.
+  - (* PNT i *)
+    destruct (IHfirst csfollow') as [? ?].
+    eauto using first.
+Qed.
+
+Lemma first_unioncharset :
+  forall g p csfollow csfirst csextra b,
+  first g p csfollow b csfirst ->
+  exists csfirst', first g p (csfollow U csextra) b csfirst' /\
+  (charseteq csfirst' csfirst \/ charseteq csfirst' (csfirst U csextra)).
+Proof.
+  intros * H.
+  generalize dependent csextra.
+  induction H; intros;
+  eauto using first,
+              charseteq,
+              charseteq_refl,
+              charseteq_comm,
+              unioncharset_diag.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    destruct (IHfirst1 csextra) as [csmid [? [|]]]; eauto using first.
+    + (* first(p2) stays the same *)
+      destruct (IHfirst2 csextra) as [? [? [|]]];
+      assert (exists csfirst', first g p1 csmid b1 csfirst')
+      as [? ?] by eauto using first_exists_if_follow_changes;
+      pose_first_charseteq_determinism;
+      subst;
+      eauto using first.
+    + (* first(p2) grows *)
+      destruct (IHfirst2 csextra) as [? [? [|]]];
+      assert (exists csfirst', first g p1 csmid b1 csfirst')
+      as [? ?] by eauto using first_exists_if_follow_changes;
+      pose_first_charseteq_determinism;
+      subst;
+      pose_charseteq_trans;
+      eauto using first, charseteq_trans, charseteq_comm, charseteq.
+  - (* PChoice p1 p2 *)
+    destruct (IHfirst1 csextra) as [? [? [|]]];
+    destruct (IHfirst2 csextra) as [? [? [|]]];
+    pose_charseteq_union_distrib;
+    eexists;
+    split;
+    eauto using first.
+    + (* first(p1) stays the same, but first(p2) grows *)
+      right.
+      eauto using charseteq_trans, unioncharset_assoc.
+    + (* first(p1) grows, but first(p2) stays the same *)
+      right.
+      eauto using charseteq_trans,
+                  charseteq_refl,
+                  unioncharset_assoc,
+                  unioncharset_comm,
+                  unioncharset_distrib.
+    + (* first(p1) and first(p2) grow *)
+      right.
+      eauto using charseteq_trans, unioncharset_rep_l.
+  - (* PRepetition p *)
+    destruct (IHfirst csextra) as [? [? [|]]].
+    + (* first(p) stays the same *)
+      eexists;
+      split;
+      eauto using first.
+      right.
+      eauto using charseteq_trans,
+                  charseteq_comm,
+                  unioncharset_assoc,
+                  unioncharset_comm,
+                  unioncharset_distrib.
+    + (* first(p) grows *)
+      eexists;
+      split;
+      eauto using first.
+      right.
+      eauto using charseteq_trans,
+                  unioncharset_distrib,
+                  unioncharset_comm,
+                  unioncharset_rep_l.
+  - (* PNT i *)
+    destruct (IHfirst csextra) as [? [? [|]]];
+    eauto using first.
+Qed.
+
+Lemma first_feedback :
+  forall g p csfollow b csfirst,
+  first g p csfollow b csfirst ->
+  exists csfirst', first g p (csfollow U csfirst) b csfirst' /\
+  charseteq csfirst' csfirst.
+Proof.
+  intros * H.
+  apply first_unioncharset with (csextra := csfirst) in H as [? [? [?|?]]];
+  eauto using charseteq_trans, charseteq_comm, unioncharset_diag.
+Qed.
+
+Lemma first_success :
+  forall g p s s' csfollow b csfirst,
+  verifygrammarpat g p true ->
+  matches g p s (Success s') ->
+  startswith s' csfollow ->
+  first g p csfollow b csfirst ->
+  startswith s csfirst.
+Proof.
+  intros * Hvgp Hm Hsw Hf.
+  remember (String.length s) as n.
+  generalize dependent csfirst.
+  generalize dependent b.
+  generalize dependent csfollow.
+  generalize dependent s'.
+  generalize dependent s.
+  generalize dependent p.
+  generalize dependent g.
+  induction n as [n IHn] using strong_induction.
+  intros.
+  assert (exists nb d b k, verifyrule g p d nb (Some b) k)
+  as [? [? [bx [? Hvr]]]] by eauto using verifygrammarpat_verifyrule.
+  remember (Some bx) as res.
+  generalize dependent bx.
+  generalize dependent n.
+  generalize dependent csfirst.
+  generalize dependent b.
+  generalize dependent csfollow.
+  generalize dependent s'.
+  generalize dependent s.
+  induction Hvr; intros;
+  try destruct1;
+  try discriminate;
+  subst.
+  - (* PEmpty *)
+    inversion Hf; subst;
+    inversion Hm; subst.
+    auto.
+  - (* PSet f *)
+    inversion Hf; subst;
+    inversion Hm; subst.
+    eauto using startswith.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    assert (verifygrammarpat g p1 true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    assert (verifygrammarpat g p2 true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    assert (nullable g p1 true)
+    by eauto using verifyrule_similar_to_nullable.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    pose_nullable_determinism;
+    try discriminate.
+    match goal with
+      [ Hx1: matches ?g ?p1 ?s (Success ?smid),
+        Hx2: matches ?g ?p2 ?smid (Success ?s') |- _ ] =>
+            assert (smid = s \/ proper_suffix smid s) as [|]
+            by eauto using matches_suffix, suffix_is_refl_or_proper_suffix;
+            try subst smid
+    end;
+    eauto using startswith, proper_suffix_length_lt.
+  - (* PSequence p1 p2, where p2 is non-nullable *)
+    assert (verifygrammarpat g p1 true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    assert (nullable g p1 false)
+    by eauto using verifyrule_similar_to_nullable.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    pose_nullable_determinism;
+    try discriminate.
+    eauto using startswith, startswith_fullcharset.
+  - (* PChoice p1 p2 *)
+    assert (verifygrammarpat g p1 true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    assert (verifygrammarpat g p2 true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    eauto using startswith, startswith_unioncharset.
+  - (* PRepetition p *)
+    assert (verifygrammarpat g p true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    eauto using startswith, startswith_unioncharset. (* move down *)
+    inversion Hvgp; subst.
+    match goal with
+      [ Hx: checkloops _ (PRepetition _) false |- _ ] =>
+        inversion Hx; subst
+    end.
+    match goal with
+      [ _: matches ?g ?p ?s (Success ?s'),
+        _: nullable ?g ?p false |- _ ] =>
+          assert (proper_suffix s' s)
+          by eauto using nullable_false_proper_suffix;
+          assert (length s' < length s)
+          by eauto using proper_suffix_length_lt
+    end.
+    assert (startswith s'0 (unioncharset csfollow cs')) by eauto.
+    apply startswith_unioncharset.
+    right.
+    match goal with
+      [ Hx: first g p ?csfollow ?b ?csfirst |- _ ] =>
+          eapply first_feedback in Hx as [csfirst' [? ?]]
+    end.
+    assert (startswith s csfirst') by eauto.
+    eauto using startswith_charseteq.
+  - (* PNot p *)
+    assert (verifygrammarpat g p true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    try match goal with
+      [ Hx: tocharset ?p = Some _ |- _ ] =>
+        destruct p; try discriminate;
+        simpl in Hx;
+        injection Hx as Hx; subst;
+        match goal with
+          [ Hy: matches ?g (PSet ?f) _ Failure |- _ ] =>
+              inversion Hy; subst;
+              eauto using startswith,
+                          startswith_complementcharset
+        end
+    end;
+    eauto.
+  - (* PNT i *)
+    match goal with
+      [ Hx: verifygrammarpat ?g (PNT ?i) true,
+        _: nth_error ?g ?i = Some ?p |- _ ] =>
+            inversion Hx; subst;
+            assert (verifygrammarpat g p true)
+            by eauto using nth_error_In, verifygrammarpat_true_In
+    end.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    repeat destruct2sep;
+    eauto.
 Qed.

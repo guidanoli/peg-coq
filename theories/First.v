@@ -79,7 +79,7 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       first g (PNT i) cs b cs'
   .
 
-Theorem first_deterministic :
+Theorem first_determinism :
   forall g p cs b1 b2 cs1 cs2,
   first g p cs b1 cs1 ->
   first g p cs b2 cs2 ->

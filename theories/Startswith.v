@@ -8,7 +8,7 @@ Inductive startswith : string -> charset -> Prop :=
       startswith EmptyString cs
   | SWChar :
       forall a s cs,
-      cs a = true ->
+      in_charset a cs true ->
       startswith (String a s) cs
   .
 
@@ -17,9 +17,8 @@ Lemma startswith_fullcharset :
   startswith s fullcharset.
 Proof.
   intros.
-  unfold fullcharset.
   destruct s;
-  eauto using startswith.
+  eauto using startswith, in_charset.
 Qed.
 
 Lemma startswith_unioncharset :
@@ -34,25 +33,19 @@ Proof.
   - (* String a s *)
     destruct H;
     inversion H; subst;
-    eauto using orb_true_intro, unioncharset, startswith.
+    eauto using startswith, in_charset.
 Qed.
 
 Lemma startswith_complementcharset :
   forall cs a s,
-  ~ in_charset a cs ->
+  in_charset a cs false ->
   startswith (String a s) (complementcharset cs).
 Proof.
   intros * H.
-  destruct (cs a) eqn:Heqcsa.
-  + (* cs a = true *)
-    assert (in_charset a cs)
-    by eauto using in_charset.
-    contradiction.
-  + (* cs a = false *)
-    unfold complementcharset.
-    econstructor.
-    rewrite Heqcsa.
-    auto.
+  destruct (in_charset_dec a cs);
+  try pose_in_charset_determinism;
+  try discriminate;
+  eauto using startswith, in_charset.
 Qed.
 
 Lemma startswith_charseteq :
@@ -61,8 +54,14 @@ Lemma startswith_charseteq :
   charseteq cs1 cs2 ->
   startswith s cs2.
 Proof.
+  unfold charseteq.
   intros * Hsw Hcseq.
-  inversion Hcseq; subst;
-  inversion Hsw; subst;
-  eauto using startswith.
+  inversion Hsw; subst.
+  - (* SWEmpty *)
+    eauto using startswith.
+  - (* SWChar *)
+    specialize (Hcseq a) as [? [? ?]].
+    pose_in_charset_determinism.
+    subst.
+    eauto using startswith.
 Qed.

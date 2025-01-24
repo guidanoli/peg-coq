@@ -18,14 +18,14 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       matches g PEmpty s (Success s)
   | MSetSuccess :
       forall g cs a s,
-      in_charset a cs ->
+      in_charset a cs true ->
       matches g (PSet cs) (String a s) (Success s)
-  | MSetFailureEmptyString :
+  | MSetEmptyString :
       forall g cs,
       matches g (PSet cs) EmptyString Failure
   | MSetFailureString :
       forall g cs a s,
-      ~ in_charset a cs ->
+      in_charset a cs false ->
       matches g (PSet cs) (String a s) Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
@@ -92,6 +92,7 @@ Proof.
   induction H1;
   intros res2 H2;
   inversion H2; subst;
+  try pose_in_charset_determinism;
   try apply_matches_IH;
   try contradiction;
   try discriminate;
@@ -333,6 +334,8 @@ Proof.
     exists 1;
     simpl;
     destruct (in_charset_dec a cs);
+    try pose_in_charset_determinism;
+    try discriminate;
     auto;
     contradiction;
     fail

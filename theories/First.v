@@ -270,7 +270,7 @@ Proof.
               subst;
               clear IHx
   end;
-  auto using charseteq, unioncharset_distrib.
+  auto using unioncharset_distrib, charseteq_refl.
 Qed.
 
 Ltac pose_first_charseteq_determinism :=
@@ -317,7 +317,6 @@ Proof.
   generalize dependent csextra.
   induction H; intros;
   eauto using first,
-              charseteq,
               charseteq_refl,
               charseteq_comm,
               unioncharset_diag.
@@ -337,7 +336,7 @@ Proof.
       pose_first_charseteq_determinism;
       subst;
       pose_charseteq_trans;
-      eauto using first, charseteq_trans, charseteq_comm, charseteq.
+      eauto using first, charseteq_trans, charseteq_comm.
   - (* PChoice p1 p2 *)
     destruct (IHfirst1 csextra) as [? [? [|]]];
     destruct (IHfirst2 csextra) as [? [? [|]]];
@@ -434,11 +433,7 @@ Proof.
     auto.
   - (* PSet cs *)
     inversion Hf; subst;
-    inversion Hm; subst.
-    match goal with
-      [ Hx: in_charset ?a ?cs |- _ ] =>
-          inversion Hx; subst
-    end.
+    inversion Hm; subst;
     eauto using startswith.
   - (* PSequence p1 p2, where p1 is nullable *)
     assert (verifygrammarpat g p1 true)

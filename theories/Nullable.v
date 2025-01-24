@@ -3,6 +3,7 @@ From Coq Require Import Lia.
 From Coq Require Import Lists.List.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
+From Peg Require Import Charset.
 From Peg Require Import Coherent.
 From Peg Require Import Match.
 From Peg Require Import Suffix.
@@ -82,7 +83,7 @@ Proof.
   eauto using nullable.
 Qed.
 
-Example PDot : pat := PSet (fun _ => true).
+Example PDot : pat := PSet (basecharset (fun _ => true)).
 
 (* ! G |= . *)
 Example nullable_ex3 :

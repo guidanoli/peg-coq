@@ -2,53 +2,110 @@ From Coq Require Import Bool.
 From Coq Require Import Strings.Ascii.
 From Peg Require Import Tactics.
 
-Definition charset : Type := (ascii -> bool).
-
-(* Full charset *)
-Definition fullcharset : charset :=
-  (fun _ => true).
-
-(* Union of charsets *)
-Definition unioncharset cs1 cs2 : charset :=
-  (fun a => orb (cs1 a) (cs2 a)).
+Inductive charset : Type :=
+  | fullcharset
+  | basecharset (f : ascii -> bool)
+  | complementcharset (cs : charset)
+  | unioncharset (cs1 cs2 : charset)
+  .
 
 Notation "cs1 'U' cs2" := (unioncharset cs1 cs2) (at level 120, right associativity).
 
-(* Set complement of a charset *)
-Definition complementcharset cs : charset :=
-  (fun a => negb (cs a)).
-
-Inductive in_charset : ascii -> charset -> Prop :=
-  | ICSIntro :
+Inductive in_charset : ascii -> charset -> bool -> Prop :=
+  | ICSFull :
+      forall a,
+      in_charset a fullcharset true
+  | ICSBase :
+      forall a f,
+      in_charset a (basecharset f) (f a)
+  | ICSComplementTrue :
       forall a cs,
-      cs a = true ->
-      in_charset a cs.
+      in_charset a cs false ->
+      in_charset a (complementcharset cs) true
+  | ICSComplementFalse :
+      forall a cs,
+      in_charset a cs true ->
+      in_charset a (complementcharset cs) false
+  | ICSUnion1True :
+      forall a cs1 cs2,
+      in_charset a cs1 true ->
+      in_charset a (unioncharset cs1 cs2) true
+  | ICSUnion2True :
+      forall a cs1 cs2,
+      in_charset a cs2 true ->
+      in_charset a (unioncharset cs1 cs2) true
+  | ICSUnionFalse :
+      forall a cs1 cs2,
+      in_charset a cs1 false ->
+      in_charset a cs2 false ->
+      in_charset a (unioncharset cs1 cs2) false
+  .
 
-Lemma in_charset_dec :
-  forall a cs, {in_charset a cs} + {~in_charset a cs}.
+Lemma in_charset_determinism :
+  forall a cs b1 b2,
+  in_charset a cs b1 ->
+  in_charset a cs b2 ->
+  b1 = b2.
 Proof.
-  intros.
-  destruct (cs a) eqn:Heqcsa.
-  - (* true *)
-    auto using in_charset.
-  - (* false *)
-    right.
-    intro Hcontra.
-    inversion Hcontra; subst.
-    destruct1sep.
+  intros * H1 H2.
+  generalize dependent b2.
+  induction H1; intros;
+  inversion H2; subst;
+  try assert (true = false) by auto;
+  try assert (false = true) by auto;
+  try discriminate;
+  eauto.
 Qed.
 
-Inductive charseteq : charset -> charset -> Prop :=
-  | CSEq :
-      forall cs1 cs2,
-      (forall a, cs1 a = cs2 a) ->
-      charseteq cs1 cs2.
+Ltac pose_in_charset_determinism :=
+  match goal with
+    [ Hx: in_charset ?a ?cs ?b1,
+      Hy: in_charset ?a ?cs ?b2 |- _ ] =>
+          assert (b1 = b2)
+          by eauto using in_charset_determinism;
+          clear Hx
+  end.
+
+Lemma in_charset_dec :
+  forall a cs, {in_charset a cs true} + {in_charset a cs false}.
+Proof.
+  intros.
+  induction cs; intros.
+  - (* fullcharset *)
+    eauto using in_charset.
+  - (* basecharset f *)
+    destruct (f a) eqn:Heqfa;
+    rewrite <- Heqfa;
+    eauto using in_charset.
+  - (* complementcharset cs *)
+    destruct IHcs;
+    eauto using in_charset.
+  - (* unioncharset cs1 cs2 *)
+    destruct IHcs1;
+    destruct IHcs2;
+    eauto using in_charset.
+Qed.
+
+Lemma in_charset_complete :
+  forall a cs, exists b, in_charset a cs b.
+Proof.
+  intros.
+  destruct (in_charset_dec a cs);
+  eauto.
+Qed.
+
+Definition charseteq (cs1 cs2 : charset) : Prop :=
+  forall a, exists b,
+  in_charset a cs1 b /\ in_charset a cs2 b.
 
 Lemma charseteq_refl :
   forall cs,
   charseteq cs cs.
 Proof.
-  eauto using charseteq.
+  unfold charseteq.
+  intros.
+  destruct (in_charset_complete a cs).
+  eauto.
 Qed.
 
 Lemma charseteq_comm :
@@ -56,10 +113,10 @@ Lemma charseteq_comm :
   charseteq cs1 cs2 ->
   charseteq cs2 cs1.
 Proof.
-  intros * H.
-  inversion H; subst.
-  econstructor.
-  auto.
+  unfold charseteq.
+  intros * H a.
+  destruct (H a) as [b [? ?]].
+  eauto.
 Qed.
 
 Lemma charseteq_trans :
@@ -68,10 +125,13 @@ Lemma charseteq_trans :
   charseteq cs2 cs3 ->
   charseteq cs1 cs3.
 Proof.
-  intros * H12 H23.
-  inversion H12; subst;
-  inversion H23; subst;
-  eauto using charseteq.
+  unfold charseteq.
+  intros * H12 H23 a.
+  destruct (H12 a) as [? [? ?]];
+  destruct (H23 a) as [? [? ?]];
+  pose_in_charset_determinism;
+  subst.
+  eauto.
 Qed.
 
 Ltac pose_charseteq_trans :=
@@ -86,7 +146,10 @@ Lemma unioncharset_diag :
   forall cs,
   charseteq (cs U cs) cs.
 Proof.
-  eauto using orb_diag, charseteq.
+  unfold charseteq.
+  intros.
+  destruct (in_charset_complete a cs) as [[|] ?];
+  eauto using in_charset.
 Qed.
 
 Lemma unioncharset_assoc :
@@ -94,7 +157,12 @@ Lemma unioncharset_assoc :
   charseteq (cs1 U (cs2 U cs3))
             ((cs1 U cs2) U cs3).
 Proof.
-  eauto using orb_assoc, charseteq.
+  unfold charseteq.
+  intros.
+  destruct (in_charset_complete a cs1) as [[|] ?];
+  destruct (in_charset_complete a cs2) as [[|] ?];
+  destruct (in_charset_complete a cs3) as [[|] ?];
+  eauto 7 using in_charset.
 Qed.
 
 Lemma unioncharset_comm :
@@ -102,7 +170,11 @@ Lemma unioncharset_comm :
   charseteq (cs1 U cs2)
             (cs2 U cs1).
 Proof.
-  eauto using orb_comm, charseteq.
+  unfold charseteq.
+  intros.
+  destruct (in_charset_complete a cs1) as [[|] ?];
+  destruct (in_charset_complete a cs2) as [[|] ?];
+  eauto using in_charset.
 Qed.
 
 Lemma unioncharset_distrib :
@@ -111,26 +183,18 @@ Lemma unioncharset_distrib :
   charseteq cs2 cs2' ->
   charseteq (cs1 U cs2) (cs1' U cs2').
 Proof.
-  intros * H1 H2.
-  unfold unioncharset.
-  inversion H1; subst.
-  inversion H2; subst.
-  econstructor.
-  intros.
-  repeat match goal with
-    [ Hx: forall a, _ a = _ a |- _ ] =>
-        rewrite Hx;
-        clear Hx
-  end.
-  auto.
+  unfold charseteq.
+  intros * H1 H2 a.
+  specialize (H1 a) as [[|] [? ?]];
+  specialize (H2 a) as [[|] [? ?]];
+  eauto using in_charset.
 Qed.
 
 Ltac pose_charseteq_union_distrib :=
   match goal with
     [ _: charseteq ?cs1 ?cs1',
       _: charseteq ?cs2 ?cs2' |- _ ] =>
-          assert (charseteq (cs1 U cs2)
-                            (cs1' U cs2'))
+          assert (charseteq (cs1 U cs2) (cs1' U cs2'))
           by eauto using unioncharset_distrib
   end.
 
@@ -138,21 +202,11 @@ Lemma unioncharset_rep_l :
   forall cs1 cs2 cs3,
   charseteq ((cs1 U cs3) U (cs2 U cs3))
             ((cs1 U cs2) U cs3).
-Proof with (eauto 3 using
-  unioncharset_assoc,
-  unioncharset_comm,
-  unioncharset_distrib,
-  unioncharset_diag,
-  charseteq_comm,
-  charseteq_refl,
-  charseteq_trans
-).
+Proof.
+  unfold charseteq.
   intros.
-  assert (charseteq ((cs1 U cs3) U (cs2 U cs3)) (cs1 U (cs3 U (cs2 U cs3))))...
-  assert (charseteq (cs1 U (cs3 U (cs2 U cs3))) (cs1 U ((cs3 U cs2) U cs3)))...
-  assert (charseteq (cs1 U ((cs3 U cs2) U cs3)) (cs1 U ((cs2 U cs3) U cs3)))...
-  assert (charseteq (cs1 U ((cs2 U cs3) U cs3)) (cs1 U (cs2 U (cs3 U cs3))))...
-  assert (charseteq (cs1 U (cs2 U (cs3 U cs3))) (cs1 U (cs2 U cs3)))...
-  assert (charseteq (cs1 U (cs2 U cs3)) ((cs1 U cs2) U cs3))...
-  eauto 6 using charseteq_trans, charseteq_comm.
+  destruct (in_charset_complete a cs1) as [[|] ?];
+  destruct (in_charset_complete a cs2) as [[|] ?];
+  destruct (in_charset_complete a cs3) as [[|] ?];
+  eauto 8 using in_charset.
 Qed.

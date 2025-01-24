@@ -1,12 +1,13 @@
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Lists.List.
 From Coq Require Import Lia.
+From Peg Require Import Charset.
 
 (** Pattern (a.k.a. expression) **)
 
 Inductive pat : Type :=
   | PEmpty : pat                          (* ε            *)
-  | PSet : (ascii -> bool) -> pat         (* [set]        *)
+  | PSet : charset -> pat                 (* [set]        *)
   | PSequence : pat -> pat -> pat         (* p1 p2        *)
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
@@ -23,6 +24,12 @@ Fixpoint pat_size p :=
   | PRepetition p => 1 + pat_size p
   | PNot p => 1 + pat_size p
   | PNT _ => 1
+  end.
+
+Definition tocharset p : option charset :=
+  match p with
+  | PSet f => Some f
+  | _ => None
   end.
 
 Inductive pat_le (p : pat) : pat -> Prop :=

@@ -21,8 +21,8 @@ Inductive nullable : grammar -> pat -> bool -> Prop :=
       forall g,
       nullable g PEmpty true
   | NSet :
-      forall g f,
-      nullable g (PSet f) false
+      forall g cs,
+      nullable g (PSet cs) false
   | NSequence1 :
       forall g p1 p2,
       nullable g p1 false ->

@@ -28,7 +28,7 @@ Fixpoint pat_size p :=
 
 Definition tocharset p : option charset :=
   match p with
-  | PSet f => Some f
+  | PSet cs => Some cs
   | _ => None
   end.
 

@@ -14,8 +14,8 @@ Inductive checkloops : grammar -> pat -> bool -> Prop :=
       forall g,
       checkloops g PEmpty false
   | CLSet :
-      forall g f,
-      checkloops g (PSet f) false
+      forall g cs,
+      checkloops g (PSet cs) false
   | CLSequenceTrue :
       forall g p1 p2,
       checkloops g p1 true ->
@@ -280,7 +280,7 @@ Proof.
     [ Hx: 0 >= S _ |- _ ] =>
         inversion Hx
   end;
-  (* PEmpty, PSet f, PNT i *)
+  (* PEmpty, PSet cs, PNT i *)
   try (simpl; eauto; fail);
   (* PNot p *)
   try (

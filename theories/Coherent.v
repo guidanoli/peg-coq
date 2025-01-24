@@ -12,8 +12,8 @@ Inductive coherent : grammar -> pat -> bool -> Prop :=
       forall g,
       coherent g PEmpty true
   | CSet :
-      forall g f,
-      coherent g (PSet f) true
+      forall g cs,
+      coherent g (PSet cs) true
   | CSequenceFalse :
       forall g p1 p2,
       coherent g p1 false ->

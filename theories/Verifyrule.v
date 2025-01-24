@@ -28,8 +28,8 @@ Inductive verifyrule :
       forall g d nb,
       verifyrule g PEmpty d nb (Some true) nil
   | VRSet :
-      forall g f d nb,
-      verifyrule g (PSet f) d nb (Some nb) nil
+      forall g cs d nb,
+      verifyrule g (PSet cs) d nb (Some nb) nil
   | VRSequenceNone :
       forall g p1 p2 d nb k,
       verifyrule g p1 d false None k ->
@@ -78,8 +78,8 @@ Proof.
 Qed.
 
 Goal
-  forall g f nb d,
-  verifyrule g (PSet f) d nb (Some nb) nil.
+  forall g cs nb d,
+  verifyrule g (PSet cs) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -92,15 +92,15 @@ Proof.
 Qed.
 
 Goal
-  forall g nb d f,
-  verifyrule g (PSequence (PSet f) PEmpty) d nb (Some nb) nil.
+  forall g nb d cs,
+  verifyrule g (PSequence (PSet cs) PEmpty) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d f,
-  verifyrule g (PSequence PEmpty (PSet f)) d nb (Some nb) nil.
+  forall g nb d cs,
+  verifyrule g (PSequence PEmpty (PSet cs)) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -149,22 +149,22 @@ Proof.
 Qed.
 
 Goal
-  forall g nb d f,
-  verifyrule g (PChoice (PSet f) PEmpty) d nb (Some true) nil.
+  forall g nb d cs,
+  verifyrule g (PChoice (PSet cs) PEmpty) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d f,
-  verifyrule g (PChoice PEmpty (PSet f)) d nb (Some true) nil.
+  forall g nb d cs,
+  verifyrule g (PChoice PEmpty (PSet cs)) d nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
 
 Goal
-  forall g nb d f,
-  verifyrule g (PChoice (PSet f) (PSet f)) d nb (Some nb) nil.
+  forall g nb d cs,
+  verifyrule g (PChoice (PSet cs) (PSet cs)) d nb (Some nb) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -195,9 +195,9 @@ Proof.
 Qed.
 
 Goal
-  forall nb f,
+  forall nb cs,
   verifyrule
-  [(PSet f); (PSet f)]
+  [(PSet cs); (PSet cs)]
   (PChoice (PNT 0) (PNT 1)) 1 nb (Some nb) [1].
 Proof.
   intros.
@@ -206,9 +206,9 @@ Proof.
 Qed.
 
 Goal
-  forall nb f,
+  forall nb cs,
   verifyrule
-  [PNT 7; (PSet f)]
+  [PNT 7; (PSet cs)]
   (PChoice (PNT 0) (PNT 1)) 1 nb None [0].
 Proof.
   intros.
@@ -224,8 +224,8 @@ Proof.
 Qed.
 
 Goal
-  forall g nb f,
-  verifyrule g (PRepetition (PSet f)) 0 nb (Some true) nil.
+  forall g nb cs,
+  verifyrule g (PRepetition (PSet cs)) 0 nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.
@@ -254,8 +254,8 @@ Proof.
 Qed.
 
 Goal
-  forall g nb f,
-  verifyrule g (PNot (PSet f)) 0 nb (Some true) nil.
+  forall g nb cs,
+  verifyrule g (PNot (PSet cs)) 0 nb (Some true) nil.
 Proof.
   eauto using verifyrule.
 Qed.

@@ -1,5 +1,6 @@
 From Coq Require Import Bool.
 From Coq Require Import Strings.Ascii.
+From Peg Require Import Tactics.
 
 Definition charset : Type := (ascii -> bool).
 
@@ -16,6 +17,26 @@ Notation "cs1 'U' cs2" := (unioncharset cs1 cs2) (at level 120, right associativ
 (* Set complement of a charset *)
 Definition complementcharset cs : charset :=
   (fun a => negb (cs a)).
+
+Inductive in_charset : ascii -> charset -> Prop :=
+  | ICSIntro :
+      forall a cs,
+      cs a = true ->
+      in_charset a cs.
+
+Lemma in_charset_dec :
+  forall a cs, {in_charset a cs} + {~in_charset a cs}.
+Proof.
+  intros.
+  destruct (cs a) eqn:Heqcsa.
+  - (* true *)
+    auto using in_charset.
+  - (* false *)
+    right.
+    intro Hcontra.
+    inversion Hcontra; subst.
+    destruct1sep.
+Qed.
 
 Inductive charseteq : charset -> charset -> Prop :=
   | CSEq :

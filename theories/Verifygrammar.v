@@ -1,16 +1,17 @@
 From Coq Require Import Lia.
+From Coq Require Import Lists.List.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
-From Coq Require Import Lists.List.
-From Peg Require Import Syntax.
-From Peg Require Import Match.
-From Peg Require Import Coherent.
-From Peg Require Import Verifyrule.
+From Peg Require Import Charset.
 From Peg Require Import Checkloops.
-From Peg Require Import Tactics.
+From Peg Require Import Coherent.
+From Peg Require Import Match.
+From Peg Require Import Nullable.
 From Peg Require Import Strong.
 From Peg Require Import Suffix.
-From Peg Require Import Nullable.
+From Peg Require Import Syntax.
+From Peg Require Import Tactics.
+From Peg Require Import Verifyrule.
 
 (** Verify Grammar
 
@@ -189,7 +190,7 @@ Proof.
   destruct (lcoherent_func g g) eqn:?; eauto.
   assert (lcoherent g g true)
   by eauto using lcoherent_func_soundness.
-  assert (gas >= grammar_size g + S (length g) * grammar_size g) by lia.
+  assert (gas >= grammar_size g + S (Datatypes.length g) * grammar_size g) by lia.
   assert (exists b, lverifyrule_comp g g gas = Some b)
   as [reslv Hlv] by eauto using lverifyrule_comp_gas_bounded.
   rewrite Hlv.
@@ -393,7 +394,7 @@ Proof.
   destruct (coherent_func g p) eqn:?; eauto.
   assert (coherent g p true)
   by eauto using coherent_func_soundness.
-  assert (gas >= pat_size p + S (length g) * grammar_size g) by lia.
+  assert (gas >= pat_size p + S (Datatypes.length g) * grammar_size g) by lia.
   assert (exists b, checkloops_comp g p gas = Some b)
   as [rescl Hcl] by eauto using checkloops_comp_gas_bounded, lcoherent_true_In.
   assert (checkloops g p rescl)
@@ -460,11 +461,11 @@ Proof.
   try discriminate.
   - (* PEmpty *)
     eauto using matches.
-  - (* PSet f *)
+  - (* PSet cs *)
     destruct s;
     try match goal with
-      [ |- exists _, matches _ (PSet ?f) (String ?a _) _ ] =>
-        destruct (f a) eqn:?;
+      [ |- exists _, matches _ (PSet ?cs) (String ?a _) _ ] =>
+        destruct (in_charset_dec a cs) eqn:?;
         subst
     end;
     eauto using matches.

@@ -5,6 +5,7 @@ From Coq Require Import Arith.PeanoNat.
 From Peg Require Import Syntax.
 From Peg Require Import Tactics.
 From Peg Require Import Suffix.
+From Peg Require Import Charset.
 
 Inductive MatchResult : Type :=
   | Failure : MatchResult            (* Pattern failed to match.            *)
@@ -16,16 +17,16 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g s,
       matches g PEmpty s (Success s)
   | MSetSuccess :
-      forall g f a s,
-      f a = true ->
-      matches g (PSet f) (String a s) (Success s)
+      forall g cs a s,
+      in_charset a cs ->
+      matches g (PSet cs) (String a s) (Success s)
   | MSetFailureEmptyString :
-      forall g f,
-      matches g (PSet f) EmptyString Failure
+      forall g cs,
+      matches g (PSet cs) EmptyString Failure
   | MSetFailureString :
-      forall g f a s,
-      f a = false ->
-      matches g (PSet f) (String a s) Failure
+      forall g cs a s,
+      ~ in_charset a cs ->
+      matches g (PSet cs) (String a s) Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
       matches g p1 s (Success s') ->
@@ -95,15 +96,7 @@ Proof.
   try contradiction;
   try discriminate;
   try destruct1;
-  try apply_matches_IH;
   try destruct2sep;
-  try match goal with
-    [ Hfalse: ?x = false,
-      Htrue: ?x = true
-      |- _ ] =>
-        rewrite Hfalse in Htrue;
-        discriminate
-  end;
   auto.
 Qed.
 
@@ -152,12 +145,12 @@ Fixpoint matches_comp g p s gas {struct gas} :=
   | O => None
   | S gas' => match p with
               | PEmpty => Some (Success s)
-              | PSet f => match s with
-                          | EmptyString => Some Failure
-                          | String a s' => if f a
-                                           then Some (Success s')
-                                           else Some Failure
-                          end
+              | PSet cs => match s with
+                           | EmptyString => Some Failure
+                           | String a s' => if in_charset_dec a cs
+                                            then Some (Success s')
+                                            else Some Failure
+                           end
               | PSequence p1 p2 => match matches_comp g p1 s gas' with
                                    | Some (Success s') => matches_comp g p2 s' gas'
                                    | res => res
@@ -197,11 +190,11 @@ Proof with eauto using matches.
   destruct p; simpl in H; eauto using matches.
   - (* PEmpty *)
     destruct1...
-  - (* PSet f *)
+  - (* PSet cs *)
     match goal with
-      [ |- matches g (PSet ?f) s res ] =>
+      [ |- matches g (PSet ?cs) s res ] =>
         destruct s as [|a s'];
-        try destruct (f a) eqn:?;
+        try destruct (in_charset_dec a cs) eqn:?;
         try destruct1;
         eauto using matches
     end.
@@ -335,6 +328,15 @@ Proof.
   induction H;
   (* Cases with no recursive calls *)
   try (exists 1; auto; fail);
+  (* Cases with charset *)
+  try (
+    exists 1;
+    simpl;
+    destruct (in_charset_dec a cs);
+    auto;
+    contradiction;
+    fail
+  );
   (* Cases with one recursive call *)
   try (
     destruct IHmatches as [gas1 H1];
@@ -354,8 +356,4 @@ Proof.
     specialize (Nat.le_add_l gas2 gas1) as Hle2;
     eauto using matches_comp_gas_some_le
   ).
-  - (* MSetSuccess *)
-    exists 1. simpl. destruct (f a); auto; discriminate.
-  - (* MSetFailureString *)
-    exists 1. simpl. destruct (f a); auto; discriminate.
 Qed.

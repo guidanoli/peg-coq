@@ -8,7 +8,7 @@ Inductive startswith : string -> charset -> Prop :=
       startswith EmptyString cs
   | SWChar :
       forall a s cs,
-      in_charset a cs true ->
+      in_charset a cs = true ->
       startswith (String a s) cs
   .
 
@@ -33,19 +33,22 @@ Proof.
   - (* String a s *)
     destruct H;
     inversion H; subst;
-    eauto using startswith, in_charset.
+    econstructor;
+    simpl;
+    rewrite orb_true_iff;
+    auto.
 Qed.
 
 Lemma startswith_complementcharset :
   forall cs a s,
-  in_charset a cs false ->
+  in_charset a cs = false ->
   startswith (String a s) (complementcharset cs).
 Proof.
   intros * H.
-  destruct (in_charset_dec a cs);
-  try pose_in_charset_determinism;
-  try discriminate;
-  eauto using startswith, in_charset.
+  econstructor.
+  simpl.
+  rewrite H.
+  auto.
 Qed.
 
 Lemma startswith_charseteq :
@@ -56,12 +59,6 @@ Lemma startswith_charseteq :
 Proof.
   unfold charseteq.
   intros * Hsw Hcseq.
-  inversion Hsw; subst.
-  - (* SWEmpty *)
-    eauto using startswith.
-  - (* SWChar *)
-    specialize (Hcseq a) as [? [? ?]].
-    pose_in_charset_determinism.
-    subst.
-    eauto using startswith.
+  inversion Hsw; subst;
+  eauto using startswith.
 Qed.

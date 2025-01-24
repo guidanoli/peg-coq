@@ -18,14 +18,14 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       matches g PEmpty s (Success s)
   | MSetSuccess :
       forall g cs a s,
-      in_charset a cs true ->
+      in_charset a cs = true ->
       matches g (PSet cs) (String a s) (Success s)
   | MSetEmptyString :
       forall g cs,
       matches g (PSet cs) EmptyString Failure
   | MSetFailureString :
       forall g cs a s,
-      in_charset a cs false ->
+      in_charset a cs = false ->
       matches g (PSet cs) (String a s) Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
@@ -92,7 +92,6 @@ Proof.
   induction H1;
   intros res2 H2;
   inversion H2; subst;
-  try pose_in_charset_determinism;
   try apply_matches_IH;
   try contradiction;
   try discriminate;
@@ -148,7 +147,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
               | PEmpty => Some (Success s)
               | PSet cs => match s with
                            | EmptyString => Some Failure
-                           | String a s' => if in_charset_dec a cs
+                           | String a s' => if in_charset a cs
                                             then Some (Success s')
                                             else Some Failure
                            end
@@ -195,7 +194,7 @@ Proof with eauto using matches.
     match goal with
       [ |- matches g (PSet ?cs) s res ] =>
         destruct s as [|a s'];
-        try destruct (in_charset_dec a cs) eqn:?;
+        try destruct (in_charset a cs) eqn:?;
         try destruct1;
         eauto using matches
     end.
@@ -333,11 +332,9 @@ Proof.
   try (
     exists 1;
     simpl;
-    destruct (in_charset_dec a cs);
-    try pose_in_charset_determinism;
+    destruct (in_charset a cs);
     try discriminate;
     auto;
-    contradiction;
     fail
   );
   (* Cases with one recursive call *)

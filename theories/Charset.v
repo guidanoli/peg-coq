@@ -138,21 +138,13 @@ Lemma unioncharset_rep_l :
   forall cs1 cs2 cs3,
   charseteq ((cs1 U cs3) U (cs2 U cs3))
             ((cs1 U cs2) U cs3).
-Proof with (eauto 3 using
-  unioncharset_assoc,
-  unioncharset_comm,
-  unioncharset_distrib,
-  unioncharset_diag,
-  charseteq_comm,
-  charseteq_refl,
-  charseteq_trans
-).
+Proof.
   intros.
-  assert (charseteq ((cs1 U cs3) U (cs2 U cs3)) (cs1 U (cs3 U (cs2 U cs3))))...
-  assert (charseteq (cs1 U (cs3 U (cs2 U cs3))) (cs1 U ((cs3 U cs2) U cs3)))...
-  assert (charseteq (cs1 U ((cs3 U cs2) U cs3)) (cs1 U ((cs2 U cs3) U cs3)))...
-  assert (charseteq (cs1 U ((cs2 U cs3) U cs3)) (cs1 U (cs2 U (cs3 U cs3))))...
-  assert (charseteq (cs1 U (cs2 U (cs3 U cs3))) (cs1 U (cs2 U cs3)))...
-  assert (charseteq (cs1 U (cs2 U cs3)) ((cs1 U cs2) U cs3))...
-  eauto 6 using charseteq_trans, charseteq_comm.
+  unfold unioncharset.
+  econstructor.
+  intros.
+  destruct (cs1 a);
+  destruct (cs2 a);
+  destruct (cs3 a);
+  eauto.
 Qed.

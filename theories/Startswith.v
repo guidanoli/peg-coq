@@ -1,6 +1,7 @@
 From Coq Require Import Bool.
 From Coq Require Import Strings.String.
 From Peg Require Import Charset.
+From Peg Require Import Tactics.
 
 Inductive startswith : string -> charset -> Prop :=
   | SWEmpty :
@@ -11,6 +12,24 @@ Inductive startswith : string -> charset -> Prop :=
       cs a = true ->
       startswith (String a s) cs
   .
+
+Lemma startswith_dec :
+  forall s cs, {startswith s cs} + {~ startswith s cs}.
+Proof.
+  intros.
+  destruct s as [|a s].
+  - (* EmptyString *)
+    auto using startswith.
+  - (* String a s *)
+    destruct (cs a) eqn:?.
+    + (* cs a = true *)
+      auto using startswith.
+    + (* cs a = false *)
+      right.
+      intro Hcontra.
+      inversion Hcontra; subst.
+      destruct1sep.
+Qed.
 
 Lemma startswith_fullcharset :
   forall s,

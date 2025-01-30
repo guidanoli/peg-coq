@@ -537,3 +537,19 @@ Proof.
     repeat destruct2sep;
     eauto.
 Qed.
+
+Lemma first_failure :
+  forall g p s b csfirst,
+  verifygrammarpat g p true ->
+  first g p fullcharset b csfirst ->
+  ~ startswith s csfirst ->
+  matches g p s Failure.
+Proof.
+  intros.
+  assert (exists res, matches g p s res)
+  as [[|s'] ?]
+  by eauto using verifygrammarpat_safe_match;
+  auto.
+  exfalso.
+  eauto using first_success, startswith_fullcharset.
+Qed.

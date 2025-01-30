@@ -494,17 +494,18 @@ Proof.
           assert (proper_suffix s' s)
           by eauto using nullable_false_proper_suffix;
           assert (length s' < length s)
-          by eauto using proper_suffix_length_lt
+          by eauto using proper_suffix_length_lt;
+          assert (startswith s' (csfollow U cs'))
+          by eauto
     end.
-    assert (startswith s'0 (unioncharset csfollow cs')) by eauto.
-    apply startswith_unioncharset.
-    right.
     match goal with
       [ Hx: first g p ?csfollow ?b ?csfirst |- _ ] =>
-          eapply first_feedback in Hx as [csfirst' [? ?]]
+          let cstmp := fresh "cs" in (
+            eapply first_feedback in Hx as [cstmp [? ?]];
+            assert (startswith s cstmp) by eauto
+          )
     end.
-    assert (startswith s csfirst') by eauto.
-    eauto using startswith_charseteq.
+    eauto using startswith_charseteq, startswith_unioncharset.
   - (* PNot p *)
     assert (verifygrammarpat g p true)
     by eauto using pat_le, verifygrammarpat_true_le.

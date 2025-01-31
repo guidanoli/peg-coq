@@ -18,14 +18,14 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       matches g PEmpty s (Success s)
   | MSetSuccess :
       forall g cs a s,
-      in_charset a cs ->
+      cs a = true ->
       matches g (PSet cs) (String a s) (Success s)
   | MSetFailureEmptyString :
       forall g cs,
       matches g (PSet cs) EmptyString Failure
   | MSetFailureString :
       forall g cs a s,
-      ~ in_charset a cs ->
+      cs a = false ->
       matches g (PSet cs) (String a s) Failure
   | MSequenceSuccess :
       forall g p1 p2 s s' res,
@@ -96,6 +96,7 @@ Proof.
   try contradiction;
   try discriminate;
   try destruct1;
+  try destruct1sep;
   try destruct2sep;
   auto.
 Qed.
@@ -147,7 +148,7 @@ Fixpoint matches_comp g p s gas {struct gas} :=
               | PEmpty => Some (Success s)
               | PSet cs => match s with
                            | EmptyString => Some Failure
-                           | String a s' => if in_charset_dec a cs
+                           | String a s' => if cs a
                                             then Some (Success s')
                                             else Some Failure
                            end
@@ -194,7 +195,7 @@ Proof with eauto using matches.
     match goal with
       [ |- matches g (PSet ?cs) s res ] =>
         destruct s as [|a s'];
-        try destruct (in_charset_dec a cs) eqn:?;
+        try destruct (cs a) eqn:?;
         try destruct1;
         eauto using matches
     end.
@@ -332,9 +333,8 @@ Proof.
   try (
     exists 1;
     simpl;
-    destruct (in_charset_dec a cs);
+    rewrite_match_subject_in_goal;
     auto;
-    contradiction;
     fail
   );
   (* Cases with one recursive call *)

@@ -465,7 +465,7 @@ Proof.
     destruct s;
     try match goal with
       [ |- exists _, matches _ (PSet ?cs) (String ?a _) _ ] =>
-        destruct (in_charset_dec a cs) eqn:?;
+        destruct (cs a) eqn:?;
         subst
     end;
     eauto using matches.

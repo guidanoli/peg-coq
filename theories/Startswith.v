@@ -58,20 +58,14 @@ Qed.
 
 Lemma startswith_complementcharset :
   forall cs a s,
-  ~ in_charset a cs ->
+  cs a = false ->
   startswith (String a s) (complementcharset cs).
 Proof.
-  intros * H.
-  destruct (cs a) eqn:Heqcsa.
-  + (* cs a = true *)
-    assert (in_charset a cs)
-    by eauto using in_charset.
-    contradiction.
-  + (* cs a = false *)
-    unfold complementcharset.
-    econstructor.
-    rewrite Heqcsa.
-    auto.
+  intros * Heqcsa.
+  unfold complementcharset.
+  econstructor.
+  rewrite Heqcsa.
+  auto.
 Qed.
 
 Lemma startswith_charseteq :

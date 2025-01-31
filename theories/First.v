@@ -435,10 +435,6 @@ Proof.
   - (* PSet cs *)
     inversion Hf; subst;
     inversion Hm; subst.
-    match goal with
-      [ Hx: in_charset ?a ?cs |- _ ] =>
-          inversion Hx; subst
-    end.
     eauto using startswith.
   - (* PSequence p1 p2, where p1 is nullable *)
     assert (verifygrammarpat g p1 true)

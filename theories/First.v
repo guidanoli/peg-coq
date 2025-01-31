@@ -435,7 +435,8 @@ Proof.
   - (* PSet cs *)
     inversion Hf; subst;
     inversion Hm; subst.
-    eauto using startswith.
+    unfold startswith.
+    auto.
   - (* PSequence p1 p2, where p1 is nullable *)
     assert (verifygrammarpat g p1 true)
     by eauto using pat_le, verifygrammarpat_true_le.
@@ -454,7 +455,7 @@ Proof.
             by eauto using matches_suffix, suffix_is_refl_or_proper_suffix;
             try subst smid
     end;
-    eauto using startswith, proper_suffix_length_lt.
+    eauto using proper_suffix_length_lt.
   - (* PSequence p1 p2, where p2 is non-nullable *)
     assert (verifygrammarpat g p1 true)
     by eauto using pat_le, verifygrammarpat_true_le.
@@ -464,7 +465,7 @@ Proof.
     inversion Hm; subst;
     pose_nullable_determinism;
     try discriminate.
-    eauto using startswith, startswith_fullcharset.
+    eauto using startswith_fullcharset.
   - (* PChoice p1 p2 *)
     assert (verifygrammarpat g p1 true)
     by eauto using pat_le, verifygrammarpat_true_le.
@@ -472,13 +473,13 @@ Proof.
     by eauto using pat_le, verifygrammarpat_true_le.
     inversion Hf; subst;
     inversion Hm; subst;
-    eauto using startswith, startswith_unioncharset.
+    eauto using startswith_unioncharset.
   - (* PRepetition p *)
     assert (verifygrammarpat g p true)
     by eauto using pat_le, verifygrammarpat_true_le.
     inversion Hf; subst;
     inversion Hm; subst;
-    eauto using startswith, startswith_unioncharset. (* move down *)
+    eauto using startswith_unioncharset.
     inversion Hvgp; subst.
     match goal with
       [ Hx: checkloops _ (PRepetition _) false |- _ ] =>
@@ -515,8 +516,7 @@ Proof.
         match goal with
           [ Hy: matches ?g (PSet ?cs) _ Failure |- _ ] =>
               inversion Hy; subst;
-              eauto using startswith,
-                          startswith_complementcharset
+              eauto using startswith_complementcharset
         end
     end;
     eauto.

@@ -3,32 +3,23 @@ From Coq Require Import Strings.String.
 From Peg Require Import Charset.
 From Peg Require Import Tactics.
 
-Inductive startswith : string -> charset -> Prop :=
-  | SWEmpty :
-      forall cs,
-      startswith EmptyString cs
-  | SWChar :
-      forall a s cs,
-      cs a = true ->
-      startswith (String a s) cs
-  .
+Definition startswith (s : string) (cs : charset) : Prop :=
+  match s with
+  | EmptyString => True
+  | String a _ => (cs a = true)
+  end.
 
 Lemma startswith_dec :
   forall s cs, {startswith s cs} + {~ startswith s cs}.
 Proof.
   intros.
-  destruct s as [|a s].
+  unfold startswith.
+  destruct s as [|a ?].
   - (* EmptyString *)
-    auto using startswith.
-  - (* String a s *)
-    destruct (cs a) eqn:?.
-    + (* cs a = true *)
-      auto using startswith.
-    + (* cs a = false *)
-      right.
-      intro Hcontra.
-      inversion Hcontra; subst.
-      destruct1sep.
+    auto.
+  - (* String a _ *)
+    destruct (cs a) eqn:?;
+    auto.
 Qed.
 
 Lemma startswith_fullcharset :
@@ -36,9 +27,10 @@ Lemma startswith_fullcharset :
   startswith s fullcharset.
 Proof.
   intros.
+  unfold startswith.
   unfold fullcharset.
   destruct s;
-  eauto using startswith.
+  auto.
 Qed.
 
 Lemma startswith_unioncharset :
@@ -46,14 +38,14 @@ Lemma startswith_unioncharset :
   startswith s cs1 \/ startswith s cs2 ->
   startswith s (cs1 U cs2).
 Proof.
+  unfold startswith.
   intros * H.
   destruct s.
   - (* EmptyString *)
-    auto using startswith.
-  - (* String a s *)
+    auto.
+  - (* String _ _ *)
     destruct H;
-    inversion H; subst;
-    eauto using orb_true_intro, unioncharset, startswith.
+    eauto using orb_true_intro.
 Qed.
 
 Lemma startswith_complementcharset :
@@ -62,8 +54,8 @@ Lemma startswith_complementcharset :
   startswith (String a s) (complementcharset cs).
 Proof.
   intros * Heqcsa.
+  unfold startswith.
   unfold complementcharset.
-  econstructor.
   rewrite Heqcsa.
   auto.
 Qed.
@@ -74,8 +66,12 @@ Lemma startswith_charseteq :
   charseteq cs1 cs2 ->
   startswith s cs2.
 Proof.
+  unfold startswith.
   intros * Hsw Hcseq.
-  inversion Hcseq; subst;
-  inversion Hsw; subst;
-  eauto using startswith.
+  destruct s as [|a ?].
+  - (* EmptyString *)
+    auto.
+  - (* String a _ *)
+    inversion Hcseq; subst.
+    eauto.
 Qed.

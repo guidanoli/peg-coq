@@ -59,19 +59,3 @@ Proof.
   rewrite Heqcsa.
   auto.
 Qed.
-
-Lemma startswith_charseteq :
-  forall s cs1 cs2,
-  startswith s cs1 ->
-  charseteq cs1 cs2 ->
-  startswith s cs2.
-Proof.
-  unfold startswith.
-  intros * Hsw Hcseq.
-  destruct s as [|a ?].
-  - (* EmptyString *)
-    auto.
-  - (* String a _ *)
-    inversion Hcseq; subst.
-    eauto.
-Qed.

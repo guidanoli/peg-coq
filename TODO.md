@@ -1,6 +1,5 @@
 ## To-do list
 
-- Use functional extensionality for charsets
 - Eliminate `first_exists_if_follow_changes`
 - About `first_unioncharset`: does the outcome depend on the boolean return value?
 - Define a functional version of  `first` and its equivalence to the inductive definition

@@ -1,6 +1,7 @@
 From Coq Require Import Bool.
 From Coq Require Import Lia.
 From Coq Require Import Lists.List.
+From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Strings.Ascii.
 From Coq Require Import Strings.String.
 From Peg Require Import Charset.
@@ -241,47 +242,6 @@ Ltac pose_first_b_independence :=
           by eauto using first_b_independence
   end.
 
-Lemma first_charseteq_determinism :
-  forall g p cs1 cs1' cs2 cs2' b1 b2,
-  first g p cs1 b1 cs1' ->
-  first g p cs2 b2 cs2' ->
-  charseteq cs1 cs2 ->
-  b1 = b2 /\ charseteq cs1' cs2'.
-Proof.
-  intros * H1 H2 Hcseq.
-  generalize dependent cs2'.
-  generalize dependent b2.
-  generalize dependent cs2.
-  induction H1; intros;
-  inversion H2; subst;
-  try destruct1sep;
-  try pose_nullable_determinism;
-  try pose_first_determinism;
-  try discriminate;
-  subst;
-  repeat match goal with
-  [ Hx: charseteq ?cs ?csx,
-    Hy: first ?g ?p ?csx ?bx ?csx',
-    IHx: forall csx, charseteq ?cs csx ->
-         forall bx csx', first ?g ?p csx bx csx' ->
-         ?b = bx /\ charseteq ?cs' csx' |- _ ] =>
-              assert (b = bx /\ charseteq cs' csx')
-              as [? ?] by eauto;
-              subst;
-              clear IHx
-  end;
-  auto using charseteq, unioncharset_distrib.
-Qed.
-
-Ltac pose_first_charseteq_determinism :=
-  match goal with
-    [ _: first ?g ?p ?cs1 ?b1 ?cs1',
-      _: first ?g ?p ?cs2 ?b2 ?cs2',
-      _: charseteq ?cs1 ?cs2 |- _ ] =>
-          assert (b1 = b2 /\ charseteq cs1' cs2')
-          as [? ?] by eauto using first_charseteq_determinism
-  end.
-
 Lemma first_exists_if_follow_changes :
   forall g p csfollow csfollow' b csfirst,
   first g p csfollow b csfirst ->
@@ -310,89 +270,74 @@ Qed.
 Lemma first_unioncharset :
   forall g p csfollow csfirst csextra b,
   first g p csfollow b csfirst ->
-  exists csfirst', first g p (csfollow U csextra) b csfirst' /\
-  (charseteq csfirst' csfirst \/ charseteq csfirst' (csfirst U csextra)).
+  first g p (csfollow U csextra) b (csfirst U csextra) \/
+  first g p (csfollow U csextra) b csfirst.
 Proof.
-  intros * H.
-  generalize dependent csextra.
+  intros.
   induction H; intros;
-  eauto using first,
-              charseteq,
-              charseteq_refl,
-              charseteq_comm,
-              unioncharset_diag.
+  try discriminate;
+  eauto using first.
   - (* PSequence p1 p2, where p1 is nullable *)
-    destruct (IHfirst1 csextra) as [csmid [? [|]]]; eauto using first.
-    + (* first(p2) stays the same *)
-      destruct (IHfirst2 csextra) as [? [? [|]]];
-      assert (exists csfirst', first g p1 csmid b1 csfirst')
-      as [? ?] by eauto using first_exists_if_follow_changes;
-      pose_first_charseteq_determinism;
-      subst;
-      eauto using first.
-    + (* first(p2) grows *)
-      destruct (IHfirst2 csextra) as [? [? [|]]];
-      assert (exists csfirst', first g p1 csmid b1 csfirst')
-      as [? ?] by eauto using first_exists_if_follow_changes;
-      pose_first_charseteq_determinism;
-      subst;
-      pose_charseteq_trans;
-      eauto using first, charseteq_trans, charseteq_comm, charseteq.
-  - (* PChoice p1 p2 *)
-    destruct (IHfirst1 csextra) as [? [? [|]]];
-    destruct (IHfirst2 csextra) as [? [? [|]]];
-    pose_charseteq_union_distrib;
-    eexists;
-    split;
+    destruct IHfirst1;
+    destruct IHfirst2;
     eauto using first.
-    + (* first(p1) stays the same, but first(p2) grows *)
-      right.
-      eauto using charseteq_trans, unioncharset_assoc.
-    + (* first(p1) grows, but first(p2) stays the same *)
-      right.
-      eauto using charseteq_trans,
-                  charseteq_refl,
-                  unioncharset_assoc,
-                  unioncharset_comm,
-                  unioncharset_distrib.
-    + (* first(p1) and first(p2) grow *)
-      right.
-      eauto using charseteq_trans, unioncharset_rep_l.
+  - (* PChoice p1 p2 *)
+    destruct IHfirst1;
+    destruct IHfirst2;
+    try match goal with
+    [ IHx1: first _ p1 _ _ ?cs1x,
+      IHx2: first _ p2 _ _ ?cs2x |- _ ] =>
+          let H := fresh in (
+            assert (((cs1 U cs2) U csextra) = (cs1x U cs2x))
+            as H by (
+               extensionality a;
+               unfold unioncharset;
+               destruct (cs1 a);
+               destruct (cs2 a);
+               destruct (csextra a);
+               eauto
+            );
+            rewrite H;
+            clear H
+          )
+    end;
+    eauto using first.
   - (* PRepetition p *)
-    destruct (IHfirst csextra) as [? [? [|]]].
-    + (* first(p) stays the same *)
-      eexists;
-      split;
-      eauto using first.
-      right.
-      eauto using charseteq_trans,
-                  charseteq_comm,
-                  unioncharset_assoc,
-                  unioncharset_comm,
-                  unioncharset_distrib.
-    + (* first(p) grows *)
-      eexists;
-      split;
-      eauto using first.
-      right.
-      eauto using charseteq_trans,
-                  unioncharset_distrib,
-                  unioncharset_comm,
-                  unioncharset_rep_l.
-  - (* PNT i *)
-    destruct (IHfirst csextra) as [? [? [|]]];
+    destruct IHfirst;
+    match goal with
+    [ IHx1: first _ _ (?cs U ?csextra) _ ?csx |- _ ] =>
+          let H := fresh in (
+            assert (((cs U cs') U csextra) = ((cs U csextra) U csx))
+            as H by (
+               extensionality a;
+               unfold unioncharset;
+               destruct (cs a);
+               destruct (cs' a);
+               destruct (csextra a);
+               eauto
+            );
+            rewrite H;
+            clear H
+          )
+    end;
+    eauto using first.
+  - (* PNot p *)
+    destruct IHfirst;
     eauto using first.
 Qed.
 
 Lemma first_feedback :
   forall g p csfollow b csfirst,
   first g p csfollow b csfirst ->
-  exists csfirst', first g p (csfollow U csfirst) b csfirst' /\
-  charseteq csfirst' csfirst.
+  first g p (csfollow U csfirst) b csfirst.
 Proof.
   intros * H.
-  apply first_unioncharset with (csextra := csfirst) in H as [? [? [?|?]]];
-  eauto using charseteq_trans, charseteq_comm, unioncharset_diag.
+  apply first_unioncharset with (csextra := csfirst) in H as [|];
+  try match goal with
+    [ Hx: first _ _ _ _ (?cs U ?cs) |- _ ] =>
+        rewrite unioncharset_diag in Hx
+  end;
+  eauto.
 Qed.
 
 Lemma first_success :
@@ -498,11 +443,11 @@ Proof.
     match goal with
       [ Hx: first g p ?csfollow ?b ?csfirst |- _ ] =>
           let cstmp := fresh "cs" in (
-            eapply first_feedback in Hx as [cstmp [? ?]];
-            assert (startswith s cstmp) by eauto
+            eapply first_feedback in Hx as ?;
+            assert (startswith s csfirst) by eauto
           )
     end.
-    eauto using startswith_charseteq, startswith_unioncharset.
+    eauto using startswith_unioncharset.
   - (* PNot p *)
     assert (verifygrammarpat g p true)
     by eauto using pat_le, verifygrammarpat_true_le.

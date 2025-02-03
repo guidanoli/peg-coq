@@ -242,31 +242,6 @@ Ltac pose_first_b_independence :=
           by eauto using first_b_independence
   end.
 
-Lemma first_exists_if_follow_changes :
-  forall g p csfollow csfollow' b csfirst,
-  first g p csfollow b csfirst ->
-  exists csfirst', first g p csfollow' b csfirst'.
-Proof.
-  intros.
-  generalize dependent csfollow'.
-  induction H; intros;
-  eauto using first.
-  - (* PSequence p1 p2, where p1 is nullable *)
-    destruct (IHfirst1 csfollow') as [csmid ?].
-    destruct (IHfirst2 csmid) as [? ?].
-    eauto using first.
-  - (* PChoice p1 p2 *)
-    destruct (IHfirst1 csfollow') as [? ?].
-    destruct (IHfirst2 csfollow') as [? ?].
-    eauto using first.
-  - (* PRepetition p *)
-    destruct (IHfirst csfollow') as [? ?].
-    eauto using first.
-  - (* PNT i *)
-    destruct (IHfirst csfollow') as [? ?].
-    eauto using first.
-Qed.
-
 Lemma first_unioncharset :
   forall g p csfollow csfirst csextra b,
   first g p csfollow b csfirst ->

@@ -469,3 +469,202 @@ Proof.
   exfalso.
   eauto using first_success, startswith_fullcharset.
 Qed.
+
+Fixpoint first_comp g p cs gas :=
+  match gas with
+  | O => None
+  | S gas' => match p with
+              | PEmpty => Some (true, cs)
+              | PSet cs' => Some (false, cs')
+              | PSequence p1 p2 => match nullable_comp g p1 gas' with
+                                   | Some false => first_comp g p1 fullcharset gas'
+                                   | Some true => match first_comp g p2 cs gas' with
+                                                  | Some (b2, cs2) => match first_comp g p1 cs2 gas' with
+                                                                      | Some (b1, cs1) => Some (b1 && b2, cs1)
+                                                                      | None => None
+                                                                      end
+                                                  | None => None
+                                                  end
+                                   | None => None
+                                   end
+              | PChoice p1 p2 => let res1 := first_comp g p1 cs gas' in
+                                 let res2 := first_comp g p2 cs gas' in
+                                 match res1, res2 with
+                                 | Some (b1, cs1), Some (b2, cs2) => Some (b1 || b2, cs1 U cs2)
+                                 | _, _ => None
+                                 end
+              | PRepetition p => match first_comp g p cs gas' with
+                                 | Some (_, cs') => Some (true, cs U cs')
+                                 | None => None
+                                 end
+              | PNot p => match tocharset p with
+                          | Some cs' => Some (true, complementcharset cs')
+                          | None => Some (true, cs)
+                          end
+              | PNT i => match nth_error g i with
+                         | Some p' => first_comp g p' cs gas'
+                         | None => None
+                         end
+              end
+  end.
+
+Lemma first_comp_soundness :
+  forall g p cs gas b cs',
+  first_comp g p cs gas = Some (b, cs') ->
+  first g p cs b cs'.
+Proof.
+  intros.
+  generalize dependent cs'.
+  generalize dependent b.
+  generalize dependent cs.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  simpl in H;
+  try discriminate;
+  destruct p;
+  try destruct2;
+  repeat destruct_match_subject_in_hyp;
+  subst;
+  try destruct1;
+  try discriminate;
+  eauto using first, nullable_comp_soundness.
+Qed.
+
+Lemma first_comp_S_gas :
+  forall g p cs gas b cs',
+  first_comp g p cs gas = Some (b, cs') ->
+  first_comp g p cs (S gas) = Some (b, cs').
+Proof.
+  intros.
+  generalize dependent cs'.
+  generalize dependent b.
+  generalize dependent cs.
+  generalize dependent p.
+  generalize dependent g.
+  induction gas; intros;
+  simpl in H;
+  try discriminate;
+  destruct p;
+  try destruct2;
+  remember (S gas) as gas';
+  simpl;
+  auto;
+  repeat destruct_match_subject_in_hyp;
+  subst;
+  try destruct2;
+  repeat match goal with
+  | [ Hx: nullable_comp _ _ gas = Some _ |- _ ] => apply nullable_comp_S_gas in Hx
+  | [ Hx: first_comp _ _ _ gas = Some _ |- _ ] => apply IHgas in Hx
+  end;
+  repeat rewrite_match_subject_in_goal;
+  try discriminate;
+  auto.
+Qed.
+
+Lemma first_comp_le_gas :
+  forall g p cs gas gas' b cs',
+  first_comp g p cs gas = Some (b, cs') ->
+  gas <= gas' ->
+  first_comp g p cs gas' = Some (b, cs').
+Proof.
+  intros * H Hle.
+  induction Hle;
+  eauto using first_comp_S_gas.
+Qed.
+
+Lemma first_comp_gas_bounded_by_depth :
+  forall g p nb d b k cs gas,
+  lcoherent g g true ->
+  coherent g p true ->
+  verifyrule g p d nb (Some b) k ->
+  gas >= pat_size p + d * (grammar_size g) ->
+  exists b' cs', first_comp g p cs gas = Some (b', cs').
+Proof.
+  intros * Hlc Hc Hv Hge.
+  generalize dependent gas.
+  generalize dependent cs.
+  remember (Some b) as res.
+  generalize dependent b.
+  induction Hv; intros;
+  inversion Hc; subst;
+  try destruct1;
+  simpl in Hge;
+  destruct gas;
+  try match goal with
+    [ Hx: 0 >= S _ |- _ ] =>
+        inversion Hx
+  end;
+  try destruct2sep;
+  try discriminate;
+  simpl;
+  eauto.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    assert (gas >= pat_size p1 + d * (grammar_size g)) by lia.
+    assert (gas >= pat_size p2 + d * (grammar_size g)) by lia.
+    assert (nullable_comp g p1 gas = Some true)
+    as Hncomp by eauto using nullable_comp_gas_bounded_by_depth.
+    rewrite Hncomp.
+    assert (exists b' cs', first_comp g p2 cs gas = Some (b', cs'))
+    as [? [cs2 Hf2]] by eauto.
+    rewrite Hf2.
+    assert (exists b' cs', first_comp g p1 cs2 gas = Some (b', cs'))
+    as [? [? Hf1]] by eauto.
+    rewrite Hf1.
+    eauto.
+  - (* PSequence p1 p2, where p1 is non-nullable *)
+    assert (gas >= pat_size p1 + d * (grammar_size g)) by lia.
+    assert (nullable_comp g p1 gas = Some false)
+    as Hncomp by eauto using nullable_comp_gas_bounded_by_depth.
+    rewrite Hncomp.
+    eauto.
+  - (* PChoice p1 p2 *)
+    assert (gas >= pat_size p1 + d * (grammar_size g)) by lia.
+    assert (gas >= pat_size p2 + d * (grammar_size g)) by lia.
+    assert (exists b' cs', first_comp g p1 cs gas = Some (b', cs'))
+    as [? [? Hf1]] by eauto.
+    rewrite Hf1.
+    assert (exists b' cs', first_comp g p2 cs gas = Some (b', cs'))
+    as [? [? Hf2]] by eauto.
+    rewrite Hf2.
+    eauto.
+  - (* PRepetition p *)
+    assert (gas >= pat_size p + d * (grammar_size g)) by lia.
+    assert (exists b' cs', first_comp g p cs gas = Some (b', cs'))
+    as [? [? Hf]] by eauto.
+    rewrite Hf.
+    eauto.
+  - (* PNot p *)
+    destruct (tocharset p);
+    eauto.
+  - (* PNT i *)
+    match goal with
+      [ Hx: nth_error ?g ?i = Some ?p |- _ ] =>
+          assert (In p g) by eauto using nth_error_In;
+          assert (coherent g p true) by eauto using lcoherent_true_In;
+          assert (pat_size p <= grammar_size g) by eauto using pat_size_le_grammar_size;
+          assert (gas >= pat_size p + d * (grammar_size g)) by lia;
+          rewrite Hx
+    end.
+    eauto.
+Qed.
+
+Lemma first_comp_gas_bounded :
+  forall g p cs gas,
+  verifygrammarpat g p true ->
+  gas >= pat_size p + (S (Datatypes.length g)) * (grammar_size g) ->
+  exists b' cs', first_comp g p cs gas = Some (b', cs').
+Proof.
+  intros * Hvgp Hge.
+  inversion Hvgp; subst.
+  match goal with
+    [ Hx: verifygrammar _ true |- _ ] =>
+        inversion Hx; subst
+  end.
+  assert (exists nb d b k, verifyrule g p d nb (Some b) k)
+  as [nb [? [b [? ?]]]]
+  by eauto using verifygrammarpat_verifyrule.
+  assert (exists k', verifyrule g p (S (Datatypes.length g)) nb (Some b) k')
+  as [? ?] by eauto using verifyrule_Some_min_depth.
+  eauto using first_comp_gas_bounded_by_depth.
+Qed.

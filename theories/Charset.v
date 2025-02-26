@@ -5,6 +5,10 @@ From Peg Require Import Tactics.
 
 Definition charset : Type := (ascii -> bool).
 
+(* Empty charset *)
+Definition emptycharset : charset :=
+  (fun _ => false).
+
 (* Full charset *)
 Definition fullcharset : charset :=
   (fun _ => true).

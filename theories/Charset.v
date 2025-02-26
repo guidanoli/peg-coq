@@ -27,6 +27,10 @@ Definition intersectioncharset cs1 cs2 : charset :=
 Definition complementcharset cs : charset :=
   (fun a => negb (cs a)).
 
+(* Disjoint charsets *)
+Definition disjointcharsets cs1 cs2 : Prop :=
+  intersectioncharset cs1 cs2 = emptycharset.
+
 Lemma unioncharset_diag :
   forall cs, (cs U cs) = cs.
 Proof.

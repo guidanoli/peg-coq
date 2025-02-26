@@ -75,3 +75,19 @@ Proof.
   extensionality a.
   auto.
 Qed.
+
+Lemma disjointcharsets_def :
+  forall cs1 cs2,
+  disjointcharsets cs1 cs2 ->
+  ~ exists a, cs1 a = true /\ cs2 a = true.
+Proof.
+  intros * H.
+  intros [a [H1 H2]].
+  unfold disjointcharsets in H.
+  apply equal_f with a in H.
+  unfold intersectioncharset in H.
+  unfold emptycharset in H.
+  rewrite H1 in H.
+  rewrite H2 in H.
+  discriminate.
+Qed.

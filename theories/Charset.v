@@ -19,6 +19,10 @@ Definition unioncharset cs1 cs2 : charset :=
 
 Notation "cs1 'U' cs2" := (unioncharset cs1 cs2) (at level 120, right associativity).
 
+(* Intersection of charsets *)
+Definition intersectioncharset cs1 cs2 : charset :=
+  (fun a => andb (cs1 a) (cs2 a)).
+
 (* Set complement of a charset *)
 Definition complementcharset cs : charset :=
   (fun a => negb (cs a)).

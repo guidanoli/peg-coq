@@ -5,7 +5,7 @@ From Peg Require Import Tactics.
 
 Definition startswith (s : string) (cs : charset) : Prop :=
   match s with
-  | EmptyString => True
+  | EmptyString => False
   | String a _ => (cs a = true)
   end.
 
@@ -22,9 +22,9 @@ Proof.
     auto.
 Qed.
 
-Lemma startswith_fullcharset :
+Lemma empty_or_startswith_fullcharset :
   forall s,
-  startswith s fullcharset.
+  s = EmptyString \/ startswith s fullcharset.
 Proof.
   intros.
   unfold startswith.
@@ -42,6 +42,7 @@ Proof.
   intros * H.
   destruct s.
   - (* EmptyString *)
+    destruct H;
     auto.
   - (* String _ _ *)
     destruct H;

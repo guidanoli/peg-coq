@@ -319,9 +319,9 @@ Lemma first_success :
   forall g p s s' csfollow b csfirst,
   verifygrammarpat g p true ->
   matches g p s (Success s') ->
-  startswith s' csfollow ->
+  s' = EmptyString \/ startswith s' csfollow ->
   first g p csfollow b csfirst ->
-  startswith s csfirst.
+  s = EmptyString \/ startswith s csfirst.
 Proof.
   intros * Hvgp Hm Hsw Hf.
   remember (String.length s) as n.
@@ -385,7 +385,7 @@ Proof.
     inversion Hm; subst;
     pose_nullable_determinism;
     try discriminate.
-    eauto using startswith_fullcharset.
+    eauto using empty_or_startswith_fullcharset.
   - (* PChoice p1 p2 *)
     assert (verifygrammarpat g p1 true)
     by eauto using pat_le, verifygrammarpat_true_le.
@@ -393,13 +393,19 @@ Proof.
     by eauto using pat_le, verifygrammarpat_true_le.
     inversion Hf; subst;
     inversion Hm; subst;
+    try assert (s = EmptyString \/ startswith s cs1) as [|] by eauto;
+    try assert (s = EmptyString \/ startswith s cs2) as [|] by eauto;
     eauto using startswith_unioncharset.
   - (* PRepetition p *)
     assert (verifygrammarpat g p true)
     by eauto using pat_le, verifygrammarpat_true_le.
     inversion Hf; subst;
     inversion Hm; subst;
-    eauto using startswith_unioncharset.
+    try (
+      destruct Hsw;
+      eauto using startswith_unioncharset;
+      fail
+    ).
     inversion Hvgp; subst.
     match goal with
       [ Hx: checkloops _ (PRepetition _) false |- _ ] =>
@@ -412,17 +418,22 @@ Proof.
           by eauto using nullable_false_proper_suffix;
           assert (length s' < length s)
           by eauto using proper_suffix_length_lt;
-          assert (startswith s' (csfollow U cs'))
+          assert (s' = EmptyString \/ startswith s' (csfollow U cs'))
           by eauto
     end.
     match goal with
       [ Hx: first g p ?csfollow ?b ?csfirst |- _ ] =>
           let cstmp := fresh "cs" in (
             eapply first_feedback in Hx as ?;
-            assert (startswith s csfirst) by eauto
+            assert (s = EmptyString \/ startswith s csfirst) by eauto
           )
     end.
-    eauto using startswith_unioncharset.
+    match goal with
+      [ Hx: ?s = EmptyString \/ startswith ?s ?cs2
+        |- ?s = EmptyString \/ startswith ?s (?cs1 U ?cs2) ] =>
+            destruct Hx;
+            eauto using startswith_unioncharset
+    end.
   - (* PNot p *)
     assert (verifygrammarpat g p true)
     by eauto using pat_le, verifygrammarpat_true_le.
@@ -455,19 +466,28 @@ Proof.
 Qed.
 
 Lemma first_failure :
-  forall g p s b csfirst,
+  forall g p s csfirst,
   verifygrammarpat g p true ->
-  first g p fullcharset b csfirst ->
+  first g p fullcharset false csfirst ->
   ~ startswith s csfirst ->
   matches g p s Failure.
 Proof.
-  intros.
+  intros * Hvgp Hf Hesw.
   assert (exists res, matches g p s res)
   as [[|s'] ?]
-  by eauto using verifygrammarpat_safe_match;
-  auto.
-  exfalso.
-  eauto using first_success, startswith_fullcharset.
+  by eauto using verifygrammarpat_safe_match.
+  - (* Failure *)
+    auto.
+  - (* Success s' *)
+    assert (s = EmptyString \/ startswith s csfirst)
+    as [|]
+    by eauto using first_success, empty_or_startswith_fullcharset.
+    + (* s = EmptyString *)
+      subst.
+      eauto using first_false.
+    + (* startswith s csfirst *)
+      exfalso.
+      auto.
 Qed.
 
 Fixpoint first_comp g p cs gas :=

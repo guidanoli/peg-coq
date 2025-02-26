@@ -15,6 +15,8 @@ Inductive pat : Type :=
   | PNT : nat -> pat                      (* G[i]         *)
   .
 
+Definition PAnd p := PNot (PNot p).
+
 Fixpoint pat_size p :=
   match p with
   | PEmpty => 1

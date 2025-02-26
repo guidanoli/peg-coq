@@ -7,6 +7,7 @@ From Coq Require Import Strings.String.
 From Peg Require Import Charset.
 From Peg Require Import Checkloops.
 From Peg Require Import Coherent.
+From Peg Require Import Equivalent.
 From Peg Require Import Match.
 From Peg Require Import Nullable.
 From Peg Require Import Startswith.
@@ -489,6 +490,65 @@ Proof.
       exfalso.
       auto.
 Qed.
+
+(* p1 / p2 -> (&[cs1] p1 / ![cs1] p2) *)
+Lemma first_choice :
+  forall g p1 p2 cs1 cs2 follow b s s',
+  let p := PChoice p1 p2 in
+  let p' := (PChoice (PSequence (PAnd (PSet cs1)) p1)
+                     (PSequence (PNot (PSet cs1)) p2)) in
+  verifygrammarpat g p true ->
+  matches g p s (Success s') ->
+  s' = EmptyString \/ startswith s' follow ->
+  first g p1 fullcharset false cs1 ->
+  first g p2 follow b cs2 ->
+  disjointcharsets cs1 cs2 ->
+  matches g p' s (Success s').
+Proof.
+  intros * Hvgp Hm Hsw Hf1 Hf2 Hdcs.
+  assert (verifygrammarpat g p1 true)
+  by eauto using verifygrammarpat_true_le, pat_le.
+  assert (verifygrammarpat g p2 true)
+  by eauto using verifygrammarpat_true_le, pat_le.
+  assert (s' = EmptyString \/ startswith s' fullcharset)
+  by eauto using empty_or_startswith_fullcharset.
+  inversion Hm; subst.
+  - (* p1 matches *)
+    assert (s = EmptyString \/ startswith s cs1)
+    as Hswcs1 by eauto using first_success.
+    destruct s as [|a s''].
+    + (* EmptyString *)
+      assert (matches g p1 EmptyString Failure)
+      by eauto using first_failure.
+      pose_matches_determinism.
+      discriminate.
+    + (* String a s *)
+      unfold startswith in Hswcs1.
+      destruct Hswcs1 as [|Heqcs1a];
+      try discriminate.
+      eauto 6 using matches.
+  - (* p1 fails but p2 matches *)
+    destruct s as [|a s''].
+    + (* EmptyString *)
+      eauto 7 using matches.
+    + (* String a s'' *)
+      destruct (startswith_dec (String a s'') cs1) as [Hswcs1|Hswcs1];
+      simpl in Hswcs1.
+      -- (* cs1 a = true *)
+         assert (~ exists a, cs1 a = true /\ cs2 a = true)
+         by eauto using disjointcharsets_def.
+         assert (cs2 a = false)
+         by (destruct (cs2 a) eqn:?; auto; exfalso; eauto).
+         assert (String a s'' = EmptyString \/ startswith (String a s'') cs2)
+         as [|]
+         by eauto using first_success;
+         try discriminate.
+         simpl in H4.
+         destruct1sep.
+      -- (* ~ startswith (String a s'') cs1 *)
+         destruct (cs1 a) eqn:Heqcs1a; try contradiction.
+         eauto 9 using matches.
+ Qed.
 
 Fixpoint first_comp g p cs gas :=
   match gas with

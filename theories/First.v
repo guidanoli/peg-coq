@@ -40,11 +40,11 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       forall g p1 p2 cs cs1 cs2 b1 b2,
       first g p1 cs b1 cs1 ->
       first g p2 cs b2 cs2 ->
-      first g (PChoice p1 p2) cs (orb b1 b2) (cs1 U cs2)
+      first g (PChoice p1 p2) cs (orb b1 b2) (cs1 ∪ cs2)
   | FRepetition :
       forall g p cs b cs',
       first g p cs b cs' ->
-      first g (PRepetition p) cs true (cs U cs')
+      first g (PRepetition p) cs true (cs ∪ cs')
   | FNotNone :
       forall g p cs,
       tocharset p = None ->
@@ -246,8 +246,8 @@ Ltac pose_first_b_independence :=
 Lemma first_unioncharset :
   forall g p csfollow csfirst csextra b,
   first g p csfollow b csfirst ->
-  first g p (csfollow U csextra) b (csfirst U csextra) \/
-  first g p (csfollow U csextra) b csfirst.
+  first g p (csfollow ∪ csextra) b (csfirst ∪ csextra) \/
+  first g p (csfollow ∪ csextra) b csfirst.
 Proof.
   intros.
   induction H; intros;
@@ -264,7 +264,7 @@ Proof.
     [ IHx1: first _ p1 _ _ ?cs1x,
       IHx2: first _ p2 _ _ ?cs2x |- _ ] =>
           let H := fresh in (
-            assert (((cs1 U cs2) U csextra) = (cs1x U cs2x))
+            assert (((cs1 ∪ cs2) ∪ csextra) = (cs1x ∪ cs2x))
             as H by (
                extensionality a;
                unfold unioncharset;
@@ -281,9 +281,9 @@ Proof.
   - (* PRepetition p *)
     destruct IHfirst;
     match goal with
-    [ IHx1: first _ _ (?cs U ?csextra) _ ?csx |- _ ] =>
+    [ IHx1: first _ _ (?cs ∪ ?csextra) _ ?csx |- _ ] =>
           let H := fresh in (
-            assert (((cs U cs') U csextra) = ((cs U csextra) U csx))
+            assert (((cs ∪ cs') ∪ csextra) = ((cs ∪ csextra) ∪ csx))
             as H by (
                extensionality a;
                unfold unioncharset;
@@ -305,12 +305,12 @@ Qed.
 Lemma first_feedback :
   forall g p csfollow b csfirst,
   first g p csfollow b csfirst ->
-  first g p (csfollow U csfirst) b csfirst.
+  first g p (csfollow ∪ csfirst) b csfirst.
 Proof.
   intros * H.
   apply first_unioncharset with (csextra := csfirst) in H as [|];
   try match goal with
-    [ Hx: first _ _ _ _ (?cs U ?cs) |- _ ] =>
+    [ Hx: first _ _ _ _ (?cs ∪ ?cs) |- _ ] =>
         rewrite unioncharset_diag in Hx
   end;
   eauto.
@@ -419,7 +419,7 @@ Proof.
           by eauto using nullable_false_proper_suffix;
           assert (length s' < length s)
           by eauto using proper_suffix_length_lt;
-          assert (s' = EmptyString \/ startswith s' (csfollow U cs'))
+          assert (s' = EmptyString \/ startswith s' (csfollow ∪ cs'))
           by eauto
     end.
     match goal with
@@ -431,7 +431,7 @@ Proof.
     end.
     match goal with
       [ Hx: ?s = EmptyString \/ startswith ?s ?cs2
-        |- ?s = EmptyString \/ startswith ?s (?cs1 U ?cs2) ] =>
+        |- ?s = EmptyString \/ startswith ?s (?cs1 ∪ ?cs2) ] =>
             destruct Hx;
             eauto using startswith_unioncharset
     end.
@@ -570,11 +570,11 @@ Fixpoint first_comp g p cs gas :=
               | PChoice p1 p2 => let res1 := first_comp g p1 cs gas' in
                                  let res2 := first_comp g p2 cs gas' in
                                  match res1, res2 with
-                                 | Some (b1, cs1), Some (b2, cs2) => Some (b1 || b2, cs1 U cs2)
+                                 | Some (b1, cs1), Some (b2, cs2) => Some (b1 || b2, cs1 ∪ cs2)
                                  | _, _ => None
                                  end
               | PRepetition p => match first_comp g p cs gas' with
-                                 | Some (_, cs') => Some (true, cs U cs')
+                                 | Some (_, cs') => Some (true, cs ∪ cs')
                                  | None => None
                                  end
               | PNot p => match tocharset p with

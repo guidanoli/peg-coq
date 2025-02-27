@@ -36,7 +36,7 @@ Qed.
 Lemma startswith_unioncharset :
   forall s cs1 cs2,
   startswith s cs1 \/ startswith s cs2 ->
-  startswith s (cs1 U cs2).
+  startswith s (cs1 ∪ cs2).
 Proof.
   unfold startswith.
   intros * H.

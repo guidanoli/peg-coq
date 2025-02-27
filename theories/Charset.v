@@ -17,7 +17,7 @@ Definition fullcharset : charset :=
 Definition unioncharset cs1 cs2 : charset :=
   (fun a => orb (cs1 a) (cs2 a)).
 
-Notation "cs1 'U' cs2" := (unioncharset cs1 cs2) (at level 120, right associativity).
+Notation "cs1 '∪' cs2" := (unioncharset cs1 cs2) (at level 120, right associativity).
 
 (* Intersection of charsets *)
 Definition intersectioncharset cs1 cs2 : charset :=
@@ -32,7 +32,7 @@ Definition disjointcharsets cs1 cs2 : Prop :=
   intersectioncharset cs1 cs2 = emptycharset.
 
 Lemma unioncharset_diag :
-  forall cs, (cs U cs) = cs.
+  forall cs, (cs ∪ cs) = cs.
 Proof.
   intros.
   extensionality a.
@@ -40,7 +40,7 @@ Proof.
 Qed.
 
 Lemma unioncharset_assoc :
-  forall cs1 cs2 cs3, (cs1 U (cs2 U cs3)) = ((cs1 U cs2) U cs3).
+  forall cs1 cs2 cs3, (cs1 ∪ (cs2 ∪ cs3)) = ((cs1 ∪ cs2) ∪ cs3).
 Proof.
   intros.
   extensionality a.
@@ -48,7 +48,7 @@ Proof.
 Qed.
 
 Lemma unioncharset_comm :
-  forall cs1 cs2, (cs1 U cs2) = (cs2 U cs1).
+  forall cs1 cs2, (cs1 ∪ cs2) = (cs2 ∪ cs1).
 Proof.
   intros.
   extensionality a.
@@ -56,7 +56,7 @@ Proof.
 Qed.
 
 Lemma unioncharset_rep_l :
-  forall cs1 cs2 cs3, ((cs1 U cs3) U (cs2 U cs3)) = ((cs1 U cs2) U cs3).
+  forall cs1 cs2 cs3, ((cs1 ∪ cs3) ∪ (cs2 ∪ cs3)) = ((cs1 ∪ cs2) ∪ cs3).
 Proof.
   intros.
   extensionality a.
@@ -69,7 +69,7 @@ Qed.
 
 Lemma unioncharset_fullcharset_l :
   forall cs,
-  (fullcharset U cs) = fullcharset.
+  (fullcharset ∪ cs) = fullcharset.
 Proof.
   intros.
   extensionality a.

@@ -23,13 +23,15 @@ Notation "cs1 '∪' cs2" := (unioncharset cs1 cs2) (at level 120, right associat
 Definition intersectioncharset cs1 cs2 : charset :=
   (fun a => andb (cs1 a) (cs2 a)).
 
+Notation "cs1 '∩' cs2" := (intersectioncharset cs1 cs2) (at level 120, right associativity).
+
 (* Set complement of a charset *)
 Definition complementcharset cs : charset :=
   (fun a => negb (cs a)).
 
 (* Disjoint charsets *)
 Definition disjointcharsets cs1 cs2 : Prop :=
-  intersectioncharset cs1 cs2 = emptycharset.
+  (cs1 ∩ cs2) = emptycharset.
 
 Lemma unioncharset_diag :
   forall cs, (cs ∪ cs) = cs.

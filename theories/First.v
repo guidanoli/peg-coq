@@ -53,6 +53,10 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       forall g p cs cs',
       tocharset p = Some cs' ->
       first g (PNot p) cs true (complementcharset cs')
+  | FAnd :
+      forall g p cs b cs',
+      first g p fullcharset b cs' ->
+      first g (PAnd p) cs b (cs ∩ cs')
   | FNT :
       forall g i p cs b cs',
       nth_error g i = Some p ->
@@ -136,6 +140,10 @@ Proof.
   - (* PNot p *)
     destruct (tocharset p) eqn:?;
     eauto using first.
+  - (* PAnd p *)
+    assert (exists b cs', first g p fullcharset b cs')
+    as [? [? ?]] by eauto.
+    eauto using first.
   - (* PNT i *)
     assert (exists b cs', first g p cs b cs')
     as [? [? ?]] by eauto.
@@ -162,6 +170,11 @@ Proof.
         destruct b1;
         destruct b2;
         simpl in Hx
+  end;
+  try match goal with
+    [ _: verifygrammarpat ?g (_ ?p) true |- _ ] =>
+      assert (verifygrammarpat g p true)
+      by eauto using pat_le, verifygrammarpat_true_le
   end;
   try match goal with
     [ _: verifygrammarpat ?g (_ ?p1 ?p2) true |- _ ] =>
@@ -246,59 +259,92 @@ Ltac pose_first_b_independence :=
 Lemma first_unioncharset :
   forall g p csfollow csfirst csextra b,
   first g p csfollow b csfirst ->
-  first g p (csfollow ∪ csextra) b (csfirst ∪ csextra) \/
-  first g p (csfollow ∪ csextra) b csfirst.
+  exists csextra',
+  (csextra' ⊆ csextra) /\
+  first g p (csfollow ∪ csextra) b (csfirst ∪ csextra').
 Proof.
-  intros.
-  induction H; intros;
-  try discriminate;
-  eauto using first.
-  - (* PSequence p1 p2, where p1 is nullable *)
-    destruct IHfirst1;
-    destruct IHfirst2;
+  intros * H.
+  generalize dependent csextra.
+  induction H; intros.
+  - (* PEmpty *)
+    exists csextra.
+    eauto using first, subcharseteq_refl.
+  - (* PSet f *)
+    exists emptycharset.
+    rewrite unioncharset_emptycharset_r.
+    eauto using first, subcharseteq_empty.
+  - (* PSequence p1 p2, where p1 is non-nullable *)
+    specialize (IHfirst csextra) as [? [? Hf]].
+    rewrite unioncharset_fullcharset_l in Hf.
     eauto using first.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    specialize (IHfirst1 csextra) as [csextra' [? ?]].
+    specialize (IHfirst2 csextra') as [csextra'' [? ?]].
+    eauto using first, subcharseteq_trans.
   - (* PChoice p1 p2 *)
-    destruct IHfirst1;
-    destruct IHfirst2;
-    try match goal with
-    [ IHx1: first _ p1 _ _ ?cs1x,
-      IHx2: first _ p2 _ _ ?cs2x |- _ ] =>
-          let H := fresh in (
-            assert (((cs1 ∪ cs2) ∪ csextra) = (cs1x ∪ cs2x))
-            as H by (
-               extensionality a;
-               unfold unioncharset;
-               destruct (cs1 a);
-               destruct (cs2 a);
-               destruct (csextra a);
-               eauto
-            );
-            rewrite H;
-            clear H
-          )
-    end;
+    specialize (IHfirst1 csextra) as [csextra1 [? ?]].
+    specialize (IHfirst2 csextra) as [csextra2 [? ?]].
+    exists (csextra1 ∪ csextra2).
+    split; eauto using subcharseteq_unioncharset.
+    assert (((cs1 ∪ cs2) ∪ csextra1 ∪ csextra2) =
+           ((cs1 ∪ csextra1) ∪ (cs2 ∪ csextra2))) as Haux.
+    {
+      extensionality a.
+      unfold unioncharset.
+      destruct (cs1 a);
+      destruct (cs2 a);
+      destruct (csextra1 a);
+      destruct (csextra2 a);
+      auto.
+    }
+    rewrite Haux.
     eauto using first.
   - (* PRepetition p *)
-    destruct IHfirst;
-    match goal with
-    [ IHx1: first _ _ (?cs ∪ ?csextra) _ ?csx |- _ ] =>
-          let H := fresh in (
-            assert (((cs ∪ cs') ∪ csextra) = ((cs ∪ csextra) ∪ csx))
-            as H by (
-               extensionality a;
-               unfold unioncharset;
-               destruct (cs a);
-               destruct (cs' a);
-               destruct (csextra a);
-               eauto
-            );
-            rewrite H;
-            clear H
-          )
-    end;
+    specialize (IHfirst csextra) as [csextra' [? ?]].
+    exists (csextra ∪ csextra').
+    split; eauto using subcharseteq_unioncharset, subcharseteq_refl.
+    assert (((cs ∪ cs') ∪ csextra ∪ csextra') =
+            ((cs ∪ csextra) ∪ (cs' ∪ csextra'))) as Haux.
+    {
+      extensionality a.
+      unfold unioncharset.
+      destruct (cs a);
+      destruct (cs' a);
+      destruct (csextra a);
+      destruct (csextra' a);
+      auto.
+    }
+    rewrite Haux.
     eauto using first.
-  - (* PNot p *)
-    destruct IHfirst;
+  - (* PNot p, where tocharset p = None *)
+    eauto using first, subcharseteq_refl.
+  - (* PNot p, where tocharset p = Some cs' *)
+    exists emptycharset.
+    split; eauto using subcharseteq_empty.
+    rewrite unioncharset_emptycharset_r.
+    eauto using first.
+  - (* PAnd p *)
+    specialize (IHfirst csextra) as [csextra' [Hs ?]].
+    exists (csextra ∩ (cs' ∪ csextra')).
+    split; eauto using subcharseteq_intersectioncharset_l.
+    assert ((cs ∩ cs' ∪ csextra ∩ (cs' ∪ csextra')) =
+            (((cs ∪ csextra) ∩ (cs' ∪ csextra'))))
+    as Haux.
+    {
+      inversion Hs; subst.
+      extensionality a.
+      unfold unioncharset.
+      unfold intersectioncharset.
+      destruct (cs a) eqn:?;
+      destruct (cs' a) eqn:?;
+      destruct (csextra' a) eqn:?;
+      destruct (cs2 a) eqn:?;
+      auto.
+    }
+    rewrite Haux.
+    eauto using first.
+  - (* PNT i *)
+    specialize (IHfirst csextra) as [csextra' [? ?]].
     eauto using first.
 Qed.
 
@@ -308,12 +354,12 @@ Lemma first_feedback :
   first g p (csfollow ∪ csfirst) b csfirst.
 Proof.
   intros * H.
-  apply first_unioncharset with (csextra := csfirst) in H as [|];
-  try match goal with
-    [ Hx: first _ _ _ _ (?cs ∪ ?cs) |- _ ] =>
-        rewrite unioncharset_diag in Hx
-  end;
-  eauto.
+  apply first_unioncharset with (csextra := csfirst) in H
+  as [csextra' [? Hf]].
+  assert ((csfirst ∪ csextra') = csfirst)
+  as Haux by eauto using subcharseteq_unioncharset_eq.
+  rewrite Haux in Hf.
+  auto.
 Qed.
 
 Lemma first_success :
@@ -452,6 +498,15 @@ Proof.
         end
     end;
     eauto.
+  - (* PAnd p *)
+    assert (verifygrammarpat g p true)
+    by eauto using pat_le, verifygrammarpat_true_le.
+    inversion Hf; subst;
+    inversion Hm; subst;
+    assert (s' = EmptyString \/ startswith s' cs')
+    as [|] by eauto using empty_or_startswith_fullcharset;
+    destruct Hsw;
+    eauto using startswith_intersectioncharset.
   - (* PNT i *)
     match goal with
       [ Hx: verifygrammarpat ?g (PNT ?i) true,
@@ -580,6 +635,10 @@ Fixpoint first_comp g p cs gas :=
               | PNot p => match tocharset p with
                           | Some cs' => Some (true, complementcharset cs')
                           | None => Some (true, cs)
+                          end
+              | PAnd p => match first_comp g p fullcharset gas' with
+                          | Some (b, cs') => Some (b, cs ∩ cs')
+                          | None => None
                           end
               | PNT i => match nth_error g i with
                          | Some p' => first_comp g p' cs gas'
@@ -716,6 +775,12 @@ Proof.
     eauto.
   - (* PNot p *)
     destruct (tocharset p);
+    eauto.
+  - (* PAnd p *)
+    assert (gas >= pat_size p + d * (grammar_size g)) by lia.
+    assert (exists b' cs', first_comp g p fullcharset gas = Some (b', cs'))
+    as [? [? Hf]] by eauto.
+    rewrite Hf.
     eauto.
   - (* PNT i *)
     match goal with

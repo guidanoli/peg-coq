@@ -62,6 +62,14 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g p s,
       matches g p s Failure ->
       matches g (PNot p) s (Success s)
+  | MAndSuccess :
+      forall g p s s',
+      matches g p s (Success s') ->
+      matches g (PAnd p) s (Success s)
+  | MAndFailure :
+      forall g p s,
+      matches g p s Failure ->
+      matches g (PAnd p) s Failure
   | MNonTerminalSome :
       forall g i p s res,
       nth_error g i = Some p ->
@@ -170,6 +178,11 @@ Fixpoint matches_comp g p s gas {struct gas} :=
                            | Some (Success _) => Some Failure
                            | None => None
                            end
+              | PAnd p' => match matches_comp g p' s gas' with
+                           | Some Failure => Some Failure
+                           | Some (Success _) => Some (Success s)
+                           | None => None
+                           end
               | PNT i => match nth_error g i with
                          | Some p' => matches_comp g p' s gas'
                          | None => None
@@ -223,6 +236,12 @@ Proof with eauto using matches.
        destruct1...
     -- (* Success s1 *)
        apply IHgas in H...
+  - (* PNot p *)
+    destruct (matches_comp g p s gas) as [res1|] eqn:H1; try discriminate.
+    apply IHgas in H1.
+    destruct res1 as [|s1];
+    destruct1;
+    eauto using matches.
   - (* PNot p *)
     destruct (matches_comp g p s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.

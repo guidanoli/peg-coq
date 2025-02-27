@@ -47,6 +47,9 @@ Inductive nullable : grammar -> pat -> bool -> Prop :=
   | NNot :
       forall g p,
       nullable g (PNot p) true
+  | NAnd :
+      forall g p,
+      nullable g (PAnd p) true
   | NNT :
       forall g i p b,
       nth_error g i = Some p ->
@@ -178,6 +181,15 @@ Qed.
 Example nullable_ex14 :
   forall g p,
   nullable g (PNot p) true.
+Proof.
+  intros.
+  eauto using nullable.
+Qed.
+
+(* G |= &p *)
+Example nullable_ex14' :
+  forall g p,
+  nullable g (PAnd p) true.
 Proof.
   intros.
   eauto using nullable.
@@ -363,6 +375,7 @@ Fixpoint nullable_comp g p gas {struct gas} :=
                                  end
               | PRepetition _ => Some true
               | PNot _ => Some true
+              | PAnd _ => Some true
               | PNT i => match nth_error g i with
                          | Some p' => nullable_comp g p' gas'
                          | None => None
@@ -589,6 +602,12 @@ Proof.
     simpl.
     eauto.
   - (* PNot p *)
+    assert (b = true)
+    by eauto using verifyrule_true_res_some_true.
+    subst.
+    simpl.
+    eauto.
+  - (* PAnd p *)
     assert (b = true)
     by eauto using verifyrule_true_res_some_true.
     subst.

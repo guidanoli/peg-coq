@@ -60,6 +60,10 @@ Inductive verifyrule :
       forall g p d nb res k,
       verifyrule g p d true res k ->
       verifyrule g (PNot p) d nb res k
+  | VRAnd :
+      forall g p d nb res k,
+      verifyrule g p d true res k ->
+      verifyrule g (PAnd p) d nb res k
   | VRNTZero :
       forall g i nb,
       verifyrule g (PNT i) O nb None nil
@@ -1012,6 +1016,7 @@ Fixpoint verifyrule_comp g p d nb gas {struct gas} :=
                                  end
               | PRepetition p' => verifyrule_comp g p' d true gas'
               | PNot p' => verifyrule_comp g p' d true gas'
+              | PAnd p' => verifyrule_comp g p' d true gas'
               | PNT i => match nth_error g i with
                          | None => None
                          | Some p' => match d with

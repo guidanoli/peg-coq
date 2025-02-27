@@ -40,6 +40,10 @@ Inductive coherent : grammar -> pat -> bool -> Prop :=
       forall g p b,
       coherent g p b ->
       coherent g (PNot p) b
+  | CAnd :
+      forall g p b,
+      coherent g p b ->
+      coherent g (PAnd p) b
   | CNTNone :
       forall g i,
       nth_error g i = None ->
@@ -91,6 +95,7 @@ Fixpoint coherent_func (g : grammar) p {struct p} :=
   | PChoice p1 p2 => coherent_func g p1 && coherent_func g p2
   | PRepetition p => coherent_func g p
   | PNot p => coherent_func g p
+  | PAnd p => coherent_func g p
   | PNT i => match nth_error g i with
              | Some _ => true
              | None => false

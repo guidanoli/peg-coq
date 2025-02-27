@@ -524,6 +524,10 @@ Proof.
     assert (exists res, matches g p s res) as [res ?] by eauto.
     destruct res as [|s'];
     eauto using matches.
+  - (* PAnd p *)
+    assert (exists res, matches g p s res) as [res ?] by eauto.
+    destruct res as [|s'];
+    eauto using matches.
   - (* PNT i *)
     assert (In p g) by eauto using nth_error_In.
     assert (checkloops g p false) by eauto.

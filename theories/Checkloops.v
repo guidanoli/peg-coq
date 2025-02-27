@@ -47,6 +47,10 @@ Inductive checkloops : grammar -> pat -> bool -> Prop :=
       forall g p b,
       checkloops g p b ->
       checkloops g (PNot p) b
+  | CLAnd :
+      forall g p b,
+      checkloops g p b ->
+      checkloops g (PAnd p) b
   | CLNT :
       forall g i,
       checkloops g (PNT i) false
@@ -132,6 +136,7 @@ Fixpoint checkloops_comp g p gas {struct gas} :=
                                   | ob => ob
                                   end
               | PNot p' => checkloops_comp g p' gas'
+              | PAnd p' => checkloops_comp g p' gas'
               | PNT _ => Some false
               end
   end.

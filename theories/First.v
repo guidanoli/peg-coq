@@ -53,6 +53,10 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       forall g p cs cs',
       tocharset p = Some cs' ->
       first g (PNot p) cs true (complementcharset cs')
+  | FAnd :
+      forall g p cs b cs',
+      first g p cs b cs' ->
+      first g (PAnd p) cs b (cs ∩ cs')
   | FNT :
       forall g i p cs b cs',
       nth_error g i = Some p ->
@@ -136,6 +140,10 @@ Proof.
   - (* PNot p *)
     destruct (tocharset p) eqn:?;
     eauto using first.
+  - (* PAnd p *)
+    assert (exists b cs', first g p cs b cs')
+    as [? [? ?]] by eauto.
+    eauto using first.
   - (* PNT i *)
     assert (exists b cs', first g p cs b cs')
     as [? [? ?]] by eauto.
@@ -162,6 +170,11 @@ Proof.
         destruct b1;
         destruct b2;
         simpl in Hx
+  end;
+  try match goal with
+    [ _: verifygrammarpat ?g (_ ?p) true |- _ ] =>
+      assert (verifygrammarpat g p true)
+      by eauto using pat_le, verifygrammarpat_true_le
   end;
   try match goal with
     [ _: verifygrammarpat ?g (_ ?p1 ?p2) true |- _ ] =>

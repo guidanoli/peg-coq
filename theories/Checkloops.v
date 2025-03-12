@@ -334,11 +334,11 @@ Inductive lcheckloops : grammar -> list pat -> bool -> Prop :=
   | LCLNil :
       forall g,
       lcheckloops g nil false
-  | LCLConsSomeTrue :
+  | LCLConsTrue :
       forall g r rs,
       checkloops g r true ->
       lcheckloops g (cons r rs) true
-  | LCLConsSomeFalse :
+  | LCLConsFalse :
       forall g r rs b,
       checkloops g r false ->
       lcheckloops g rs b ->

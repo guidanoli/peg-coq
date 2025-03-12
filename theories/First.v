@@ -25,12 +25,12 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
   | FSet :
       forall g cs cs',
       first g (PSet cs') cs false cs'
-  | FSequenceNullableSomeFalse :
+  | FSequenceNullableFalse :
       forall g p1 p2 cs b cs',
       nullable g p1 false ->
       first g p1 fullcharset b cs' ->
       first g (PSequence p1 p2) cs b cs'
-  | FSequenceNullableSomeTrue :
+  | FSequenceNullableTrue :
       forall g p1 p2 cs b1 b2 cs1 cs2,
       nullable g p1 true ->
       first g p2 cs b2 cs2 ->

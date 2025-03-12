@@ -78,6 +78,26 @@ Proof.
   auto.
 Qed.
 
+Lemma unioncharset_emptycharset_l :
+  forall cs,
+  (emptycharset ∪ cs) = cs.
+Proof.
+  intros.
+  extensionality a.
+  auto.
+Qed.
+
+Lemma unioncharset_emptycharset_r :
+  forall cs,
+  (cs ∪ emptycharset) = cs.
+Proof.
+  intros.
+  extensionality a.
+  unfold emptycharset.
+  unfold unioncharset.
+  auto using orb_false_r.
+Qed.
+
 Lemma disjointcharsets_def :
   forall cs1 cs2,
   disjointcharsets cs1 cs2 ->

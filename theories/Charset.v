@@ -93,3 +93,15 @@ Proof.
   rewrite H2 in H.
   discriminate.
 Qed.
+
+Lemma unioncharset_intersectioncharset_simpl :
+  forall cs1 cs2, (cs1 ∪ (cs1 ∩ cs2)) = cs1.
+Proof.
+  intros.
+  unfold unioncharset.
+  unfold intersectioncharset.
+  extensionality a.
+  destruct (cs1 a);
+  destruct (cs2 a);
+  auto.
+Qed.

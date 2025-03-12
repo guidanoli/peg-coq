@@ -125,3 +125,46 @@ Proof.
   destruct (cs2 a);
   auto.
 Qed.
+
+Inductive subcharseteq : charset -> charset -> Prop :=
+  | SubCharSetEq :
+      forall cs1 cs2,
+      subcharseteq cs1 (cs1 ∪ cs2)
+  .
+
+Notation "cs1 '⊆' cs2" := (subcharseteq cs1 cs2) (at level 120, right associativity).
+
+Lemma subcharseteq_refl :
+  forall cs,
+  cs ⊆ cs.
+Proof.
+  intros.
+  assert (cs ⊆ (cs ∪ cs))
+  as H by eauto using subcharseteq.
+  rewrite unioncharset_diag in H.
+  auto.
+Qed.
+
+Lemma subcharseteq_empty :
+  forall cs,
+  emptycharset ⊆ cs.
+Proof.
+  intros.
+  assert (emptycharset ⊆ (emptycharset ∪ cs))
+  as H by eauto using subcharseteq.
+  rewrite unioncharset_emptycharset_l in H.
+  auto.
+Qed.
+
+Lemma subcharseteq_trans :
+  forall cs1 cs2 cs3,
+  (cs1 ⊆ cs2) ->
+  (cs2 ⊆ cs3) ->
+  (cs1 ⊆ cs3).
+Proof.
+  intros * H12 H23.
+  inversion H12; subst.
+  inversion H23; subst.
+  rewrite <- unioncharset_assoc.
+  eauto using subcharseteq.
+Qed.

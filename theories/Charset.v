@@ -17,7 +17,7 @@ Definition fullcharset : charset :=
 Definition unioncharset cs1 cs2 : charset :=
   (fun a => orb (cs1 a) (cs2 a)).
 
-Notation "cs1 '∪' cs2" := (unioncharset cs1 cs2) (at level 120, right associativity).
+Notation "cs1 '∪' cs2" := (unioncharset cs1 cs2) (at level 130, right associativity).
 
 (* Intersection of charsets *)
 Definition intersectioncharset cs1 cs2 : charset :=

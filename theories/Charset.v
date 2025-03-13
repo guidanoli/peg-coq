@@ -168,3 +168,64 @@ Proof.
   rewrite <- unioncharset_assoc.
   eauto using subcharseteq.
 Qed.
+
+Lemma subcharseteq_unioncharset :
+  forall cs1 cs2 cs3,
+  (cs1 ⊆ cs3) ->
+  (cs2 ⊆ cs3) ->
+  ((cs1 ∪ cs2) ⊆ cs3).
+Proof.
+  intros * H13 H23.
+  inversion H13; subst.
+  inversion H23; subst.
+  assert ((cs2 ∪ cs3) = ((cs1 ∪ cs2) ∪ (cs1 ∪ cs4)))
+  as Haux.
+  {
+    extensionality a.
+    unfold unioncharset.
+    unfold unioncharset in H1.
+    apply equal_f with a in H1.
+    destruct (cs1 a);
+    destruct (cs2 a);
+    destruct (cs3 a);
+    destruct (cs4 a);
+    auto.
+  }
+  rewrite Haux.
+  eauto using subcharseteq.
+Qed.
+
+Lemma subcharseteq_intersectioncharset_l :
+  forall cs1 cs2,
+  (cs1 ∩ cs2) ⊆ cs1.
+Proof.
+  intros.
+  assert (cs1 = ((cs1 ∩ cs2) ∪ cs1))
+  as Haux.
+  {
+    extensionality a.
+    unfold unioncharset.
+    unfold intersectioncharset.
+    destruct (cs1 a);
+    destruct (cs2 a);
+    auto.
+  }
+  remember (cs1 ∩ cs2) as cstemp.
+  rewrite Haux.
+  subst cstemp.
+  eauto using subcharseteq.
+Qed.
+
+Lemma subcharseteq_unioncharset_eq :
+  forall cs1 cs2,
+  (cs2 ⊆ cs1) ->
+  (cs1 ∪ cs2) = cs1.
+Proof.
+  intros * H.
+  inversion H; subst.
+  extensionality a.
+  unfold unioncharset.
+  destruct (cs2 a);
+  destruct (cs3 a);
+  auto.
+Qed.

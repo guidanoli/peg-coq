@@ -55,6 +55,7 @@ The main files are:
 - `Nullable.v`: nullable patterns
 - `Checkloops.v`: degenerate loops
 - `Verifygrammar.v`: well-formedness
+- `First.v`: definition of first (used for optimization)
 
 Auxiliar files are:
 
@@ -62,6 +63,9 @@ Auxiliar files are:
 - `Pigeonhole.v`: states and proves the pigeonhole principle
 - `Strong.v`: states and proves the strong induction primitive
 - `Suffix.v`: defines the suffix and proper suffix relations, and proves some results about them
+- `Charset.v`: defines character sets and operations on them, and proves some lemmas about them
+- `Startswith.v`: defines the "starts with" function, and proves some lemmas about it
+- `Equivalent.v`: defines equivalent patterns, proves some lemmas about them, and examples
 
 ## Building the project
 

@@ -69,10 +69,13 @@ Given a choice pattern `p1 / p2`, if `p1` does not match the empty string,
 and the first sets of `p1` and `p2` are disjoint,
 then LPeg converts the choice pattern into `&[cs1] p1 / ![cs1] p2`,
 where `cs1` is the first set of `p1`.
-In terms of instructions of the LPeg virtual machine,
-this is equivalent to a test instruction,
-which makes matching against this pattern more performant.
-We prove that this optimization is correct in Coq.
+In reality, this is only a depiction of the optimization using standard PEG notation,
+while LPeg actually performs this optimization at the virtual machine instruction level.
+For this optimization,
+LPeg inserts a test instruction, which checks whether the next character
+is in a given character set or not, and jumps to another instruction otherswise.
+This optimization makes matching against this kind of pattern more performant.
+Here, we prove that this optimization is indeed correct.
 
 ## Files
 

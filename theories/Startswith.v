@@ -49,6 +49,21 @@ Proof.
     eauto using orb_true_intro.
 Qed.
 
+Lemma startswith_intersectioncharset :
+  forall s cs1 cs2,
+  startswith s cs1 ->
+  startswith s cs2 ->
+  startswith s (cs1 ∩ cs2).
+Proof.
+  unfold startswith.
+  intros * H1 H2.
+  destruct s.
+  - (* EmptyString *)
+    auto.
+  - (* String _ _ *)
+    eauto using andb_true_intro.
+Qed.
+
 Lemma startswith_complementcharset :
   forall cs a s,
   cs a = false ->

@@ -6,6 +6,9 @@ It also formalizes the algorithm implemented in [LPeg]
 for detecting well-formed PEGs,
 and proves that it terminates and is correct.
 Correctness here implies in termination of the parsing procedure.
+It also formalizes the definition of "first" implemented in [LPeg],
+used to optimize certain types of patterns such as choices.
+We also prove the choice optimization is correct.
 
 ## Syntax
 
@@ -43,6 +46,33 @@ Ford proved that, in the general case,
 the problem of identifying complete PEGs
 is undecidable, so this is a conservative
 approach that ensures termination.
+
+## First
+
+We loosely define here "first" as a conservative set of
+characters that a string can start in order to match a pattern.
+To be more precise, if a string starts with a character
+that is not in the first set of a pattern,
+then the match is guaranteed to fail.
+To take into consideration the match against empty strings,
+the function that computes the first set also outputs a Boolean value
+which indicates whether the pattern may match the empty string or not.
+If it returns false, then the pattern fails to match the empty string.
+Otherwise, it may or may not match the empty string.
+Besides the input grammar and pattern,
+the function also takes a character set called "follow" as parameter.
+The purpose of this parameter is to properly define first for sequence patterns.
+In the sequence `p1; p2`, we use the first of `p2` as the follow of `p1`.
+
+This definition is used by LPeg to optimize patterns such as choices.
+Given a choice pattern `p1 / p2`, if `p1` does not match the empty string,
+and the first sets of `p1` and `p2` are disjoint,
+then LPeg converts the choice pattern into `&[cs1] p1 / ![cs1] p2`,
+where `cs1` is the first set of `p1`.
+In terms of instructions of the LPeg virtual machine,
+this is equivalent to a test instruction,
+which makes matching against this pattern more performant.
+We prove that this optimization is correct in Coq.
 
 ## Files
 

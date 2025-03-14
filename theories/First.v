@@ -553,14 +553,14 @@ Lemma first_choice :
   let p' := (PChoice (PSequence (PAnd (PSet cs1)) p1)
                      (PSequence (PNot (PSet cs1)) p2)) in
   verifygrammarpat g p true ->
-  matches g p s (Success s') ->
   s' = EmptyString \/ startswith s' follow ->
   first g p1 fullcharset false cs1 ->
   first g p2 follow b cs2 ->
   disjointcharsets cs1 cs2 ->
+  matches g p s (Success s') ->
   matches g p' s (Success s').
 Proof.
-  intros * Hvgp Hm Hsw Hf1 Hf2 Hdcs.
+  intros * Hvgp Hsw Hf1 Hf2 Hdcs Hm.
   assert (verifygrammarpat g p1 true)
   by eauto using verifygrammarpat_true_le, pat_le.
   assert (verifygrammarpat g p2 true)

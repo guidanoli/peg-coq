@@ -546,8 +546,8 @@ Proof.
       auto.
 Qed.
 
-(* p1 / p2 -> (&[cs1] p1 / ![cs1] p2) *)
-Lemma first_choice :
+(* on success, p1 / p2 -> (&[cs1] p1 / ![cs1] p2) *)
+Lemma first_choice_success :
   forall g p1 p2 cs1 cs2 follow b s s',
   let p := PChoice p1 p2 in
   let p' := (PChoice (PSequence (PAnd (PSet cs1)) p1)

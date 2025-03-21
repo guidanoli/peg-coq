@@ -605,6 +605,22 @@ Proof.
          eauto 9 using matches.
  Qed.
 
+(* on failure, p1 / p2 -> (&[cs1] p1 / ![cs1] p2) *)
+Lemma first_choice_failure :
+  forall g p1 p2 cs s,
+  let p := PChoice p1 p2 in
+  let p' := (PChoice (PSequence (PAnd (PSet cs)) p1)
+                     (PSequence (PNot (PSet cs)) p2)) in
+  matches g p s Failure ->
+  matches g p' s Failure.
+Proof.
+  intros * Hm.
+  inversion Hm; subst.
+  econstructor;
+  destruct s as [|a s']; eauto using matches;
+  destruct (cs a) eqn:?; eauto using matches.
+Qed.
+
 Fixpoint first_comp g p cs gas :=
   match gas with
   | O => None

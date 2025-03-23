@@ -91,10 +91,11 @@ Qed.
 
 Ltac pose_first_determinism :=
   match goal with
-    [ _: first ?g ?p ?cs ?b1 ?cs1,
-      _: first ?g ?p ?cs ?b2 ?cs2 |- _ ] =>
+    [ H1: first ?g ?p ?cs ?b1 ?cs1,
+      H2: first ?g ?p ?cs ?b2 ?cs2 |- _ ] =>
             assert (b1 = b2 /\ cs1 = cs2)
-            as [? ?] by eauto using first_determinism
+            as [? ?] by eauto using first_determinism;
+            clear H2
   end.
 
 Theorem first_complete :

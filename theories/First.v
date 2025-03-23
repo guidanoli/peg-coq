@@ -254,7 +254,8 @@ Ltac pose_first_b_independence :=
     [ _: first ?g ?p ?cs1 ?b1 ?cs1',
       _: first ?g ?p ?cs2 ?b2 ?cs2' |- _ ] =>
           assert (b1 = b2)
-          by eauto using first_b_independence
+          by eauto using first_b_independence;
+          subst b2
   end.
 
 Lemma first_unioncharset :

@@ -623,6 +623,63 @@ Proof.
   destruct (cs a) eqn:?; eauto using matches.
 Qed.
 
+Lemma first_non_nullable_false :
+  forall g p csfollow b csfirst,
+  nullable g p false ->
+  first g p csfollow b csfirst ->
+  b = false.
+Proof.
+  intros * Hn Hf.
+  induction Hf;
+  inversion Hn; subst;
+  repeat pose_nullable_determinism;
+  try destruct2sep;
+  try discriminate;
+  auto using andb_false_intro2, orb_false_intro.
+Qed.
+
+Lemma first_non_nullable_follow :
+  forall g p csfollow csfollow' b b' csfirst csfirst',
+  nullable g p false ->
+  first g p csfollow b csfirst ->
+  first g p csfollow' b' csfirst' ->
+  b = b' /\ csfirst = csfirst'.
+Proof.
+  intros * Hn Hf Hf'.
+  assert (b = b')
+  by eauto using first_b_independence.
+  subst b'.
+  split; trivial.
+  generalize dependent csfollow'.
+  generalize dependent csfirst'.
+  induction Hf; intros;
+  inversion Hf'; subst;
+  inversion Hn; subst;
+  repeat pose_nullable_determinism;
+  repeat pose_first_b_independence;
+  repeat destruct2sep;
+  try discriminate;
+  eauto.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    match goal with
+      [ Hn: nullable ?g ?p false,
+        Hf1: first ?g ?p _ ?b ?cs1,
+        Hf2: first ?g ?p _ ?b ?cs2 |- _ ] =>
+            assert (cs1 = cs2) by eauto;
+            subst cs2
+    end.
+    pose_first_determinism.
+    trivial.
+  - (* PChoice p1 p2 *)
+    repeat match goal with
+      [ _: first ?g ?p _ ?b ?cs1,
+        _: first ?g ?p _ ?b ?cs2 |- _ ] =>
+            assert (cs1 = cs2) by eauto;
+            subst cs2
+    end.
+    trivial.
+Qed.
+
 Fixpoint first_comp g p cs gas :=
   match gas with
   | O => None

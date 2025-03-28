@@ -46,9 +46,10 @@ Inductive first : grammar -> pat -> charset -> bool -> charset -> Prop :=
       first g p cs b cs' ->
       first g (PRepetition p) cs true (cs ∪ cs')
   | FNotNone :
-      forall g p cs,
+      forall g p cs b cs',
       tocharset p = None ->
-      first g (PNot p) cs true cs
+      first g p cs b cs' ->
+      first g (PNot p) cs (negb b) cs
   | FNotSome :
       forall g p cs cs',
       tocharset p = Some cs' ->
@@ -98,6 +99,71 @@ Ltac pose_first_determinism :=
             clear H2
   end.
 
+Lemma first_non_nullable_false :
+  forall g p csfollow b csfirst,
+  nullable g p false ->
+  first g p csfollow b csfirst ->
+  b = false.
+Proof.
+  intros * Hn Hf.
+  induction Hf;
+  inversion Hn; subst;
+  repeat pose_nullable_determinism;
+  try destruct2sep;
+  try discriminate;
+  auto using andb_false_intro2, orb_false_intro.
+Qed.
+
+Lemma first_b :
+  forall g p cs b cs',
+  verifygrammarpat g p true ->
+  first g p cs b cs' ->
+  matches g p EmptyString (if b then Success EmptyString else Failure).
+Proof.
+  intros * Hvgp Hf.
+  induction Hf;
+  eauto using matches.
+  - (* PSequence p1 p2, where p1 is non-nullable *)
+    assert (b = false)
+    by eauto using first_non_nullable_false.
+    subst b.
+    eauto using matches, pat_le, verifygrammarpat_true_le.
+  - (* PSequence p1 p2, where p1 is nullable *)
+    destruct b1;
+    destruct b2;
+    eauto 8 using matches, pat_le, verifygrammarpat_true_le.
+  - (* PChoice p1 p2 *)
+    destruct b1;
+    destruct b2;
+    simpl;
+    eauto 8 using matches, pat_le, verifygrammarpat_true_le.
+  - (* PRepetition p *)
+    assert (checkloops g (PRepetition p) false)
+    as Hcl by (inversion Hvgp; subst; auto).
+    assert (nullable g p false)
+    as Hn by (inversion Hcl; subst; auto).
+    assert (b = false)
+    by eauto using first_non_nullable_false.
+    subst b.
+    eauto using matches, pat_le, verifygrammarpat_true_le.
+  - (* PNot p, where tocharset p = None *)
+    destruct b;
+    eauto 8 using matches, pat_le, verifygrammarpat_true_le.
+  - (* PNot p, where tocharset p = Some cs' *)
+    destruct p; try discriminate.
+    eauto using matches.
+  - (* PAnd p *)
+    destruct b;
+    eauto 8 using matches, pat_le, verifygrammarpat_true_le.
+  - (* PNT i *)
+    assert (verifygrammar g true)
+    by (inversion Hvgp; subst; auto).
+    assert (verifygrammarpat g p true)
+    by eauto using nth_error_In, verifygrammarpat_true_In.
+    destruct b;
+    eauto 8 using matches, pat_le, verifygrammarpat_true_le.
+Qed.
+
 Theorem first_complete :
   forall g p cs,
   verifygrammarpat g p true ->
@@ -139,6 +205,8 @@ Proof.
     as [? [? ?]] by eauto.
     eauto using first.
   - (* PNot p *)
+    assert (exists b cs', first g p cs b cs')
+    as [? [? ?]] by eauto.
     destruct (tocharset p) eqn:?;
     eauto using first.
   - (* PAnd p *)
@@ -158,51 +226,8 @@ Lemma first_false :
   matches g p EmptyString Failure.
 Proof.
   intros * Hvgp Hf.
-  remember false as b in Hf.
-  induction Hf;
-  try match goal with
-    [ Hx: ?b1 && ?b2 = false |- _ ] =>
-        destruct b1;
-        destruct b2;
-        simpl in Hx
-  end;
-  try match goal with
-    [ Hx: ?b1 || ?b2 = false |- _ ] =>
-        destruct b1;
-        destruct b2;
-        simpl in Hx
-  end;
-  try match goal with
-    [ _: verifygrammarpat ?g (_ ?p) true |- _ ] =>
-      assert (verifygrammarpat g p true)
-      by eauto using pat_le, verifygrammarpat_true_le
-  end;
-  try match goal with
-    [ _: verifygrammarpat ?g (_ ?p1 ?p2) true |- _ ] =>
-      assert (verifygrammarpat g p1 true)
-      by eauto using pat_le, verifygrammarpat_true_le;
-      assert (verifygrammarpat g p2 true)
-      by eauto using pat_le, verifygrammarpat_true_le;
-      assert (exists res, matches g p1 EmptyString res)
-      as [[|?] ?] by eauto using verifygrammarpat_safe_match
-  end;
-  try match goal with
-    [ _: matches _ _ EmptyString (Success ?s) |- _ ] =>
-        let H := fresh "H" in (
-          assert (suffix s EmptyString)
-          as H by eauto using matches_suffix;
-          inversion H; subst
-        )
-  end;
-  try match goal with
-    [ Hvgp: verifygrammarpat ?g (PNT ?i) true,
-      _: nth_error ?g ?i = Some ?p |- _ ] =>
-          inversion Hvgp; subst;
-          assert (verifygrammarpat g p true)
-          by eauto using nth_error_In, verifygrammarpat_true_In
-  end;
-  try discriminate;
-  eauto using matches.
+  specialize (first_b _ _ _ _ _ Hvgp Hf).
+  auto.
 Qed.
 
 Lemma first_true :
@@ -236,6 +261,7 @@ Proof.
   generalize dependent cs2.
   induction H1; intros;
   inversion H2; subst;
+  try destruct1sep;
   try destruct2sep;
   try pose_nullable_determinism;
   try pose_first_determinism;
@@ -319,6 +345,7 @@ Proof.
     rewrite Haux.
     eauto using first.
   - (* PNot p, where tocharset p = None *)
+    specialize (IHfirst csextra) as [csextra' [Hs ?]].
     eauto using first, subcharseteq_refl.
   - (* PNot p, where tocharset p = Some cs' *)
     exists emptycharset.
@@ -623,21 +650,6 @@ Proof.
   destruct (cs a) eqn:?; eauto using matches.
 Qed.
 
-Lemma first_non_nullable_false :
-  forall g p csfollow b csfirst,
-  nullable g p false ->
-  first g p csfollow b csfirst ->
-  b = false.
-Proof.
-  intros * Hn Hf.
-  induction Hf;
-  inversion Hn; subst;
-  repeat pose_nullable_determinism;
-  try destruct2sep;
-  try discriminate;
-  auto using andb_false_intro2, orb_false_intro.
-Qed.
-
 Lemma first_non_nullable_follow :
   forall g p csfollow csfollow' b b' csfirst csfirst',
   nullable g p false ->
@@ -709,7 +721,10 @@ Fixpoint first_comp g p cs gas :=
                                  end
               | PNot p => match tocharset p with
                           | Some cs' => Some (true, complementcharset cs')
-                          | None => Some (true, cs)
+                          | None => match first_comp g p cs gas' with
+                                        | Some (b, _) => Some (negb b, cs)
+                                        | None => None
+                                        end
                           end
               | PAnd p => match first_comp g p fullcharset gas' with
                           | Some (b, cs') => Some (b, cs ∩ cs')
@@ -849,6 +864,10 @@ Proof.
     rewrite Hf.
     eauto.
   - (* PNot p *)
+    assert (gas >= pat_size p + d * (grammar_size g)) by lia.
+    assert (exists b' cs', first_comp g p cs gas = Some (b', cs'))
+    as [? [? Hf]] by eauto.
+    rewrite Hf.
     destruct (tocharset p);
     eauto.
   - (* PAnd p *)

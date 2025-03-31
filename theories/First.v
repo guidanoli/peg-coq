@@ -787,6 +787,29 @@ Proof.
   eauto using first_comp_S_gas.
 Qed.
 
+Lemma first_comp_coherent :
+  forall g p csfollow gas gas' res res',
+  first_comp g p csfollow gas = Some res ->
+  first_comp g p csfollow gas' = Some res' ->
+  res = res'.
+Proof.
+  intros * H1 H2.
+  destruct (Compare_dec.le_ge_dec gas gas') as [Hle|Hge].
+  + (* gas <= gas' *)
+    assert (first_comp g p csfollow gas' = Some res)
+    as H2' by (destruct res; destruct res'; eauto using first_comp_le_gas).
+    rewrite H2' in H2.
+    destruct1.
+    auto.
+  + (* gas >= gas' *)
+    unfold ge in Hge.
+    assert (first_comp g p csfollow gas = Some res')
+    as H1' by (destruct res; destruct res'; eauto using first_comp_le_gas).
+    rewrite H1' in H1.
+    destruct1.
+    auto.
+Qed.
+
 Lemma first_comp_gas_bounded_by_depth :
   forall g p nb d b k cs gas,
   lcoherent g g true ->

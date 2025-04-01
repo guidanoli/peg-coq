@@ -472,10 +472,8 @@ Proof.
     end.
     match goal with
       [ Hx: first g p ?csfollow ?b ?csfirst |- _ ] =>
-          let cstmp := fresh "cs" in (
-            eapply first_feedback in Hx as ?;
-            assert (s = EmptyString \/ startswith s csfirst) by eauto
-          )
+          eapply first_feedback in Hx as ?;
+          assert (s = EmptyString \/ startswith s csfirst) by eauto
     end.
     match goal with
       [ Hx: ?s = EmptyString \/ startswith ?s ?cs2

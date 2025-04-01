@@ -147,6 +147,68 @@ Proof.
   eauto using suffix, suffix_trans.
 Qed.
 
+(** If-then-else pattern **)
+
+Ltac assert_matches g p s res :=
+  assert (matches g p s res) by eauto using matches.
+
+Ltac invert_matches p :=
+  match goal with
+    [ Hx: matches _ p _ _ |- _ ] =>
+        inversion Hx; subst
+  end.
+
+Lemma matches_if_then_else :
+  forall g pcond p1 p2 s rescond res,
+  matches g pcond s rescond ->
+  matches g (PChoice (PSequence (PAnd pcond) p1) (PSequence (PNot pcond) p2)) s res <->
+  matches g (match rescond with Success _ => p1 | Failure => p2 end) s res.
+Proof.
+  intros * Hcond.
+  split; intro H.
+  - (* -> *)
+    destruct rescond.
+    + (* pcond fails *)
+      assert_matches g (PAnd pcond) s Failure.
+      assert_matches g (PSequence (PAnd pcond) p1) s Failure.
+      assert_matches g (PNot pcond) s (Success s).
+      inversion H; subst;
+      try (pose_matches_determinism; discriminate).
+      invert_matches (PSequence (PNot pcond) p2);
+      pose_matches_determinism;
+      try discriminate;
+      destruct1.
+      auto.
+    + (* pcond matches *)
+      assert_matches g (PNot pcond) s Failure.
+      assert_matches g (PSequence (PNot pcond) p2) s Failure.
+      assert_matches g (PAnd pcond) s (Success s).
+      inversion H; subst.
+      -- (* &pcond p1 matches *)
+         invert_matches (PSequence (PAnd pcond) p1).
+         pose_matches_determinism.
+         destruct1.
+         auto.
+      -- (* &pcond p1 fails *)
+         invert_matches (PSequence (PAnd pcond) p1).
+         ++ (* p1 fails *)
+            pose_matches_determinism.
+            destruct1.
+            pose_matches_determinism.
+            subst.
+            auto.
+         ++ (* &pcond fails *)
+            pose_matches_determinism.
+            discriminate.
+  - (* <- *)
+    destruct rescond.
+    + (* pcond fails *)
+      eauto 6 using matches.
+    + (* pcond matches *)
+      destruct res;
+      eauto 6 using matches.
+Qed.
+
 (** Match function with gas **)
 
 Fixpoint matches_comp g p s gas {struct gas} :=

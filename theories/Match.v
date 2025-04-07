@@ -131,6 +131,20 @@ Proof.
   auto.
 Qed.
 
+Example infinite_loop_rule :
+  forall g i s,
+  nth_error g i = Some (PNT i) ->
+  ~ (exists res, matches g (PNT i) s res).
+Proof.
+  intros * H1 [res H2].
+  remember (PNT i).
+  induction H2;
+  try destruct1;
+  try destruct2sep;
+  try discriminate;
+  auto.
+Qed.
+
 (** Match suffix theorem **)
 
 Theorem matches_suffix :

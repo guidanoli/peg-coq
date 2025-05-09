@@ -266,6 +266,35 @@ Proof.
 Qed.
 
 
+Ltac breakH :=
+    match goal with
+    |[H1 : forall _, verifyrule _ ?p ?lr ?br _ -> _,
+      H2 : verifyrule _ ?p ?lr ?br _ |- _
+     ] => apply H1 in H2;
+            try (injection H2; intros; subst); try discriminate
+    end.
+
+Ltac nthnth :=
+  match goal with
+  |[Hn: nth_error ?lr ?i = Some _,
+    Hq: nth ?i ?lr Visiting = _ |- _] =>
+       eapply nth_error_nth with (d := Visiting) in Hn;
+       try congruence
+  end.
+
+Lemma verifyrule_unique : forall g p lr nb res res',
+    verifyrule g p lr nb res ->
+    verifyrule g p lr nb res' ->
+    res = res'.
+Proof.
+  intros * H1.
+  generalize dependent res'.
+  induction H1; intros * H2;
+    try (inversion H2; subst; trivial; repeat f_equal;
+         repeat breakH; trivial; try nthnth; try congruence).
+Qed.
+
+
 Fixpoint verifyrule_comp gas
     (g : grammar) (p : pat) (lr : list RuleStatus) (nb : bool) :
       option (option (bool * list RuleStatus)) :=
@@ -306,6 +335,50 @@ Fixpoint verifyrule_comp gas
       end
     end
   end.
+
+
+Lemma nth_nth_error : forall {A : Type} n map (x y : A),
+   nth n map x = y -> x <> y -> nth_error map n = Some y.
+Proof.
+  intros * Hn Hneq.
+  destruct (nth_error map n) eqn:?.
+  - eapply nth_error_nth with (d := x) in Heqo.
+    congruence.
+  - exfalso.
+    apply nth_error_None in Heqo.
+    apply nth_overflow with (d := x) in Heqo.
+    congruence.
+Qed.
+
+
+Lemma verifyrule_comp1 : forall gas g p lr nb nb' lr',
+  verifyrule_comp gas g p lr nb = Some (Some (nb', lr')) ->
+  verifyrule g p lr nb (Some (nb', lr')).
+Proof.
+  induction gas; intros * H; try discriminate.
+  destruct p; simpl in H;
+    try (injection H; intros; subst); eauto using verifyrule.
+  - destruct (verifyrule_comp gas g p1 lr false) as [[[? ?] | ] | ] eqn:Heq;
+       try discriminate.
+    destruct b.
+    + eauto using verifyrule.
+    + injection H; intros; subst. eauto using verifyrule.
+  - destruct (verifyrule_comp gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq;
+       try discriminate.
+     eauto using verifyrule.
+  - destruct (nth n lr Visiting) eqn:?; try discriminate.
+    + destruct (verifyrule_comp gas g (nth n g PEmpty)
+                           (update lr n Visiting) false) 
+         as [[[? ?] | ] | ] eqn:?;
+         try discriminate.
+      injection H; intros; subst; clear H.
+      econstructor; eauto.
+      eapply  nth_nth_error; eauto. discriminate.
+    + injection H; intros; subst; clear H.
+        apply VRNTVisited.
+        eapply  nth_nth_error; eauto.
+        discriminate.
+Qed.
 
  
 

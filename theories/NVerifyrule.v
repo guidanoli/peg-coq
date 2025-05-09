@@ -20,16 +20,6 @@ Proof.
 Qed.
 
 
-Lemma nth_update: forall {T} (l : list T) idx val,
-  idx < length l -> nth_error (update l idx val) idx = Some val.
-Proof.
-  induction l; intros * H.
-  - simpl in H. exfalso. eapply Nat.nlt_0_r. eauto.
-  - simpl. destruct idx; trivial.
-    simpl in *. apply IHl. lia.
-Qed.
-
-
 Inductive RuleStatus : Type :=
 | NotVisited
 | Visiting
@@ -89,19 +79,19 @@ Inductive verifyrule :
       verifyrule g (PNT i) lr nb None
   | VRNTNotvisitedSome :
       forall g i p lr nb nb' lr',
-      nth_error lr i = Some NotVisited ->
+      nth i lr Visiting = NotVisited ->
       nth i g PEmpty = p ->
       verifyrule g p (update lr i Visiting) false (Some (nb', lr')) ->
       verifyrule g (PNT i) lr nb (Some (orb nb nb', update lr i (Visited nb')))
   | VRNTNotvisitedNone :
       forall g i p lr nb,
-      nth_error lr i = Some NotVisited ->
+      nth i lr Visiting = NotVisited ->
       nth i g PEmpty = p ->
       verifyrule g p (update lr i Visiting) false None ->
       verifyrule g (PNT i) lr nb None
   | VRNTVisited :
       forall g i lr nb nb',
-      nth_error lr i = Some (Visited nb') ->
+      nth i lr Visiting = Visited nb' ->
       verifyrule g (PNT i) lr nb (Some (orb nb nb', lr))
 .
 
@@ -124,13 +114,13 @@ Proof.
 Qed.
 
 Lemma updateVisiting: forall lr n,
-  nth_error lr n = Some NotVisited ->
+  nth n lr Visiting = NotVisited ->
   count_notvisited (update lr n Visiting) < count_notvisited lr.
 Proof.
   induction lr; intros *.
   - destruct n; simpl; discriminate.
   - destruct n; simpl.
-    + intros H; injection H as Ha; subst; lia.
+    + intros H; subst; lia.
     + intros H. specialize (IHlr _ H).
       destruct a; lia.
 Qed.
@@ -250,19 +240,14 @@ Proof.
       specialize (IHp2 lr' nb' HC1) as [res2  HV2].
       eexists; eauto using verifyrule.
     + (* Non Terminal *)
-      destruct (nth_error lr n) eqn:Hne.
-      * destruct r;
-          try (eexists; eauto using verifyrule, nth_error_nth; fail).
-       (* VRNTNotvisitedSome/VRNTNotvisitedNone *)
+      destruct (nth n lr Visiting) eqn:Hne;
+         try (eexists; eauto using verifyrule; fail).
        specialize (updateVisiting _ _ Hne) as ?.
        assert (count_notvisited (update lr n Visiting) < N) as HN
          by lia.
-       specialize (IHN g (nth n g PEmpty)
-                       (update lr n Visiting) false HN) as [res Hr].
-       destruct res as [[nb' lr'] | ];
-         eexists; eauto using verifyrule. 
-      * eexists None. apply nth_error_None in Hne.
-        eauto using VRNTVisiting, nth_overflow.
+      specialize (IHN g (nth n g PEmpty) (update lr n Visiting) false HN)
+          as [res ?].
+      destruct res as [[? ?] | ]; eexists; eauto using verifyrule.
 Qed.
 
 
@@ -274,13 +259,6 @@ Ltac breakH :=
             try (injection H2; intros; subst); try discriminate
     end.
 
-Ltac nthnth :=
-  match goal with
-  |[Hn: nth_error ?lr ?i = Some _,
-    Hq: nth ?i ?lr Visiting = _ |- _] =>
-       eapply nth_error_nth with (d := Visiting) in Hn;
-       try congruence
-  end.
 
 Lemma verifyrule_unique : forall g p lr nb res res',
     verifyrule g p lr nb res ->
@@ -291,7 +269,7 @@ Proof.
   generalize dependent res'.
   induction H1; intros * H2;
     try (inversion H2; subst; trivial; repeat f_equal;
-         repeat breakH; trivial; try nthnth; try congruence).
+         repeat breakH; trivial; try congruence).
 Qed.
 
 
@@ -337,20 +315,6 @@ Fixpoint verifyrule_comp gas
   end.
 
 
-Lemma nth_nth_error : forall {A : Type} n map (x y : A),
-   nth n map x = y -> x <> y -> nth_error map n = Some y.
-Proof.
-  intros * Hn Hneq.
-  destruct (nth_error map n) eqn:?.
-  - eapply nth_error_nth with (d := x) in Heqo.
-    congruence.
-  - exfalso.
-    apply nth_error_None in Heqo.
-    apply nth_overflow with (d := x) in Heqo.
-    congruence.
-Qed.
-
-
 Lemma verifyrule_comp1 : forall gas g p lr nb nb' lr',
   verifyrule_comp gas g p lr nb = Some (Some (nb', lr')) ->
   verifyrule g p lr nb (Some (nb', lr')).
@@ -373,11 +337,9 @@ Proof.
          try discriminate.
       injection H; intros; subst; clear H.
       econstructor; eauto.
-      eapply  nth_nth_error; eauto. discriminate.
     + injection H; intros; subst; clear H.
         apply VRNTVisited.
-        eapply  nth_nth_error; eauto.
-        discriminate.
+        eauto.
 Qed.
 
  

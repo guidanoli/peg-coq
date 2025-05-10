@@ -315,32 +315,35 @@ Fixpoint verifyrule_comp gas
   end.
 
 
-Lemma verifyrule_comp1 : forall gas g p lr nb nb' lr',
-  verifyrule_comp gas g p lr nb = Some (Some (nb', lr')) ->
-  verifyrule g p lr nb (Some (nb', lr')).
-Proof.
+Ltac simplsome :=
+  repeat match goal with
+  | [H: Some ?x = Some ?x |- _] => clear H
+  | [H: Some _ = Some _ |- _] => injection H; intros; subst; clear H
+  end; try discriminate.
+
+
+Lemma verifyrule_comp_sound : forall gas g p lr nb res,
+  verifyrule_comp gas g p lr nb = Some res ->
+  verifyrule g p lr nb res.
+Proof with eauto using verifyrule.
   induction gas; intros * H; try discriminate.
   destruct p; simpl in H;
-    try (injection H; intros; subst); eauto using verifyrule.
+    try (injection H; intros; subst);
+      try discriminate...
   - destruct (verifyrule_comp gas g p1 lr false) as [[[? ?] | ] | ] eqn:Heq;
-       try discriminate.
-    destruct b.
-    + eauto using verifyrule.
-    + injection H; intros; subst. eauto using verifyrule.
+      try discriminate; simplsome...
+    destruct b; simplsome...
   - destruct (verifyrule_comp gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq;
-       try discriminate.
-     eauto using verifyrule.
-  - destruct (nth n lr Visiting) eqn:?; try discriminate.
-    + destruct (verifyrule_comp gas g (nth n g PEmpty)
-                           (update lr n Visiting) false) 
-         as [[[? ?] | ] | ] eqn:?;
-         try discriminate.
-      injection H; intros; subst; clear H.
-      econstructor; eauto.
-    + injection H; intros; subst; clear H.
-        apply VRNTVisited.
-        eauto.
+      simplsome...
+  - destruct (nth n lr Visiting) eqn:?; simplsome...
+    destruct (verifyrule_comp gas g (nth n g PEmpty)
+        (update lr n Visiting) false) as [[[? ?] | ] | ] eqn:Heq; simplsome...
 Qed.
+
+
+Lemma verifyrule_comp_gas_exists : forall g p lr nb res,
+  verifyrule g p lr nb res ->
+  exists gas, verifyrule_comp gas g p lr nb = Some res.
 
  
 

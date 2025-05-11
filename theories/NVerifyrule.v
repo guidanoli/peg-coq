@@ -341,11 +341,55 @@ Proof with eauto using verifyrule.
 Qed.
 
 
-Lemma verifyrule_comp_gas_exists : forall g p lr nb res,
-  verifyrule g p lr nb res ->
-  exists gas, verifyrule_comp gas g p lr nb = Some res.
+Ltac breakEx :=
+  repeat match goal with
+  [H: exists _, _ |- _] => destruct H as [? ?]
+  end.
 
- 
+Lemma verifyrule_comp_gas_exists : forall g p lr nb res,
+    verifyrule g p lr nb res ->
+    exists gas,
+      forall gas', gas < gas' -> verifyrule_comp gas' g p lr nb = Some res.
+Proof.
+  induction 1; intros *;
+    try (exists 0; destruct gas'; try lia; trivial; fail);
+    try (breakEx; exists (S x); intros * Hlt;
+    destruct gas'; try lia; simpl;
+    apply H0; lia; fail).
+  - breakEx. exists (S x). intros * Hlt.
+    destruct gas'. try lia. simpl.
+    rewrite H0; trivial; lia.
+  - breakEx. exists (S (x + x0)).
+    destruct gas'; try lia. simpl.
+    intros Hlt. rewrite H2; try lia; rewrite H1; trivial; lia.
+  - breakEx. exists (S x).
+    intros * Htl.
+    destruct gas'; try lia. simpl.
+    rewrite H0; trivial; try lia.
+  - breakEx. exists (S x).
+    destruct gas'; try lia; simpl.
+    intros ?. rewrite H0; trivial; try lia.
+  - breakEx. exists (S (x + x0)).
+    destruct gas'; try lia; simpl.
+    intros ?. rewrite H2; try lia.
+    apply H1; lia.
+  - exists 1. intros gas' Hlt.
+    destruct gas'; try lia; simpl.
+    rewrite H; trivial.
+  - breakEx. exists (S x). intros gas' Hlt.
+    destruct gas'; try lia; simpl.
+    rewrite H. subst.
+    rewrite H2; trivial; lia.
+  - breakEx. exists (S x). subst.
+    intros gas' Hlt.
+    destruct gas'; try lia; simpl.
+    rewrite H.
+    rewrite H2; trivial; try lia.
+  - exists 1; intros gas' Hlt.
+    destruct gas'; try lia; simpl.
+    rewrite H. trivial.
+Qed.
+
 
 Definition not_nullable g p := forall s, ~matches g p s (Success s).
 

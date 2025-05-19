@@ -9,6 +9,13 @@ From Coq Require Import Classes.EquivDec.
 Require Extraction.
 
 
+Ltac simplsome :=
+  repeat match goal with
+  | [H: Some ?x = Some ?x |- _] => clear H
+  | [H: Some _ = Some _ |- _] => injection H; intros; subst; clear H
+  end; try discriminate.
+
+
 Fixpoint update {T} (l : list T) (idx : nat) (newval : T) : list T :=
   match idx,  l with
   | _, nil => nil
@@ -34,11 +41,24 @@ Proof.
 Qed.
 
 
+Lemma update_eq_err : forall {T} (l : list T) i a b,
+    nth_error (update l i a) i = Some b -> a = b.
+Proof.
+  intros * H.
+  assert (i < length l).
+  { replace (length l) with (length (update l i a)); try apply update_len.
+    apply nth_error_Some. intuition congruence. }
+  apply nth_error_nth with (d := a) in H.
+  apply update_eq with (a := a) (b := a) in H0.
+  congruence.
+Qed.
+
+
 Lemma update_eq2 : forall {T} (l : list T) i a b,
   nth i (update l i a) b = a \/ nth i (update l i a) b = b.
 Proof.
   intros *.
-  specialize (le_lt_dec (length l) i) as [? | ?].
+  destruct (le_lt_dec (length l) i).
   - right. apply nth_overflow. rewrite update_len. trivial.
   - left. auto using update_eq.
 Qed.
@@ -52,6 +72,38 @@ Proof.
   - simpl. destruct i; destruct n; trivial.
     + exfalso. apply Hne. trivial.
     + simpl. apply IHl. lia.
+Qed.
+
+
+Lemma update_neq_err : forall {T} (l : list T) i n a b,
+    i <> n ->
+    nth_error (update l n a) i = Some b ->
+    nth_error l i = Some b.
+Proof.
+  intros * Hlt Heq.
+  destruct (nth_error l i) eqn:?.
+  - apply nth_error_nth with (d := b) in Heq.
+    apply nth_error_nth with (d := b) in Heqo.
+    rewrite update_neq in Heq; trivial.
+    congruence.
+  - exfalso.
+    apply nth_error_None in Heqo.
+    replace (length l) with (length (update l n a)) in Heqo
+         by eauto using update_len.
+    apply nth_error_None in Heqo.
+    congruence. 
+Qed.
+
+
+Lemma nth_nth_error: forall {T} n (l : list T) def res,
+    nth n l def = res ->
+    def <> res ->
+    nth_error l n = Some res.
+Proof.
+  intros * Hnt Hneq.
+  destruct (le_lt_dec (length l) n).
+  - exfalso. eapply nth_overflow with (d := def) in l0. congruence.
+  - rewrite nth_error_nth' with (d := def); auto; congruence.
 Qed.
 
 
@@ -209,10 +261,10 @@ Qed.
 
 
 Lemma nb_true : forall g p lr nb lr',
-    verifyrule g p lr true (Some (nb, lr')) -> true = nb.
+    verifyrule g p lr true (Some (nb, lr')) -> nb = true.
 Proof.
   induction p; intros * HV; inversion HV; subst; trivial; eauto.
-  replace nb' with true in * by eauto.
+  replace nb' with true in * by (symmetry; eauto).
   eauto.
 Qed.
 
@@ -223,43 +275,31 @@ Ltac simplOrb :=
     repeat rewrite Bool.orb_true_l;
     repeat rewrite Bool.orb_false_l.
 
-Lemma nb_false : forall g p lr nb nb' lr',
+Lemma nb_false : forall g p lr nb lr',
+    verifyrule g p lr false (Some (nb, lr')) ->
+    verifyrule g p lr true (Some (true, lr')).
+Proof.
+  intros * H.
+  remember false as nbF.
+  remember (Some (nb, lr')) as res.
+  generalize dependent nb.
+  generalize dependent lr'.
+  induction H; intros * Heq; subst; simplsome;
+    try (destruct nb');
+    try (replace nb0 with true in * by (symmetry; eauto using nb_true));
+    eauto using verifyrule.
+  - apply VRNTNotvisitedSome with (nb := true) in H1; trivial.
+  - eapply VRNTVisited with (nb := true) in H.
+    rewrite Bool.orb_true_l in H. eauto.
+Qed.
+
+
+Lemma nb_nb : forall g p lr nb nb' lr',
     verifyrule g p lr false (Some (nb', lr')) ->
-    verifyrule g p lr nb (Some (orb nb nb', lr')).
+    verifyrule g p lr nb (Some (orb nb' nb, lr')).
 Proof.
-  induction p; intros * HV; inversion HV; subst; simpl;
-  simplOrb;
-  eauto using verifyrule.
-  - rewrite Bool.orb_comm. simpl.
-    eapply VRChoiceSome.
-    + clear IHp2.
-      eapply IHp1. eauto.
-    + clear IHp1 H2.
-      destruct nb.
-      * simpl.
-Abort.
-
-
-Lemma nb_false : forall g p lr nb nb' lr',
-    verifyrule g p lr nb (Some (nb', lr')) ->
-    exists nb'', nb' = orb nb nb'' /\
-      verifyrule g p lr false (Some (nb'', lr')).
-Proof.
-  induction p; intros * HV; destruct nb; inversion HV; subst;
-    simpl; try (eexists; try exact true; split;
-    eauto using verifyrule, nb_true, eq_sym; fail).
-    - replace nb' with true in * by eauto using nb_true.
-      specialize (IHp2 _ _ _ _ H6) as [? [? ?]].
-      eexists; split; eauto using verifyrule.
-    - replace nb' with true in * by eauto using nb_true.
-      specialize (IHp1 _ _ _ _ H2) as [? [? ?]].
-      specialize (IHp2 _ _ _ _ H6) as [? [? ?]].
-      eexists; split; eauto using verifyrule.
-      eapply VRChoiceSome.
-      + eauto.
-      + eauto.
-
-Abort.
+  intros * H. destruct nb; simplOrb; eauto using nb_false.
+Qed.
 
 
 Lemma VRcomplete : forall N g p lr nb,
@@ -386,13 +426,6 @@ Fixpoint verifyrule_comp gas
       end
     end
   end.
-
-
-Ltac simplsome :=
-  repeat match goal with
-  | [H: Some ?x = Some ?x |- _] => clear H
-  | [H: Some _ = Some _ |- _] => injection H; intros; subst; clear H
-  end; try discriminate.
 
 
 Ltac destVR :=
@@ -639,8 +672,7 @@ Lemma VRVR : forall g p lr nb res,
   verifyrule g p lr nb res.
 Proof.
   intros *; split; intro H.
-  - Search (_ -> verifyrule _ _ _ _ _ ).
-    eauto using verifyrule_comp_sound.
+  - eauto using verifyrule_comp_sound.
   - 
     assert (H1 : costG g lr + costP p <= S (costG g lr + costP p)) by lia.
     specialize (VR_comp (S (costG g lr + costP p)) g p lr nb H1) as H2.
@@ -654,16 +686,140 @@ Qed.
 Definition not_nullable g p := forall s, ~matches g p s (Success s).
 
 
+Lemma match_len : forall g p,
+  forall s s', matches g p s (Success s') -> String.length s' <= String.length s.
+Proof.
+  intros * Hm. eauto using Suffix.suffix_length_le, matches_suffix. Qed.
+
+
+Lemma notnull_len : forall g p,
+  not_nullable g p <->
+  forall s s', matches g p s (Success s') -> String.length s' < String.length s.
+Proof.
+  intros *; split; intros H.
+  - intros * Hm.
+    specialize (matches_suffix _ _ _ _  Hm) as HL.
+    specialize (Suffix.suffix_length_le _ _ HL) as HS.
+    apply Lt.le_lt_or_eq_stt in HS.
+    destruct HS; trivial.
+    exfalso.
+    replace s with s' in * by eauto using Suffix.suffix_length_eq.
+    eapply H. eauto.
+  - intros s HM.
+    apply H in HM. lia.
+Qed.
+
+
 Definition stateCorrect g lr :=
   forall n, nth_error lr n = Some (Visited false) ->
-            not_nullable g (nth n g PEmpty).
+            not_nullable g (PNT n).
 
 
-Lemma nullableVR: forall N g p lr lr',
-  count_notvisited lr < N ->
-  verifyrule g p lr false (Some (false, lr')) ->
-  stateCorrect g lr ->
-  not_nullable g p.
+Lemma stcorrupdate : forall g lr i,
+    stateCorrect g lr -> stateCorrect g (update lr i Visiting).
 Proof.
+  unfold stateCorrect.
+  intros * H n Hn.
+  destruct (Nat.eq_dec n i); subst; apply H.
+  - apply update_eq_err in Hn. discriminate.
+  - eauto using  update_neq_err.
+Qed.
+
+
+Lemma not_null_set : forall g set, not_nullable g (PSet set).
+Proof.
+  intros *.
+  apply notnull_len.
+  inversion 1; subst. simpl. lia.
+Qed.
+
+
+Lemma not_null_seq1 : forall g p1 p2,
+  not_nullable g p1 -> not_nullable g (PSequence p1 p2).
+Proof.
+  intros * H.
+  inversion 1; subst.
+  apply match_len in H7; eauto.
+  apply notnull_len in H4; eauto.
+  lia.
+Qed.
+
+
+Lemma not_null_seq2 : forall g p1 p2,
+  not_nullable g p2 -> not_nullable g (PSequence p1 p2).
+Proof.
+  intros * H.
+  inversion 1; subst.
+  apply match_len in H4; eauto.
+  apply notnull_len in H7; eauto.
+  lia.
+Qed.
+
+
+Lemma not_null_choice : forall g p1 p2,
+  not_nullable g p1 ->
+  not_nullable g p2 ->
+  not_nullable g (PChoice p1 p2).
+Proof.
+  intros * H1 H2.
+  inversion 1; subst.
+  - apply H1 in H6. trivial.
+  - apply H2 in H8. trivial.
+Qed.
+
+
+Ltac ff :=
+  repeat match goal with
+  [H: false = false -> _ |- _] => specialize (H eq_refl)
+  end.
+
+Ltac appHI :=
+match goal with
+    [IH: stateCorrect ?g ?lr -> _,
+     H: stateCorrect ?g ?lr |- _] =>
+          eapply IH in H; eauto;
+          destruct H as [[? | ?] ?]; clear IH
+    end.
+
+Lemma nullableVR: forall g p nb nb' lr lr',
+  verifyrule g p lr nb (Some (nb', lr')) ->
+  stateCorrect g lr ->
+  (nb' = true \/ not_nullable g p) /\ stateCorrect g lr'.
+Proof.
+  intros * HV HSC.
+  remember (Some (nb', lr')) as res.
+  generalize dependent nb'.
+  generalize dependent lr'.
+  induction HV; intros * HS; subst; simplsome; ff;
+    repeat appHI; subst; try discriminate;
+    intuition (eauto using not_null_set, not_null_seq2, not_null_seq1,
+      nb_true, not_null_choice).
+  - apply stcorrupdate with (i := i) in HSC.
+    appHI; subst.
+    + left. simpl. simplOrb. trivial.
+    + right. unfold not_nullable in *.
+      intros s Hm. inversion Hm; subst; clear Hm.
+      eapply nth_error_nth in H3.
+      rewrite H3 in H0.
+      eapply H0. eauto.
+  - apply stcorrupdate with (i := i) in HSC.
+    appHI; subst.
+    * unfold stateCorrect in *; intros n H2.
+      destruct (Nat.eq_dec n i); subst.
+      + apply update_eq_err in H2. discriminate.
+      + eauto using update_neq_err.
+    * unfold stateCorrect in *; intros n H2.
+      destruct (Nat.eq_dec n i); subst.
+      + apply update_eq_err in H2. injection H2; intros; subst; clear H2.
+        unfold not_nullable in *; intros s HM.
+        inversion HM; subst. eapply H0.
+        erewrite nth_error_nth; eauto.
+      + apply H1; clear H1.
+        eauto using update_neq_err.
+  - destruct nb'.
+      + left. simplOrb. trivial.
+      + right. apply HSC.
+        eapply nth_nth_error; eauto. congruence.
+Qed.
 
 

@@ -711,7 +711,7 @@ Qed.
 
 
 Definition stateCorrect g lr :=
-  forall n, nth_error lr n = Some (Visited false) ->
+  forall n, nth n lr NotVisited = Visited false ->
             not_nullable g (PNT n).
 
 
@@ -721,8 +721,8 @@ Proof.
   unfold stateCorrect.
   intros * H n Hn.
   destruct (Nat.eq_dec n i); subst; apply H.
-  - apply update_eq_err in Hn. discriminate.
-  - eauto using  update_neq_err.
+  - destruct (update_eq2 lr i Visiting NotVisited); congruence.
+  - rewrite update_neq in Hn; trivial.
 Qed.
 
 
@@ -806,20 +806,25 @@ Proof.
     appHI; subst.
     * unfold stateCorrect in *; intros n H2.
       destruct (Nat.eq_dec n i); subst.
-      + apply update_eq_err in H2. discriminate.
-      + eauto using update_neq_err.
+      + destruct (update_eq2 lr' i (Visited true) NotVisited); congruence.
+      + eapply H1.
+        rewrite update_neq in H2; auto.
     * unfold stateCorrect in *; intros n H2.
       destruct (Nat.eq_dec n i); subst.
-      + apply update_eq_err in H2. injection H2; intros; subst; clear H2.
+      + destruct (update_eq2 lr' i (Visited nb') NotVisited);
+          try congruence.
+        replace nb' with false in * by congruence.
         unfold not_nullable in *; intros s HM.
         inversion HM; subst. eapply H0.
         erewrite nth_error_nth; eauto.
       + apply H1; clear H1.
-        eauto using update_neq_err.
+        rewrite update_neq in H2; auto.
   - destruct nb'.
       + left. simplOrb. trivial.
       + right. apply HSC.
-        eapply nth_nth_error; eauto. congruence.
+        rewrite nth_indep with (d' := Visiting); trivial.
+        destruct (le_lt_dec (length lr') i); trivial.
+        rewrite nth_overflow in H; trivial; discriminate.
 Qed.
 
 

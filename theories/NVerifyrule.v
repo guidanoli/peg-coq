@@ -16,6 +16,19 @@ Ltac simplsome :=
   end; try discriminate.
 
 
+Lemma nth_ndef: forall {T} (l: list T) n a def def',
+    nth n l def = a ->
+    a <> def ->
+    nth n l def' = a.
+Proof.
+  intros * Heq Hneq.
+  erewrite nth_indep; eauto.
+  destruct (le_lt_dec (length l) n); trivial.
+  eapply nth_overflow with (d := def) in l0.
+  congruence.
+Qed.
+
+
 Fixpoint update {T} (l : list T) (idx : nat) (newval : T) : list T :=
   match idx,  l with
   | _, nil => nil
@@ -41,19 +54,6 @@ Proof.
 Qed.
 
 
-Lemma update_eq_err : forall {T} (l : list T) i a b,
-    nth_error (update l i a) i = Some b -> a = b.
-Proof.
-  intros * H.
-  assert (i < length l).
-  { replace (length l) with (length (update l i a)); try apply update_len.
-    apply nth_error_Some. intuition congruence. }
-  apply nth_error_nth with (d := a) in H.
-  apply update_eq with (a := a) (b := a) in H0.
-  congruence.
-Qed.
-
-
 Lemma update_eq2 : forall {T} (l : list T) i a b,
   nth i (update l i a) b = a \/ nth i (update l i a) b = b.
 Proof.
@@ -72,26 +72,6 @@ Proof.
   - simpl. destruct i; destruct n; trivial.
     + exfalso. apply Hne. trivial.
     + simpl. apply IHl. lia.
-Qed.
-
-
-Lemma update_neq_err : forall {T} (l : list T) i n a b,
-    i <> n ->
-    nth_error (update l n a) i = Some b ->
-    nth_error l i = Some b.
-Proof.
-  intros * Hlt Heq.
-  destruct (nth_error l i) eqn:?.
-  - apply nth_error_nth with (d := b) in Heq.
-    apply nth_error_nth with (d := b) in Heqo.
-    rewrite update_neq in Heq; trivial.
-    congruence.
-  - exfalso.
-    apply nth_error_None in Heqo.
-    replace (length l) with (length (update l n a)) in Heqo
-         by eauto using update_len.
-    apply nth_error_None in Heqo.
-    congruence. 
 Qed.
 
 
@@ -353,7 +333,7 @@ Definition WF (g : grammar) : Result.
   destruct Hlt as [? ?].
   exact x.
 Defined.
- 
+
 Definition A : (Ascii.ascii -> bool) := fun c => false.
 
 Goal WF [PNT 0] = None. reflexivity. Qed.
@@ -537,7 +517,7 @@ Fixpoint costG g lr : nat :=
 
 
 Lemma CostUpdateVIsitingP : forall lr g n,
-    nth n lr Visiting = NotVisited -> 
+    nth n lr Visiting = NotVisited ->
     costP (nth n g PEmpty) + costG g (update lr n Visiting) <= costG g lr.
 Proof.
   induction lr; intros * Hn.
@@ -673,8 +653,7 @@ Lemma VRVR : forall g p lr nb res,
 Proof.
   intros *; split; intro H.
   - eauto using verifyrule_comp_sound.
-  - 
-    assert (H1 : costG g lr + costP p <= S (costG g lr + costP p)) by lia.
+  - assert (H1 : costG g lr + costP p <= S (costG g lr + costP p)) by lia.
     specialize (VR_comp (S (costG g lr + costP p)) g p lr nb H1) as H2.
     destruct (verifyrule_comp (S (costG g lr + costP p)) g p lr nb) eqn:?.
     + apply verifyrule_comp_sound in Heqo.
@@ -781,6 +760,31 @@ match goal with
           destruct H as [[? | ?] ?]; clear IH
     end.
 
+(* 'verifyrule' only "increases" rules status: It can only change
+   rules not-yet visited. *)
+Lemma vrinc: forall g p nb nb' lr lr' n stat,
+  verifyrule g p lr nb (Some (nb', lr')) ->
+  nth n lr NotVisited = stat ->
+  stat <> NotVisited ->
+  nth n lr' NotVisited = stat.
+Proof.
+  intros * HVR.
+  remember (Some (nb', lr')) as res.
+  generalize dependent nb'.
+  generalize dependent lr'.
+  generalize dependent n.
+  induction HVR; intros * Heq Hnt Hneq; try discriminate; subst;
+  try (injection Heq; intros; subst); eauto.
+  destruct (Nat.eq_dec n i); subst.
+  - exfalso. eapply nth_ndef in H; eauto; discriminate.
+  - clear Heq.
+    eapply IHHVR in Hneq; clear IHHVR; trivial.
+    + rewrite <- Hneq.
+      eauto using update_neq.
+    + eapply update_neq; trivial.
+Qed.
+
+
 Lemma nullableVR: forall g p nb nb' lr lr',
   verifyrule g p lr nb (Some (nb', lr')) ->
   stateCorrect g lr ->
@@ -822,9 +826,7 @@ Proof.
   - destruct nb'.
       + left. simplOrb. trivial.
       + right. apply HSC.
-        rewrite nth_indep with (d' := Visiting); trivial.
-        destruct (le_lt_dec (length lr') i); trivial.
-        rewrite nth_overflow in H; trivial; discriminate.
+        eapply nth_ndef; eauto; discriminate.
 Qed.
 
 

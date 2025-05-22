@@ -1,6 +1,6 @@
 From Coq Require Import Arith.
 From Peg Require Import Syntax.
-From Peg Require Import Match.
+From Peg Require Import NMatch.
 From Coq Require Import Lists.List.
 Import ListNotations.
 From Coq Require Import Lia.
@@ -329,6 +329,18 @@ Proof.
           as [res ?].
       destruct res as [[? ?] | ]; eexists; eauto using verifyrule.
 Defined.
+
+
+Lemma VRcompleteP : forall g p lr nb,
+  exists res,  verifyrule g p lr nb res.
+Proof.
+  intros *.
+  specialize (VRcomplete (S (count_notvisited lr)) g p lr nb).
+  intros H.
+  specialize (H (Nat.lt_succ_diag_r _)) as [? ?].
+  eexists; eauto.
+Qed.
+
 
 Definition WF (g : grammar) : Result.
   specialize (VRcomplete (S (length g))
@@ -810,9 +822,7 @@ Proof.
     + left. simpl. simplOrb. trivial.
     + right. unfold not_nullable in *.
       intros s Hm. inversion Hm; subst; clear Hm.
-      eapply nth_error_nth in H3.
-      rewrite H3 in H0.
-      eapply H0. eauto.
+      apply (H0 s); trivial.
   - apply stcorrupdate with (i := i) in HSC.
     appHI; subst.
     * unfold stateCorrect in *; intros n H2.
@@ -826,8 +836,7 @@ Proof.
           try congruence.
         replace nb' with false in * by congruence.
         unfold not_nullable in *; intros s HM.
-        inversion HM; subst. eapply H0.
-        erewrite nth_error_nth; eauto.
+        inversion HM; subst. eapply H0; eauto.
       + apply H1; clear H1.
         rewrite update_neq in H2; auto.
   - destruct nb'.
@@ -887,145 +896,3 @@ Proof.
     eapply nth_ndef; eauto; congruence.
 Qed.
 
-
-
-(*
-Lemma stcompupdate : forall g lr i,
-    stateComplete g lr -> stateComplete g (update lr i Visiting).
-Proof.
-  intros * H.
-  unfold stateComplete in *.
-  intros * Heq.
-  destruct (Nat.eq_dec n i); subst.
-  - destruct (update_eq2 lr i Visiting NotVisited); congruence.
-  - rewrite update_neq in Heq.
-    apply H in Heq.
-    simpl.
-Qed.
-
-
-Lemma not_null_set : forall g set, not_nullable g (PSet set).
-Proof.
-  intros *.
-  apply notnull_len.
-  inversion 1; subst. simpl. lia.
-Qed.
-
-
-Lemma not_null_seq1 : forall g p1 p2,
-  not_nullable g p1 -> not_nullable g (PSequence p1 p2).
-Proof.
-  intros * H.
-  inversion 1; subst.
-  apply match_len in H7; eauto.
-  apply notnull_len in H4; eauto.
-  lia.
-Qed.
-
-
-Lemma not_null_seq2 : forall g p1 p2,
-  not_nullable g p2 -> not_nullable g (PSequence p1 p2).
-Proof.
-  intros * H.
-  inversion 1; subst.
-  apply match_len in H4; eauto.
-  apply notnull_len in H7; eauto.
-  lia.
-Qed.
-
-
-Lemma not_null_choice : forall g p1 p2,
-  not_nullable g p1 ->
-  not_nullable g p2 ->
-  not_nullable g (PChoice p1 p2).
-Proof.
-  intros * H1 H2.
-  inversion 1; subst.
-  - apply H1 in H6. trivial.
-  - apply H2 in H8. trivial.
-Qed.
-
-
-Ltac ff :=
-  repeat match goal with
-  [H: false = false -> _ |- _] => specialize (H eq_refl)
-  end.
-
-Ltac appHI :=
-match goal with
-    [IH: stateCorrect ?g ?lr -> _,
-     H: stateCorrect ?g ?lr |- _] =>
-          eapply IH in H; eauto;
-          destruct H as [[? | ?] ?]; clear IH
-    end.
-
-(* 'verifyrule' only "increases" rules status: It can only change
-   rules not-yet visited. *)
-Lemma vrinc: forall g p nb nb' lr lr' n stat,
-  verifyrule g p lr nb (Some (nb', lr')) ->
-  nth n lr NotVisited = stat ->
-  stat <> NotVisited ->
-  nth n lr' NotVisited = stat.
-Proof.
-  intros * HVR.
-  remember (Some (nb', lr')) as res.
-  generalize dependent nb'.
-  generalize dependent lr'.
-  generalize dependent n.
-  induction HVR; intros * Heq Hnt Hneq; try discriminate; subst;
-  try (injection Heq; intros; subst); eauto.
-  destruct (Nat.eq_dec n i); subst.
-  - exfalso. eapply nth_ndef in H; eauto; discriminate.
-  - clear Heq.
-    eapply IHHVR in Hneq; clear IHHVR; trivial.
-    + rewrite <- Hneq.
-      eauto using update_neq.
-    + eapply update_neq; trivial.
-Qed.
-
-
-Lemma nullableVR: forall g p nb nb' lr lr',
-  verifyrule g p lr nb (Some (nb', lr')) ->
-  stateCorrect g lr ->
-  (nb' = true \/ not_nullable g p) /\ stateCorrect g lr'.
-Proof.
-  intros * HV HSC.
-  remember (Some (nb', lr')) as res.
-  generalize dependent nb'.
-  generalize dependent lr'.
-  induction HV; intros * HS; subst; simplsome; ff;
-    repeat appHI; subst; try discriminate;
-    intuition (eauto using not_null_set, not_null_seq2, not_null_seq1,
-      nb_true, not_null_choice).
-  - apply stcorrupdate with (i := i) in HSC.
-    appHI; subst.
-    + left. simpl. simplOrb. trivial.
-    + right. unfold not_nullable in *.
-      intros s Hm. inversion Hm; subst; clear Hm.
-      eapply nth_error_nth in H3.
-      rewrite H3 in H0.
-      eapply H0. eauto.
-  - apply stcorrupdate with (i := i) in HSC.
-    appHI; subst.
-    * unfold stateCorrect in *; intros n H2.
-      destruct (Nat.eq_dec n i); subst.
-      + destruct (update_eq2 lr' i (Visited true) NotVisited); congruence.
-      + eapply H1.
-        rewrite update_neq in H2; auto.
-    * unfold stateCorrect in *; intros n H2.
-      destruct (Nat.eq_dec n i); subst.
-      + destruct (update_eq2 lr' i (Visited nb') NotVisited);
-          try congruence.
-        replace nb' with false in * by congruence.
-        unfold not_nullable in *; intros s HM.
-        inversion HM; subst. eapply H0.
-        erewrite nth_error_nth; eauto.
-      + apply H1; clear H1.
-        rewrite update_neq in H2; auto.
-  - destruct nb'.
-      + left. simplOrb. trivial.
-      + right. apply HSC.
-        eapply nth_ndef; eauto; discriminate.
-Qed.
-
-*)

@@ -388,195 +388,10 @@ Proof.
 Qed.
 
 
-Fixpoint verifyrule_comp gas
-    (g : grammar) (p : pat) (lr : list RuleStatus) (nb : bool) :
-      option Result :=
-  match gas with
-  | 0 => None
-  | S gas' =>
-    match p with
-    | PEmpty => Some (Some (true, lr))
-    | PSet _ => Some (Some (nb, lr))
-    | PSequence p1 p2 =>
-      match verifyrule_comp gas' g p1 lr false with
-      | None => None  (* out of gas *)
-      | Some None => Some None  (* ill formed *)
-      | Some (Some (false, lr')) => Some (Some (nb, lr'))
-      | Some (Some (true, lr')) => verifyrule_comp gas' g p2 lr' nb
-      end
-    | PChoice p1 p2 =>
-      match verifyrule_comp gas' g p1 lr nb with
-      | None => None  (* out of gas *)
-      | Some None => Some None  (* ill formed *)
-      | Some (Some (nb', lr')) => verifyrule_comp gas' g p2 lr' nb'
-      end
-    | PRepetition p' => verifyrule_comp gas' g p' lr true
-    | PNot p' => verifyrule_comp gas' g p' lr true
-    | PAnd p' => verifyrule_comp gas' g p' lr true
-    | PNT i =>
-      match nth i lr Visiting with
-      | Visiting => Some (None)  (* ill formed *)
-      | Visited nb' => Some (Some (orb nb nb', lr))
-      | NotVisited =>
-        match verifyrule_comp gas' g (nth i g PEmpty)
-                              (update lr i Visiting) false with
-        | None => None  (* out of gas *)
-        | Some None => Some None  (* ill formed *)
-        | Some (Some (nb', lr')) =>
-            Some (Some (orb nb nb', update lr' i (Visited nb')))
-        end
-      end
-    end
-  end.
-
-
-Ltac destVR :=
-  match goal with
-  | [H: context [verifyrule_comp ?gas ?g ?p1 ?lr ?nb] |- _]
-        => destruct (verifyrule_comp gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq
-  | [|- context [verifyrule_comp ?gas ?g ?p1 ?lr ?nb]]
-        => destruct (verifyrule_comp gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq
-  end.
-
-
-Lemma verifyrule_comp_sound : forall gas g p lr nb res,
-  verifyrule_comp gas g p lr nb = Some res ->
-  verifyrule g p lr nb res.
-Proof with eauto using verifyrule.
-  induction gas; intros * H; try discriminate.
-  destruct p; simpl in H;
-    try (injection H; intros; subst);
-      try discriminate...
-  - destVR; try discriminate; simplsome...
-    destruct b; simplsome...
-  - destVR; simplsome...
-  - destruct (nth n lr Visiting) eqn:?; simplsome...
-    destVR; simplsome...
-Qed.
-
-
 Ltac breakEx :=
   repeat match goal with
   [H: exists _, _ |- _] => destruct H as [? ?]
   end.
-
-Lemma verifyrule_comp_gas_exists : forall g p lr nb res,
-    verifyrule g p lr nb res ->
-    exists gas,
-      forall gas', gas < gas' -> verifyrule_comp gas' g p lr nb = Some res.
-Proof.
-  induction 1; intros *;
-    try (exists 0; destruct gas'; try lia; trivial; fail);
-    try (breakEx; exists (S x); intros * Hlt;
-    destruct gas'; try lia; simpl;
-    apply H0; lia; fail).
-  - breakEx. exists (S x). intros * Hlt.
-    destruct gas'. try lia. simpl.
-    rewrite H0; trivial; lia.
-  - breakEx. exists (S (x + x0)).
-    destruct gas'; try lia. simpl.
-    intros Hlt. rewrite H2; try lia; rewrite H1; trivial; lia.
-  - breakEx. exists (S x).
-    intros * Htl.
-    destruct gas'; try lia. simpl.
-    rewrite H0; trivial; try lia.
-  - breakEx. exists (S x).
-    destruct gas'; try lia; simpl.
-    intros ?. rewrite H0; trivial; try lia.
-  - breakEx. exists (S (x + x0)).
-    destruct gas'; try lia; simpl.
-    intros ?. rewrite H2; try lia.
-    apply H1; lia.
-  - exists 1. intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H; trivial.
-  - breakEx. exists (S x). intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H. subst.
-    rewrite H2; trivial; lia.
-  - breakEx. exists (S x). subst.
-    intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H.
-    rewrite H2; trivial; try lia.
-  - exists 1; intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H. trivial.
-Qed.
-
-
-Fixpoint costP p : nat :=
-  match p with
-  | PEmpty => 1
-  | PSet _ => 1
-  | PSequence p1 p2 => S (costP p1 + costP p2)
-  | PChoice p1 p2 => S (costP p1 + costP p2)
-  | PRepetition p => S (costP p)
-  | PNot p => S (costP p)
-  | PAnd p => S (costP p)
-  | PNT _ => 1
-  end.
-
-
-Lemma costP1 : forall p, 0 < costP p.
-Proof. induction p; simpl; lia. Qed.
-
-
-Fixpoint costG g lr : nat :=
-  match lr with
-  | nil => 0
-  | NotVisited :: lr' =>
-      match g with
-      | nil => S (1 + costG nil lr')
-      | (p :: g') => S (costP p + costG g' lr')
-      end
-  | _ :: lr' =>
-      match g with
-      | nil => costG nil lr'
-      | (_ :: g') => costG g' lr'
-      end
-  end.
-
-
-Lemma CostUpdateVIsitingP : forall lr g n,
-    nth n lr Visiting = NotVisited ->
-    costP (nth n g PEmpty) + costG g (update lr n Visiting) <= costG g lr.
-Proof.
-  induction lr; intros * Hn.
-  - simpl in Hn. destruct n; discriminate.
-  - simpl. destruct n; destruct a; destruct g; simpl; try lia;
-     try discriminate; simpl in Hn;
-     try (apply IHlr with (g := g) in Hn; simpl in Hn; lia);
-     try (apply IHlr with (g := nil) in Hn; destruct n; simpl in Hn; lia).
-Qed.
-
-
-Lemma costUpdateVisited : forall lr g i nb,
-  costG g (update lr i (Visited nb)) <= costG g lr.
-Proof.
-  induction lr; intros *.
-  - simpl. destruct i; trivial.
-  - destruct g.
-    + simpl. destruct i; simpl.
-      * simpl. destruct a; lia.
-      * simpl. destruct a; specialize (IHlr nil i nb) as ?; lia.
-    + simpl. destruct i; simpl; destruct a; try lia;
-      specialize (IHlr g i nb) as ?; lia.
-Qed.
-
-
-Lemma costUpdateVisiting : forall lr g i,
-  costG g (update lr i Visiting) <= costG g lr.
-Proof.
-  induction lr; intros *.
-  - simpl. destruct i; trivial.
-  - destruct g.
-    + simpl. destruct i; simpl.
-      * simpl. destruct a; lia.
-      * simpl. destruct a; specialize (IHlr nil i) as ?; lia.
-    + simpl. destruct i; simpl; destruct a; try lia;
-      specialize (IHlr g i) as ?; lia.
-Qed.
 
 
 Lemma sameLen : forall g p lr lr' nb nb',
@@ -597,87 +412,6 @@ Proof.
   rewrite update_len in IHHVR.
   rewrite update_len.
   trivial.
-Qed.
-
-
-Lemma dimCost : forall gas g p lr lr' nb nb',
-    verifyrule_comp gas g p lr nb = Some (Some (nb', lr')) ->
-    costG g lr' <= costG g lr.
-Proof.
-  induction gas; intros * HVr; try discriminate.
-  destruct p; simpl in HVr; simplsome; trivial;
-    repeat match goal with
-    [H : verifyrule_comp _ _ _ _ _ = Some _ |- _] =>
-       eapply IHgas in H
-    end; try lia.
-  - destVR; try congruence.
-    destruct b.
-    + eapply IHgas in Heq.
-      eapply IHgas in HVr.
-      lia.
-    + simplsome.
-      eapply IHgas in Heq.
-      trivial.
-  - destVR; try congruence.
-    eapply IHgas in Heq.
-    eapply IHgas in HVr.
-    lia.
-  - destruct (nth n lr Visiting); try congruence.
-    + destVR; try congruence.
-      simplsome.
-      apply IHgas in Heq; clear IHgas.
-      specialize (costUpdateVisited l g n b) as ?.
-      specialize (costUpdateVisiting lr g n) as ?.
-      lia.
-    + simplsome. trivial.
-Qed.
-
-
-Lemma VR_comp : forall gas g p lr nb,
-    (costG g lr + costP p) <= gas ->
-    verifyrule_comp gas g p lr nb <> None.
-Proof.
-  induction gas; intros * Hle.
-  - specialize (costP1 p). lia.
-  - destruct p.
-    + simpl. congruence.
-    + simpl. congruence.
-    + simpl in Hle; simpl.
-      destVR; try congruence.
-      destruct b; try congruence.
-      * eapply IHgas.
-        eapply dimCost in Heq. lia.
-      * exfalso. eapply IHgas; eauto. lia.
-    + simpl in Hle; simpl.
-      destVR; try congruence.
-      * eapply IHgas.
-        apply dimCost in Heq. lia.
-      * exfalso. eapply IHgas; eauto. lia.
-    + apply IHgas. simpl in Hle. lia.
-    + apply IHgas. simpl in Hle. lia.
-    + apply IHgas. simpl in Hle. lia.
-    + simpl in Hle; simpl.
-      destruct (nth n lr Visiting) eqn:?; try congruence.
-      destVR; try congruence.
-      exfalso.
-      eapply IHgas; eauto.
-      specialize (CostUpdateVIsitingP lr g n Heqr) as ?.
-      lia.
-Qed.
-
-
-Lemma VRVR : forall g p lr nb res,
-  verifyrule_comp (S (costG g lr + costP p)) g p lr nb = Some res <->
-  verifyrule g p lr nb res.
-Proof.
-  intros *; split; intro H.
-  - eauto using verifyrule_comp_sound.
-  - assert (H1 : costG g lr + costP p <= S (costG g lr + costP p)) by lia.
-    specialize (VR_comp (S (costG g lr + costP p)) g p lr nb H1) as H2.
-    destruct (verifyrule_comp (S (costG g lr + costP p)) g p lr nb) eqn:?.
-    + apply verifyrule_comp_sound in Heqo.
-      f_equal. eauto using verifyrule_unique.
-    + exfalso. apply H2. trivial.
 Qed.
 
 
@@ -709,7 +443,7 @@ Qed.
 
 
 Definition stateCorrect g lr :=
-  forall n, nth n lr NotVisited = Visited false ->
+  forall n, nth n lr Visiting = Visited false ->
             not_nullable g (PNT n).
 
 
@@ -719,7 +453,7 @@ Proof.
   unfold stateCorrect.
   intros * H n Hn.
   destruct (Nat.eq_dec n i); subst; apply H.
-  - destruct (update_eq2 lr i Visiting NotVisited); congruence.
+  - destruct (update_eq2 lr i Visiting Visiting); congruence.
   - rewrite update_neq in Hn; trivial.
 Qed.
 
@@ -783,9 +517,9 @@ match goal with
    rules not-yet visited. *)
 Lemma vrinc: forall g p nb nb' lr lr' n stat,
   verifyrule g p lr nb (Some (nb', lr')) ->
-  nth n lr NotVisited = stat ->
+  nth n lr Visiting = stat ->
   stat <> NotVisited ->
-  nth n lr' NotVisited = stat.
+  nth n lr' Visiting = stat.
 Proof.
   intros * HVR.
   remember (Some (nb', lr')) as res.
@@ -827,12 +561,12 @@ Proof.
     appHI; subst.
     * unfold stateCorrect in *; intros n H2.
       destruct (Nat.eq_dec n i); subst.
-      + destruct (update_eq2 lr' i (Visited true) NotVisited); congruence.
+      + destruct (update_eq2 lr' i (Visited true) Visiting); congruence.
       + eapply H1.
         rewrite update_neq in H2; auto.
     * unfold stateCorrect in *; intros n H2.
       destruct (Nat.eq_dec n i); subst.
-      + destruct (update_eq2 lr' i (Visited nb') NotVisited);
+      + destruct (update_eq2 lr' i (Visited nb') Visiting);
           try congruence.
         replace nb' with false in * by congruence.
         unfold not_nullable in *; intros s HM.
@@ -847,7 +581,7 @@ Qed.
 
 
 Definition stateComplete g lr :=
-  forall n nb, nth n lr NotVisited = Visited nb ->
+  forall n nb, nth n lr Visiting = Visited nb ->
      exists nb' lr', verifyrule g (PNT n) lr false (Some (nb', lr')).
 
 
@@ -891,8 +625,21 @@ Proof.
   - eexists; eexists. eapply VRNTVisited.
     rewrite update_neq; try congruence.
     rewrite update_neq in H1; try congruence.
-    replace (nth n lr' Visiting) with (nth n lr' NotVisited); eauto.
     rewrite H1; symmetry.
-    eapply nth_ndef; eauto; congruence.
+    eauto.
 Qed.
+
+
+Lemma VRAdd1: forall g r nb nb' lr lr',
+  verifyrule g (PNT r) lr nb (Some (nb', lr')) ->
+  nth r lr Visiting = NotVisited ->
+  exists b, nth r lr' Visiting = Visited b.
+Proof.
+  inversion 1; subst; intros ?.
+  - eexists. eapply update_eq.
+    replace (length lr'0) with (length lr).
+    + eapply nth_overflow'; eauto; congruence.
+    + erewrite <- sameLen.
+Abort.
+
 

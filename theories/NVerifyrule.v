@@ -103,6 +103,34 @@ Inductive RuleStatus : Type :=
 | Visited : bool -> RuleStatus.
 
 
+Inductive leRS : RuleStatus -> RuleStatus -> Prop :=
+| LERRef : forall x, leRS x x
+| LERNV : forall nb, leRS NotVisited (Visited nb).
+
+
+Definition leLR (lr lr' : list RuleStatus) : Prop :=
+    forall n, leRS (nth n lr Visiting) (nth n lr' Visiting).
+
+
+Lemma leLRRef : forall lr, leLR lr lr.
+Proof. intros lr n. auto using leRS. Qed.
+
+
+Lemma leRSTrans : forall r r' r'',
+    leRS r r' -> leRS r' r'' -> leRS r r''.
+Proof.
+  intros * H1 H2.
+  destruct H1 eqn:?.
+  - trivial.
+  - inversion H2; subst. eauto using leRS.
+ Qed.
+
+
+Lemma leLRTrans : forall lr lr' lr'',
+    leLR lr lr' -> leLR lr' lr'' -> leLR lr lr''.
+Proof. intros * H1 H2 n. eauto using leRSTrans. Qed.
+
+
 Definition dec_Rule : forall (r1 r2 : RuleStatus), {r1 = r2} + {r1 <> r2}.
 Proof. repeat decide equality. Qed.
 
@@ -630,16 +658,73 @@ Proof.
 Qed.
 
 
-Lemma VRAdd1: forall g r nb nb' lr lr',
-  verifyrule g (PNT r) lr nb (Some (nb', lr')) ->
+Lemma VRAdd1': forall g r nb lr lr',
+  verifyrule g (PNT r) lr false (Some (nb, lr')) ->
   nth r lr Visiting = NotVisited ->
-  exists b, nth r lr' Visiting = Visited b.
+  nth r lr' Visiting = Visited nb.
 Proof.
-  inversion 1; subst; intros ?.
-  - eexists. eapply update_eq.
-    replace (length lr'0) with (length lr).
-    + eapply nth_overflow'; eauto; congruence.
-    + erewrite <- sameLen.
-Abort.
+  inversion 1; subst; intros ?; eauto; try congruence.
+  eapply update_eq.
+  replace (length lr'0) with (length lr).
+  - eapply nth_overflow'; eauto; congruence.
+  - apply sameLen in H; rewrite H.
+    eapply update_len.
+Qed.
 
 
+Lemma VRAdd1: forall g r nb lr lr',
+  verifyrule g (PNT r) lr false (Some (nb, lr')) ->
+   nth r lr' Visiting = Visited nb.
+Proof.
+  intros * HV.
+  destruct (nth r lr Visiting) eqn:?.
+  - eauto using VRAdd1'.
+  - inversion HV; subst; congruence.
+  - inversion HV; subst; try congruence; eauto.
+Qed.
+
+
+Lemma VRInc : forall g p nb nb' lr lr',
+    verifyrule g p lr nb (Some (nb', lr')) ->
+    leLR lr lr'.
+Proof.
+  intros * H.
+  remember (Some (nb', lr')) as res.
+  generalize dependent nb'.
+  generalize dependent lr'.
+  induction H; intros * HEq n;
+  try (injection HEq; intros; subst; clear HEq);
+  try discriminate; subst;
+  repeat match goal with
+    [H: forall _ _,  (Some _ = Some _) -> _ |- _] =>
+       specialize (H _ _ eq_refl n)
+       end;
+   eauto using leRS, leRSTrans.
+   destruct (Nat.eq_dec i n); subst.
+   - erewrite update_eq.
+     + rewrite H. auto using leRS.
+     + apply nth_overflow' in H; try congruence.
+       replace (length lr') with (length lr); trivial.
+       eapply sameLen in H1.
+       rewrite update_len in H1.
+       trivial.
+  - rewrite update_neq; try congruence.
+    rewrite update_neq in IHverifyrule; try congruence.
+Qed.
+
+
+(*
+verifyrule g p lr nb (Some (x, lr')) ->
+verifyrule g (PNT i) lr false (Some (x0, x1)) ->
+exists (nb : bool) (lr'' : list RuleStatus),
+  verifyrule g (PNT i) lr' false (Some (nb, lr''))
+
+Lemma VRVRpres: forall g n lr b lr',
+    verifyrule g (PNT n) lr false (Some (b, lr')) ->
+    verifyrule g (PNT n) lr' false (Some (b, lr')).
+Proof.
+  intros * HV.
+  apply VRAdd1 in HV.
+  destruct HV as [? ?].
+  eauto using verifyrule.
+*)

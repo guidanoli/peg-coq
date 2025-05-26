@@ -267,14 +267,14 @@ Qed.
 
 
 Lemma VRVR : forall g p lr nb res,
-  verifyrule_comp (S (costG g lr + costP p)) g p lr nb = Some res <->
+  verifyrule_comp (costG g lr + costP p) g p lr nb = Some res <->
   verifyrule g p lr nb res.
 Proof.
   intros *; split; intro H.
   - eauto using verifyrule_comp_sound.
-  - assert (H1 : costG g lr + costP p <= S (costG g lr + costP p)) by lia.
-    specialize (VR_comp (S (costG g lr + costP p)) g p lr nb H1) as H2.
-    destruct (verifyrule_comp (S (costG g lr + costP p)) g p lr nb) eqn:?.
+  - assert (H1 : costG g lr + costP p <= costG g lr + costP p) by lia.
+    specialize (VR_comp (costG g lr + costP p) g p lr nb H1) as H2.
+    destruct (verifyrule_comp (costG g lr + costP p) g p lr nb) eqn:?.
     + apply verifyrule_comp_sound in Heqo.
       f_equal. eauto using verifyrule_unique.
     + exfalso. apply H2. trivial.

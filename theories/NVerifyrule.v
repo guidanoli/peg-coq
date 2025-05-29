@@ -422,6 +422,12 @@ Ltac breakEx :=
   end.
 
 
+Ltac breakIHsome :=
+  repeat match goal with
+  [H: forall _ _, _ = _ -> _ |- _] =>
+    specialize (H _ _ eq_refl)
+  end.
+
 Lemma sameLen : forall g p lr lr' nb nb',
     verifyrule g p lr nb (Some (nb', lr')) ->
     length lr = length lr'.
@@ -433,10 +439,7 @@ Proof.
   induction HVR; intros * Heq;
   try (injection Heq; intros; subst; clear Heq);
     subst; try discriminate; eauto;
-    repeat match goal with
-    [H: forall _ _, _ = _ -> _ |- _] =>
-      specialize (H _ _ eq_refl)
-    end; try congruence.
+    breakIHsome; try congruence.
   rewrite update_len in IHHVR.
   rewrite update_len.
   trivial.
@@ -541,29 +544,81 @@ match goal with
           destruct H as [[? | ?] ?]; clear IH
     end.
 
+
 (* 'verifyrule' only "increases" rules status: It can only change
    rules not-yet visited. *)
+Lemma VRInc : forall g p nb nb' lr lr',
+    verifyrule g p lr nb (Some (nb', lr')) ->
+    leLR lr lr'.
+Proof.
+  intros * H.
+  remember (Some (nb', lr')) as res.
+  generalize dependent nb'.
+  generalize dependent lr'.
+  induction H; intros * HEq n;
+  try (injection HEq; intros; subst; clear HEq);
+  try discriminate; subst;
+  breakIHsome;
+   eauto using leRS, leRSTrans.
+   destruct (Nat.eq_dec i n); subst.
+   - erewrite update_eq.
+     + rewrite H. auto using leRS.
+     + apply nth_overflow' in H; try congruence.
+       replace (length lr') with (length lr); trivial.
+       eapply sameLen in H1.
+       rewrite update_len in H1.
+       trivial.
+  - rewrite update_neq; try congruence.
+    specialize (IHverifyrule n).
+    rewrite update_neq in IHverifyrule; try congruence.
+Qed.
+
+
 Lemma vrinc: forall g p nb nb' lr lr' n stat,
   verifyrule g p lr nb (Some (nb', lr')) ->
   nth n lr Visiting = stat ->
   stat <> NotVisited ->
   nth n lr' Visiting = stat.
 Proof.
+  intros * HVR Hnt Hneq.
+  apply VRInc in HVR.
+  specialize (HVR n).
+  inversion HVR; subst; congruence.
+Qed.
+
+
+Lemma VRIncVR: forall g p nb nb' lr lr' lr'',
+    verifyrule g p lr nb (Some (nb', lr')) ->
+    leLR lr lr'' ->
+    exists lr''', verifyrule g p lr'' nb (Some (nb', lr''')).
+Proof.
   intros * HVR.
   remember (Some (nb', lr')) as res.
   generalize dependent nb'.
   generalize dependent lr'.
-  generalize dependent n.
-  induction HVR; intros * Heq Hnt Hneq; try discriminate; subst;
-  try (injection Heq; intros; subst); eauto.
-  destruct (Nat.eq_dec n i); subst.
-  - exfalso. eapply nth_ndef in H; eauto; discriminate.
-  - clear Heq.
-    eapply IHHVR in Hneq; clear IHHVR; trivial.
-    + rewrite <- Hneq.
-      eauto using update_neq.
-    + eapply update_neq; trivial.
-Qed.
+  generalize dependent lr''.
+  induction HVR; intros * Heq Hle;
+  try discriminate;
+  try (injection Heq; intros; subst; clear Heq);
+  subst;
+  try (eexists; eauto using verifyrule; fail).
+  -
+  specialize (IHHVR1 lr'' _ _ eq_refl) as [lr''' H1]; trivial.
+  specialize (IHHVR2 lr''' _ _ eq_refl) as [lr'''' H2]; trivial.
+  2:{ eauto using verifyrule. }
+(*
+  + apply VRInc in H.
+
+  repeat match goal with
+  [H1: leLR ?lr ?lr',
+   H2: leLR ?lr ?lr' -> _ |- _] =>
+     specialize (H2 H1) as [? ?]
+  end.
+  eexists.
+  eapply VRSequenceSomeTrue; eauto.
+  try (eexists; eauto using verifyrule; fail).
+*)
+Abort.
 
 
 Lemma nullableVR: forall g p nb nb' lr lr',
@@ -608,15 +663,15 @@ Proof.
 Qed.
 
 
-Definition stateComplete g lr :=
+Definition stateSound g lr :=
   forall n nb, nth n lr Visiting = Visited nb ->
      exists nb' lr', verifyrule g (PNT n) lr false (Some (nb', lr')).
 
 
 Lemma SCVR: forall g p nb nb' lr lr',
   verifyrule g p lr nb (Some (nb', lr')) ->
-  stateComplete g lr ->
-  stateComplete g lr'.
+  stateSound g lr ->
+  stateSound g lr'.
 Proof.
   intros * HVR HSC.
   remember (Some (nb', lr')) as res.
@@ -625,8 +680,8 @@ Proof.
   induction HVR; intros * Heq;
   try (injection Heq; intros; subst; clear Heq);
   try discriminate; eauto.
-  assert (stateComplete g (update lr i Visiting)).
-  { clear IHHVR. unfold stateComplete in *.
+  assert (stateSound g (update lr i Visiting)).
+  { clear IHHVR. unfold stateSound in *.
     intros * H1.
     destruct (Nat.eq_dec i n); subst.
     - exfalso. erewrite update_eq in H1; try discriminate.
@@ -637,7 +692,7 @@ Proof.
       rewrite update_neq in H1; try congruence.
       eapply nth_ndef in H1; eauto; congruence. }
   eapply IHHVR in H0. 2: eauto.
-  unfold stateComplete; intros * H1.
+  unfold stateSound; intros * H1.
   assert (Hleq: length lr' = length lr).
   { eapply sameLen in HVR.
     rewrite update_len in HVR.
@@ -681,35 +736,6 @@ Proof.
   - eauto using VRAdd1'.
   - inversion HV; subst; congruence.
   - inversion HV; subst; try congruence; eauto.
-Qed.
-
-
-Lemma VRInc : forall g p nb nb' lr lr',
-    verifyrule g p lr nb (Some (nb', lr')) ->
-    leLR lr lr'.
-Proof.
-  intros * H.
-  remember (Some (nb', lr')) as res.
-  generalize dependent nb'.
-  generalize dependent lr'.
-  induction H; intros * HEq n;
-  try (injection HEq; intros; subst; clear HEq);
-  try discriminate; subst;
-  repeat match goal with
-    [H: forall _ _,  (Some _ = Some _) -> _ |- _] =>
-       specialize (H _ _ eq_refl n)
-       end;
-   eauto using leRS, leRSTrans.
-   destruct (Nat.eq_dec i n); subst.
-   - erewrite update_eq.
-     + rewrite H. auto using leRS.
-     + apply nth_overflow' in H; try congruence.
-       replace (length lr') with (length lr); trivial.
-       eapply sameLen in H1.
-       rewrite update_len in H1.
-       trivial.
-  - rewrite update_neq; try congruence.
-    rewrite update_neq in IHverifyrule; try congruence.
 Qed.
 
 

@@ -134,16 +134,17 @@ Ltac simplOrb :=
     try rewrite Bool.orb_false_l in *.
 
 
+Definition LRCoher (g : grammar) lr :=
+  forall n nb, nth n lr Visiting = Visited nb ->
+      exists ln, noleftrec g (PNT n) nb ln.
+
+
 Theorem NLRpreservation : forall g p lr nb onb lr',
     verifyrule g p lr nb (Some (onb, lr')) ->
-    (forall n nb',
-       nth n lr Visiting = Visited nb' ->
-           (exists ln, noleftrec g (PNT n) nb' ln)) ->
-    (exists ln nb', noleftrec g p nb' ln /\ onb = orb nb nb') /\
-    (forall n nb',
-       nth n lr' Visiting = Visited nb' ->
-          (exists ln, noleftrec g (PNT n) nb' ln)).
+    LRCoher g lr ->
+    (exists ln nb', noleftrec g p nb' ln /\ onb = orb nb nb') /\ LRCoher g lr'.
 Proof.
+  unfold LRCoher.
   intros * HVR.
   remember (Some (onb, lr')) as res.
   generalize dependent onb.
@@ -185,7 +186,7 @@ Proof.
         - erewrite update_neq in HH1; eauto. }
       eapply IHHVR in HH.
       destruct HH as [[? [? [? ?]]] ?].
-      replace nb'0 with nb' in *.
+      replace nb0 with nb' in *.
       * simplOrb; subst.
         eexists. econstructor.
         ** reflexivity.
@@ -210,5 +211,30 @@ Proof.
     eexists; eexists. split; eauto. 
 Qed.
 
-
         
+Lemma not_null_nt: forall g p n,
+    not_nullable g p ->
+    nth n g PEmpty = p ->
+    not_nullable g (PNT n).
+Proof.
+  unfold not_nullable.
+  intros * HNN Heq.
+  inversion 1; subst.
+  eapply HNN. eauto.
+Qed.
+
+
+Lemma nlr_nullable : forall g p ln,
+   noleftrec g p false ln -> not_nullable g p.
+Proof.
+  intros * HNLR.
+  remember false as nbF eqn:Heq.
+  induction HNLR; try discriminate;
+  intros *;
+    eauto using not_null_set, not_null_seq2, not_null_seq1,
+                not_null_choice, not_null_nt.
+  apply Bool.orb_false_elim in Heq; destruct Heq; subst.
+  eauto using not_null_choice.
+Qed.
+
+

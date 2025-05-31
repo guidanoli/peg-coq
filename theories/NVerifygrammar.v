@@ -69,7 +69,7 @@ Proof.
     apply verifyrule_comp_sound in H0.
     specialize (IHn _ _ _ H HLR) as [? ?].
     + intros i Hlt. apply HL1. lia.
-    + specialize (NLRpreservation _ _ _ _ _ _ H0 H1) as HN.
+    + specialize (NLRpreservation H0 H1) as HN.
       destruct HN as [[? [? [? ?]]] ?].
       simplOrb; subst.
       split; trivial.
@@ -81,14 +81,5 @@ Proof.
         exists x. eapply vrinc; eauto. subst; congruence.
       * subst; eauto using VRAdd1.
 Qed.
-
-
-
-
-
-
-
-
-
 
 

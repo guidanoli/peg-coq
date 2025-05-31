@@ -8,41 +8,43 @@ From Peg Require Import Syntax.
 From Peg Require Import NMatch.
 From Peg Require Import NVerifyrule.
 
+Set Implicit Arguments.
+
 
 Inductive noleftrec : grammar -> pat -> bool -> list nat -> Prop :=
-  | VREmpty :
+  | NLREmpty :
       forall g,
       noleftrec g PEmpty true []
-  | VRSet :
+  | NLRSet :
       forall g cs,
       noleftrec g (PSet cs) false []
-  | VRSequenceSomeTrue :
+  | NLRSequenceSomeTrue :
       forall g p1 p2 ln ln' nb,
       noleftrec g p1 true ln ->
       noleftrec g p2 nb ln' ->
       noleftrec g (PSequence p1 p2) nb (ln ++ ln')
-  | VRSequenceSomeFalse :
+  | NLRSequenceSomeFalse :
       forall g p1 p2 ln,
       noleftrec g p1 false ln ->
       noleftrec g (PSequence p1 p2) false ln
-  | VRChoice :
+  | NLRChoice :
       forall g p1 p2 ln ln' nb nb',
       noleftrec g p1 nb ln ->
       noleftrec g p2 nb' ln' ->
       noleftrec g (PChoice p1 p2) (orb nb nb') (ln ++ ln')
-  | VRRepetition :
+  | NLRRepetition :
       forall g p ln nb,
       noleftrec g p nb ln ->
       noleftrec g (PRepetition p) true ln 
-  | VRNot :
+  | NLRNot :
       forall g p ln nb,
       noleftrec g p nb ln ->
       noleftrec g (PNot p) true ln
-  | VRAnd :
+  | NLRAnd :
       forall g p ln nb,
       noleftrec g p nb ln ->
       noleftrec g (PAnd p) true ln
-  | VRNT :
+  | NLRNT :
       forall g i p ln nb,
       nth i g PEmpty = p ->
       noleftrec g p nb ln ->
@@ -122,6 +124,7 @@ Proof.
   replace x0 with (n :: ln) in * by (eapply NLRunique; eauto).
   simpl in H1. lia.
 Qed.
+
 
 Ltac simplOrb :=
     repeat rewrite Bool.orb_false_r;
@@ -211,6 +214,29 @@ Proof.
     eexists; eexists. split; eauto. 
 Qed.
 
+
+Corollary LRCoherPres : forall g p lr nb nb' lr',
+    verifyrule g p lr nb (Some (nb', lr')) ->
+    LRCoher g lr ->
+    LRCoher g lr'.
+Proof.
+  intros * HVR HLR.
+  apply NLRpreservation in HVR; intuition eauto.
+Qed.
+
+
+Lemma LRCoherUpdate: forall g lr i,
+    LRCoher g lr ->
+    LRCoher g (update lr i Visiting).
+Proof.
+  unfold LRCoher; intros * H * Hnth.
+  apply H. destruct (Nat.eq_dec n i); subst.
+  - exfalso.
+    specialize (update_eq2 lr i Visiting Visiting) as [? | ?];
+      congruence.
+  - rewrite update_neq in Hnth; auto.
+Qed.
+
         
 Lemma not_null_nt: forall g p n,
     not_nullable g p ->
@@ -235,6 +261,77 @@ Proof.
                 not_null_choice, not_null_nt.
   apply Bool.orb_false_elim in Heq; destruct Heq; subst.
   eauto using not_null_choice.
+Qed.
+
+
+Lemma In1 : forall lr ln ln',
+    (forall i, nth i lr Visiting = Visiting -> ~ In i (ln ++ ln')) ->
+    (forall i, nth i lr Visiting = Visiting -> ~ In i ln).
+Proof.
+  intros * HVis i HVis1 HIn.
+  eapply HVis; eauto using in_or_app.
+Qed.
+
+
+Lemma In2 : forall lr ln ln',
+    (forall i, nth i lr Visiting = Visiting -> ~ In i (ln ++ ln')) ->
+    (forall i, nth i lr Visiting = Visiting -> ~ In i ln').
+Proof.
+  intros * HVis i HVis1 HIn.
+  eapply HVis; eauto using in_or_app.
+Qed.
+
+
+Lemma NLR_VR: forall g p nb ln lr,
+  noleftrec g p nb ln ->
+  LRCoher g lr ->
+  (forall i, nth i lr Visiting = Visiting -> ~In i ln) ->
+  exists lr', verifyrule g p lr false (Some (nb, lr')).
+Proof.
+  intros * HNL.
+  generalize dependent lr.
+  induction HNL; intros * HLR HVis;
+    eauto using verifyrule;
+    try (eapply IHHNL in HVis; trivial; destruct HVis as [? ?];
+         eauto using verifyrule, nb_false; fail).
+  - specialize (In1 _ _ _ HVis) as H1.
+    specialize (In2 _ _ _ HVis) as H2.
+    apply IHHNL1 in H1; trivial. destruct H1 as [? ?]. clear IHHNL1.
+    specialize (IHHNL2 x).
+    assert (forall i : nat, nth i x Visiting = Visiting -> ~ In i ln').
+    { intros * HVis1. eapply H2. eapply vrPvisiting; eauto. }
+    apply IHHNL2 in H0; eauto using LRCoherPres.
+    destruct H0 as [? ?]. clear IHHNL2.
+    eauto using verifyrule.
+  - specialize (In1 _ _ _ HVis) as H1.
+    specialize (In2 _ _ _ HVis) as H2.
+    apply IHHNL1 in H1; trivial. destruct H1 as [? ?]. clear IHHNL1.
+    specialize (IHHNL2 x).
+    assert (forall i : nat, nth i x Visiting = Visiting -> ~ In i ln').
+    { intros * HVis1. eapply H2. eapply vrPvisiting; eauto. }
+    apply IHHNL2 in H0; eauto using LRCoherPres.
+    destruct H0 as [? ?]. clear IHHNL2.
+    exists x0. eapply VRChoiceSome; eauto.
+    rewrite Bool.orb_comm.
+    apply nb_nb. auto.
+  - destruct (nth i lr Visiting) eqn:?.
+    + assert (HH: forall i0 : nat,
+         nth i0 (update lr i Visiting) Visiting = Visiting -> ~ In i0 ln).
+      { intros n HVis1.
+        destruct (Nat.eq_dec n i); subst.
+        - eauto using NLRNoLoops.
+        - rewrite update_neq in HVis1; trivial.
+          apply HVis in HVis1. eauto using in_cons. }
+       apply IHHNL in HH; eauto using LRCoherUpdate.
+       destruct HH as [? ?]. 
+       eapply VRNTNotvisitedSome with (nb := false) in H0; eauto.
+    + exfalso. apply HVis in Heqr. simpl in Heqr. intuition.
+    + replace nb with (false || nb)%bool by auto using Bool.orb_false_l.
+      eexists. eapply VRNTVisited.
+      replace nb with b; trivial.
+      apply HLR in Heqr. destruct Heqr as [? ?].
+      inversion H0; subst.
+      eapply NLRunique; eauto.
 Qed.
 
 

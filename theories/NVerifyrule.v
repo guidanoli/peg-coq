@@ -587,38 +587,20 @@ Proof.
 Qed.
 
 
-Lemma VRIncVR: forall g p nb nb' lr lr' lr'',
-    verifyrule g p lr nb (Some (nb', lr')) ->
-    leLR lr lr'' ->
-    exists lr''', verifyrule g p lr'' nb (Some (nb', lr''')).
+Lemma vrPvisiting: forall g p nb nb' lr lr',
+  verifyrule g p lr nb (Some (nb', lr')) ->
+  forall n, nth n lr Visiting = Visiting <-> nth n lr' Visiting = Visiting.
 Proof.
-  intros * HVR.
-  remember (Some (nb', lr')) as res.
-  generalize dependent nb'.
-  generalize dependent lr'.
-  generalize dependent lr''.
-  induction HVR; intros * Heq Hle;
-  try discriminate;
-  try (injection Heq; intros; subst; clear Heq);
-  subst;
-  try (eexists; eauto using verifyrule; fail).
-  -
-  specialize (IHHVR1 lr'' _ _ eq_refl) as [lr''' H1]; trivial.
-  specialize (IHHVR2 lr''' _ _ eq_refl) as [lr'''' H2]; trivial.
-  2:{ eauto using verifyrule. }
-(*
-  + apply VRInc in H.
-
-  repeat match goal with
-  [H1: leLR ?lr ?lr',
-   H2: leLR ?lr ?lr' -> _ |- _] =>
-     specialize (H2 H1) as [? ?]
-  end.
-  eexists.
-  eapply VRSequenceSomeTrue; eauto.
-  try (eexists; eauto using verifyrule; fail).
-*)
-Abort.
+  intros * HVR n; split; intros H.
+  - erewrite vrinc; eauto. congruence.
+  - eapply VRInc in HVR. unfold leLR in HVR.
+    specialize (HVR n).
+    destruct (nth n lr Visiting) eqn:Heq; trivial; exfalso.
+    + rewrite H in HVR.
+      inversion HVR.
+    + rewrite H in HVR.
+      inversion HVR.
+Qed.
 
 
 Lemma nullableVR: forall g p nb nb' lr lr',
@@ -738,19 +720,3 @@ Proof.
   - inversion HV; subst; try congruence; eauto.
 Qed.
 
-
-(*
-verifyrule g p lr nb (Some (x, lr')) ->
-verifyrule g (PNT i) lr false (Some (x0, x1)) ->
-exists (nb : bool) (lr'' : list RuleStatus),
-  verifyrule g (PNT i) lr' false (Some (nb, lr''))
-
-Lemma VRVRpres: forall g n lr b lr',
-    verifyrule g (PNT n) lr false (Some (b, lr')) ->
-    verifyrule g (PNT n) lr' false (Some (b, lr')).
-Proof.
-  intros * HV.
-  apply VRAdd1 in HV.
-  destruct HV as [? ?].
-  eauto using verifyrule.
-*)

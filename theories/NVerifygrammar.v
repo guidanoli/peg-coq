@@ -11,7 +11,7 @@ From Peg Require Import VRcomp.
 From Peg Require Import NLR.
 
 
-Fixpoint verifygrammar_comp n 
+Fixpoint verifygrammar_comp n
     (g : grammar) (lr : list RuleStatus) : option (list RuleStatus) :=
   match n with
   | 0 => Some lr
@@ -82,4 +82,29 @@ Proof.
       * subst; eauto using VRAdd1.
 Qed.
 
+
+Theorem VGcorrect: forall g lr',
+  verifygrammar_comp (length g) g
+    (repeat NotVisited (length g)) = Some lr' ->
+  GrammarComplete g.
+Proof.
+  intros * HVG.
+  apply vgcomp_ind in HVG; destruct HVG.
+  - unfold GrammarComplete. intros.
+    specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
+    + apply H0 in H1. destruct H1. eauto.
+    + eexists; eexists; eauto using nth_overflow, noleftrec.
+  - unfold LRCoher.
+    intros * Heq. exfalso.
+    specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
+    + rewrite nth_indep with (d' := NotVisited) in Heq.
+      * rewrite nth_repeat in Heq. discriminate.
+      * rewrite repeat_length. trivial.
+    + rewrite nth_overflow in Heq; try discriminate.
+      rewrite repeat_length. trivial.
+  - intros * Hlt.
+    rewrite nth_indep with (d' := NotVisited).
+    * rewrite nth_repeat. trivial.
+    * rewrite repeat_length. trivial.
+Qed.
 

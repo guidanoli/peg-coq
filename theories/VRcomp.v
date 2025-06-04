@@ -5,50 +5,10 @@ From Coq Require Import Lia.
 From Coq Require Import Classes.EquivDec.
 
 From Peg Require Import Syntax.
+From Peg Require Import Ncode.
 From Peg Require Import NMatch.
 From Peg Require Import NVerifyrule.
 
-
-Fixpoint verifyrule_comp gas
-    (g : grammar) (p : pat) (lr : list RuleStatus) (nb : bool) :
-      option Result :=
-  match gas with
-  | 0 => None
-  | S gas' =>
-    match p with
-    | PEmpty => Some (Some (true, lr))
-    | PSet _ => Some (Some (nb, lr))
-    | PSequence p1 p2 =>
-      match verifyrule_comp gas' g p1 lr false with
-      | None => None  (* out of gas *)
-      | Some None => Some None  (* ill formed *)
-      | Some (Some (false, lr')) => Some (Some (nb, lr'))
-      | Some (Some (true, lr')) => verifyrule_comp gas' g p2 lr' nb
-      end
-    | PChoice p1 p2 =>
-      match verifyrule_comp gas' g p1 lr nb with
-      | None => None  (* out of gas *)
-      | Some None => Some None  (* ill formed *)
-      | Some (Some (nb', lr')) => verifyrule_comp gas' g p2 lr' nb'
-      end
-    | PRepetition p' => verifyrule_comp gas' g p' lr true
-    | PNot p' => verifyrule_comp gas' g p' lr true
-    | PAnd p' => verifyrule_comp gas' g p' lr true
-    | PNT i =>
-      match nth i lr Visiting with
-      | Visiting => Some (None)  (* ill formed *)
-      | Visited nb' => Some (Some (orb nb nb', lr))
-      | NotVisited =>
-        match verifyrule_comp gas' g (nth i g PEmpty)
-                              (update lr i Visiting) false with
-        | None => None  (* out of gas *)
-        | Some None => Some None  (* ill formed *)
-        | Some (Some (nb', lr')) =>
-            Some (Some (orb nb nb', update lr' i (Visited nb')))
-        end
-      end
-    end
-  end.
 
 
 Ltac destVR :=
@@ -126,37 +86,8 @@ Proof.
 Qed.
 
 
-Fixpoint costP p : nat :=
-  match p with
-  | PEmpty => 1
-  | PSet _ => 1
-  | PSequence p1 p2 => S (costP p1 + costP p2)
-  | PChoice p1 p2 => S (costP p1 + costP p2)
-  | PRepetition p => S (costP p)
-  | PNot p => S (costP p)
-  | PAnd p => S (costP p)
-  | PNT _ => 1
-  end.
-
-
 Lemma costP1 : forall p, 0 < costP p.
 Proof. induction p; simpl; lia. Qed.
-
-
-Fixpoint costG g lr : nat :=
-  match lr with
-  | nil => 0
-  | NotVisited :: lr' =>
-      match g with
-      | nil => S (1 + costG nil lr')
-      | (p :: g') => S (costP p + costG g' lr')
-      end
-  | _ :: lr' =>
-      match g with
-      | nil => costG nil lr'
-      | (_ :: g') => costG g' lr'
-      end
-  end.
 
 
 Lemma CostUpdateVIsitingP : forall lr g n,

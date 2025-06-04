@@ -1,10 +1,12 @@
 From Coq Require Import Arith.
-From Peg Require Import Syntax.
-From Peg Require Import NMatch.
 From Coq Require Import Lists.List.
 Import ListNotations.
 From Coq Require Import Lia.
 From Coq Require Import Classes.EquivDec.
+
+From Peg Require Import Syntax.
+From Peg Require Import NMatch.
+From Peg Require Import Ncode.
 
 Require Extraction.
 
@@ -27,14 +29,6 @@ Proof.
   eapply nth_overflow with (d := def) in l0.
   congruence.
 Qed.
-
-
-Fixpoint update {T} (l : list T) (idx : nat) (newval : T) : list T :=
-  match idx,  l with
-  | _, nil => nil
-  | 0,  (h :: t) => newval :: t
-  | S idx', (h :: t) => h :: update t idx' newval
-  end.
 
 
 Lemma update_eq : forall {T} (l : list T) i a b,
@@ -97,12 +91,6 @@ Proof.
 Qed.
 
 
-Inductive RuleStatus : Type :=
-| NotVisited
-| Visiting
-| Visited : bool -> RuleStatus.
-
-
 Inductive leRS : RuleStatus -> RuleStatus -> Prop :=
 | LERRef : forall x, leRS x x
 | LERNV : forall nb, leRS NotVisited (Visited nb).
@@ -133,9 +121,6 @@ Proof. intros * H1 H2 n. eauto using leRSTrans. Qed.
 
 Definition dec_Rule : forall (r1 r2 : RuleStatus), {r1 = r2} + {r1 <> r2}.
 Proof. repeat decide equality. Qed.
-
-
-Definition Result := option (bool * list RuleStatus).
 
 
 Inductive verifyrule :

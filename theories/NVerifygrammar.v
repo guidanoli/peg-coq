@@ -5,31 +5,11 @@ From Coq Require Import Lia.
 From Coq Require Import Classes.EquivDec.
 
 From Peg Require Import Syntax.
+From Peg Require Import Ncode.
 From Peg Require Import NMatch.
 From Peg Require Import NVerifyrule.
 From Peg Require Import VRcomp.
 From Peg Require Import NLR.
-
-
-Fixpoint verifygrammar_comp n
-    (g : grammar) (lr : list RuleStatus) : option (list RuleStatus) :=
-  match n with
-  | 0 => Some lr
-  | S n' => match verifygrammar_comp n' g lr with
-            | None => None
-            | Some lr' =>
-                match verifyrule_comp (costG g lr' + costP (PNT n'))
-                                      g (PNT n') lr' false with
-                | None => Some lr'   (* cannot happen *)
-                | Some None => None
-                | Some (Some (nb, lr'')) => Some lr''
-                end
-            end
-  end.
-
-
-Definition VG (g : grammar) : option (list RuleStatus) :=
-  verifygrammar_comp (length g) g (repeat NotVisited (length g)).
 
 
 Lemma verifygrammar_comp_S:
@@ -145,11 +125,11 @@ Theorem VGcorrect_nonull: forall g lr',
 Proof.
   unfold VG.
   intros * HVG.
-  apply vgcomp_ind in HVG; destruct HVG;
+  apply vgcomp_ind in HVG; destruct HVG as [H1 ?];
   auto using LRCoherRep, nth_repeat_init.
   unfold LRCoher in *.
   intros * HVis.
-  apply H in HVis. destruct HVis.
+  apply H1 in HVis. destruct HVis.
   eauto using nlr_nullable.
 Qed.
 

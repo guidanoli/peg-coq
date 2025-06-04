@@ -5,6 +5,7 @@ From Coq Require Import Lia.
 From Coq Require Import Classes.EquivDec.
 
 From Peg Require Import Syntax.
+From Peg Require Import Ncode.
 From Peg Require Import NMatch.
 From Peg Require Import NVerifyrule.
 

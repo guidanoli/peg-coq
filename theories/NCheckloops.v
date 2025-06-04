@@ -5,35 +5,12 @@ From Peg Require Import Syntax.
 
 From Peg Require Import Syntax.
 From Peg Require Import NMatch.
-From Peg Require Import Nullable.
+From Peg Require Import Ncode.
 From Peg Require Import Tactics.
 From Peg Require Import NVerifyrule.
 From Peg Require Import NVerifygrammar.
 
 Import ListNotations.
-
-
-Fixpoint nullable_comp lr p :=
-  match p with
-  | PEmpty => true
-  | PSet _ => false
-  | PSequence p1 p2 =>
-      if nullable_comp lr p1 then
-        nullable_comp lr p2
-      else false
-  | PChoice p1 p2 =>
-      if nullable_comp lr p1 then
-        true
-      else
-        nullable_comp lr p2
-  | PRepetition _ => true
-  | PNot _ => true
-  | PAnd _ => true
-  | PNT i => match nth i lr Visiting with
-             | Visited false => false
-             | _ => true
-             end
-  end.
 
 
 Ltac destructCond :=
@@ -85,24 +62,6 @@ Inductive noloops : list RuleStatus -> pat -> Prop :=
   .
 
 
-(** CheckLoops function **)
-
-Fixpoint noloops_comp lr p :=
-  match p with
-  | PEmpty => true
-  | PSet _ => true
-  | PSequence p1 p2 =>
-      (noloops_comp lr p1 && noloops_comp lr p2)%bool
-  | PChoice p1 p2 =>
-      (noloops_comp lr p1 && noloops_comp lr p2)%bool
-  | PRepetition p' =>
-      if nullable_comp lr p' then false
-      else noloops_comp lr p'
-  | PNot p' => noloops_comp lr p'
-  | PAnd p' => noloops_comp lr p'
-  | PNT _ => true
-end.
-
 
 Lemma noloops_comp_necessary :
   forall lr p,
@@ -125,16 +84,6 @@ Proof.
   destructCond.
   auto using noloops.
 Qed.
-
-
-Fixpoint Gnoloops_comp n lr g : bool :=
-  match n with
-  | 0 => true
-  | S n' => match Gnoloops_comp n' lr g with
-            | false => false
-            | true => noloops_comp lr (nth n' g PEmpty)
-            end
-  end.
 
 
 Lemma Gnoloops_comp_complete_aux : forall n lr g,
@@ -160,50 +109,6 @@ Proof.
   apply nth_overflow with (d := PEmpty) in H1.
   rewrite H1. auto using noloops.
 Qed.
-
-
-Definition well_formed (g : grammar) : option (list RuleStatus) :=
-  match VG g with
-  | Some lr => 
-      if Gnoloops_comp (length g) lr g then Some lr
-      else None
-  | None => None
-end.
-
-
-Module Examples.
-(* R0 -> R0 *)
-
-Goal well_formed [PNT 0] = None. reflexivity. Qed.
-
-Definition dot : pat := PSet (fun c => true).
-
-(* R0 -> R1 R1; R1 -> ε / . *)
-Goal well_formed [PSequence (PNT 1) (PNT 1); PChoice PEmpty dot] =
-     Some [Visited true; Visited true]. reflexivity. Qed.
-
-(* R0 -> . R0 / . *)
-Goal well_formed [PChoice (PSequence dot (PNT 0)) dot] =
-       Some [Visited false]. reflexivity. Qed.
-
-(* R0 -> !. / &. . R0 *)
-Goal well_formed [PChoice (PNot dot)
-                          (PSequence (PAnd dot)
-                          (PSequence dot (PNT 0)))] = Some [Visited true].
-reflexivity. Qed.
-
-
-(* R0 -> ( .* )*  *)
-Goal well_formed [PRepetition (PRepetition dot)] = None.
-reflexivity. Qed.
-
-
-(* R0 -> ( .* . )*  *)
-Goal well_formed [PRepetition (PSequence (PRepetition dot) dot)] =
-      Some [Visited true]. reflexivity. Qed.
-
-End Examples.
-
 
 
 Lemma well_formed_correct_aux : forall g lr,

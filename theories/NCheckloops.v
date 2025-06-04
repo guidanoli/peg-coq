@@ -154,8 +154,7 @@ Proof with eauto using matches.
     breakEx.
     destruct x...
     assert (String.length s0 < N) as Hlen0.
-    { Search (nullable_comp _ _ = false).
-      eapply nullable_comp_correct in H2; eauto.
+    { eapply nullable_comp_correct in H2; eauto.
       eapply (proj1 (notnull_len g p)) in H2; eauto; try lia. }
     specialize (IHN s0 _ Hlen0 HNL).
     breakEx...
@@ -183,7 +182,5 @@ Proof.
   injection HWF; intro; subst; clear HWF.
   eauto using Gnoloops_comp_complete.
 Qed.
-
-
   
 

@@ -3,6 +3,10 @@ From Coq Require Import Lists.List.
 Import ListNotations.
 
 
+(*
+  Update the 'idx'-th position of list 'l' to the value 'newval'.
+  no-op if index out of range.
+*)
 Fixpoint update {T} (l : list T) (idx : nat) (newval : T) : list T :=
   match idx,  l with
   | _, nil => nil
@@ -11,12 +15,20 @@ Fixpoint update {T} (l : list T) (idx : nat) (newval : T) : list T :=
   end.
 
 
+(*
+  status of each Non-terminal rule during traversal
+*)
 Inductive RuleStatus : Type :=
 | NotVisited
 | Visiting
-| Visited : bool -> RuleStatus.
+| Visited : bool -> RuleStatus.  (* true means rule is nullable *)
 
 
+(*
+  Result of a traversal:
+  - None means left-recursion detected.
+  - Some: bool true means pattern is nullable; list is status updated.
+*)
 Definition Result := option (bool * list RuleStatus).
 
 
@@ -47,7 +59,7 @@ Fixpoint verifyrule_comp gas
     | PAnd p' => verifyrule_comp gas' g p' lr true
     | PNT i =>
       match nth i lr Visiting with
-      | Visiting => Some (None)  (* ill formed *)
+      | Visiting => Some None  (* left recursion *)
       | Visited nb' => Some (Some (orb nb nb', lr))
       | NotVisited =>
         match verifyrule_comp gas' g (nth i g PEmpty)
@@ -62,6 +74,7 @@ Fixpoint verifyrule_comp gas
   end.
 
 
+(* Cost (gas) to traverse a pattern *)
 Fixpoint costP p : nat :=
   match p with
   | PEmpty => 1
@@ -75,6 +88,7 @@ Fixpoint costP p : nat :=
   end.
 
 
+(* Cost (gas) to traverse a grammar *)
 Fixpoint costG g lr : nat :=
   match lr with
   | nil => 0
@@ -83,7 +97,7 @@ Fixpoint costG g lr : nat :=
       | nil => S (1 + costG nil lr')
       | (p :: g') => S (costP p + costG g' lr')
       end
-  | _ :: lr' =>
+  | _ :: lr' =>    (* visited rules add no cost *)
       match g with
       | nil => costG nil lr'
       | (_ :: g') => costG g' lr'
@@ -91,6 +105,10 @@ Fixpoint costG g lr : nat :=
   end.
 
 
+(*
+  Traverse all rules of a grammar up to 'n' (exclusive), passing forward
+  the list of status.
+ *)
 Fixpoint verifygrammar_comp n
     (g : grammar) (lr : list RuleStatus) : option (list RuleStatus) :=
   match n with
@@ -108,11 +126,16 @@ Fixpoint verifygrammar_comp n
   end.
 
 
+(*
+  Traverse all rules of a grammar, returning the final list of status.
+  (Start with all rules NotVisited.)
+ *)
 Definition VG (g : grammar) : option (list RuleStatus) :=
   verifygrammar_comp (length g) g (repeat NotVisited (length g)).
 
 
-Fixpoint nullable_comp lr p :=
+(* Check whether a pattern is nullable, using 'lr' to solve rules *)
+Fixpoint nullable_comp lr p : bool :=
   match p with
   | PEmpty => true
   | PSet _ => false
@@ -135,9 +158,10 @@ Fixpoint nullable_comp lr p :=
   end.
 
 
-(** CheckLoops function **)
-
-Fixpoint noloops_comp lr p :=
+(*
+  Check whether pattern doesn't have a loop with a nullable body.
+*)
+Fixpoint noloops_comp lr p : bool :=
   match p with
   | PEmpty => true
   | PSet _ => true
@@ -150,10 +174,14 @@ Fixpoint noloops_comp lr p :=
       else noloops_comp lr p'
   | PNot p' => noloops_comp lr p'
   | PAnd p' => noloops_comp lr p'
-  | PNT _ => true
+  | PNT _ => true   (* each rule will be checked alone *)
 end.
 
 
+(*
+  Check whether grammar doesn't have a loop with a nullable body,
+  up to rule 'n' (exclusive).
+*)
 Fixpoint Gnoloops_comp n lr g : bool :=
   match n with
   | 0 => true
@@ -164,6 +192,10 @@ Fixpoint Gnoloops_comp n lr g : bool :=
   end.
 
 
+(*
+  Final check: Checks whether grammar has neither left recursion nor
+  loops with nullable body.
+*)
 Definition well_formed (g : grammar) : option (list RuleStatus) :=
   match VG g with
   | Some lr => 
@@ -175,7 +207,6 @@ end.
 
 Module Examples.
 (* R0 -> R0 *)
-
 Goal well_formed [PNT 0] = None. reflexivity. Qed.
 
 Definition dot : pat := PSet (fun c => true).

@@ -10,7 +10,7 @@ Require Extraction.
 
 
 Ltac simplsome :=
-  repeat match goal with
+  subst; repeat match goal with
   | [H: Some ?x = Some ?x |- _] => clear H
   | [H: Some _ = Some _ |- _] => injection H; intros; subst; clear H
   end; try discriminate.
@@ -437,8 +437,7 @@ Proof.
   generalize dependent nb'.
   generalize dependent lr'.
   induction HVR; intros * Heq;
-  try (injection Heq; intros; subst; clear Heq);
-    subst; try discriminate; eauto;
+  simplsome; eauto;
     breakIHsome; try congruence.
   rewrite update_len in IHHVR.
   rewrite update_len.
@@ -556,9 +555,7 @@ Proof.
   generalize dependent nb'.
   generalize dependent lr'.
   induction H; intros * HEq n;
-  try (injection HEq; intros; subst; clear HEq);
-  try discriminate; subst;
-  breakIHsome;
+  simplsome; breakIHsome;
    eauto using leRS, leRSTrans.
    destruct (Nat.eq_dec i n); subst.
    - erewrite update_eq.
@@ -595,10 +592,8 @@ Proof.
   - erewrite vrinc; eauto. congruence.
   - eapply VRInc in HVR. unfold leLR in HVR.
     specialize (HVR n).
-    destruct (nth n lr Visiting) eqn:Heq; trivial; exfalso.
-    + rewrite H in HVR.
-      inversion HVR.
-    + rewrite H in HVR.
+    destruct (nth n lr Visiting) eqn:Heq; trivial; exfalso;
+      rewrite H in HVR;
       inversion HVR.
 Qed.
 

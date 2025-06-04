@@ -28,6 +28,10 @@ Fixpoint verifygrammar_comp n
   end.
 
 
+Definition VG (g : grammar) : option (list RuleStatus) :=
+  verifygrammar_comp (length g) g (repeat NotVisited (length g)).
+
+
 Lemma verifygrammar_comp_S:
     forall g lr n lr'',
     verifygrammar_comp (S n) g lr = Some lr'' ->
@@ -83,28 +87,70 @@ Proof.
 Qed.
 
 
-Theorem VGcorrect: forall g lr',
-  verifygrammar_comp (length g) g
-    (repeat NotVisited (length g)) = Some lr' ->
-  GrammarComplete g.
+Lemma LRCoherRep : forall g,
+    LRCoher g (repeat NotVisited (length g)).
+Proof.
+  unfold LRCoher.
+  intros * Heq. exfalso.
+  specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
+  - rewrite nth_indep with (d' := NotVisited) in Heq.
+    + rewrite nth_repeat in Heq. discriminate.
+    + rewrite repeat_length. trivial.
+  - rewrite nth_overflow in Heq; try discriminate.
+    rewrite repeat_length. trivial.
+Qed.
+
+
+Lemma nth_repeat_init: forall n,
+  forall i : nat,
+      i < n -> nth i (repeat NotVisited n) Visiting = NotVisited.
+Proof.
+  intros * Hlt.
+  rewrite nth_indep with (d' := NotVisited).
+  * rewrite nth_repeat. trivial.
+  * rewrite repeat_length. trivial.
+Qed.
+
+
+Theorem VGcorrect: forall g lr,
+  VG g = Some lr -> GrammarComplete g.
+Proof.
+  unfold VG.
+  intros * HVG.
+  apply vgcomp_ind in HVG; destruct HVG;
+  auto using LRCoherRep, nth_repeat_init.
+  unfold GrammarComplete. intros.
+  specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
+  - apply H0 in H1. destruct H1. eauto.
+  - eexists; eexists; eauto using nth_overflow, noleftrec.
+Qed.
+
+
+Theorem VGcomplete: forall g lr p,
+  VG g = Some lr ->
+  exists nb ln, noleftrec g p nb ln.
 Proof.
   intros * HVG.
-  apply vgcomp_ind in HVG; destruct HVG.
-  - unfold GrammarComplete. intros.
-    specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
-    + apply H0 in H1. destruct H1. eauto.
-    + eexists; eexists; eauto using nth_overflow, noleftrec.
-  - unfold LRCoher.
-    intros * Heq. exfalso.
-    specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
-    + rewrite nth_indep with (d' := NotVisited) in Heq.
-      * rewrite nth_repeat in Heq. discriminate.
-      * rewrite repeat_length. trivial.
-    + rewrite nth_overflow in Heq; try discriminate.
-      rewrite repeat_length. trivial.
-  - intros * Hlt.
-    rewrite nth_indep with (d' := NotVisited).
-    * rewrite nth_repeat. trivial.
-    * rewrite repeat_length. trivial.
+  apply VGcorrect in HVG.
+  induction p; try breakEx;
+  try (eexists; eexists; eauto using noleftrec; fail).
+  - destruct x1; eauto using noleftrec.
+  - specialize (HVG n); breakEx; eauto.
 Qed.
+
+
+Theorem VGcorrect_nonull: forall g lr',
+  VG g = Some lr' ->
+  (forall i, nth i lr' Visiting = Visited false -> not_nullable g (PNT i)).
+Proof.
+  unfold VG.
+  intros * HVG.
+  apply vgcomp_ind in HVG; destruct HVG;
+  auto using LRCoherRep, nth_repeat_init.
+  unfold LRCoher in *.
+  intros * HVis.
+  apply H in HVis. destruct HVis.
+  eauto using nlr_nullable.
+Qed.
+
 

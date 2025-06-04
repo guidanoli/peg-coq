@@ -1,0 +1,6 @@
+coqc -Q . Peg NMatch.v
+coqc -Q . Peg NVerifyrule.v
+coqc -Q . Peg NLR.v
+coqc -Q . Peg VRcomp.v
+coqc -Q . Peg NVerifygrammar.v
+coqc -Q . Peg NCheckloops.v

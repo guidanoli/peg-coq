@@ -1,5 +1,6 @@
 From Peg Require Import Syntax.
 From Peg Require Import Match.
+From Peg Require Import Tactics.
 
 Definition equivalent g p1 p2 :=
   forall s res, matches g p1 s res <-> matches g p2 s res.
@@ -223,4 +224,51 @@ Proof.
         invert_matches PEmpty.
       -- (* p fails *)
          eauto using matches.
+Qed.
+
+Lemma rep_not :
+  forall g p,
+  equivalent g (PRepetition p) (PSequence (PRepetition p) (PNot p)).
+Proof.
+  intros.
+  unfold equivalent.
+  intros.
+  split; intro H.
+  - (* -> *)
+    remember (PRepetition p) as prep.
+    induction H;
+    try discriminate;
+    try destruct1.
+    + (* p succeeds *)
+      assert (matches g (PSequence (PRepetition p) (PNot p)) s' res) by eauto.
+      invert_matches (PSequence (PRepetition p) (PNot p));
+      eauto using matches.
+    + (* p fails *)
+      eauto using matches.
+  - (* <- *)
+    inversion H; subst.
+    + (* p* succeeds *)
+      remember (PRepetition p) as prep.
+      remember (Success s') as res'.
+      generalize dependent res.
+      generalize dependent s'.
+      generalize dependent p.
+      induction H3;
+      intros;
+      try discriminate;
+      repeat destruct1.
+      -- (* p succeeds *)
+         eauto using matches.
+      -- (* p fails *)
+         match goal with
+           [ Hx: matches ?g ?p ?s Failure,
+             Hy: matches ?g (PNot ?p) ?s ?res |- _ ] =>
+                 assert (matches g (PNot p) s (Success s))
+                 by eauto using matches;
+                 pose_matches_determinism;
+                 subst;
+                 eauto using matches
+         end.
+    + (* p* fails *)
+      eauto using matches.
 Qed.

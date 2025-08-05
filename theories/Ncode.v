@@ -142,14 +142,9 @@ Fixpoint nullable_comp lr p : bool :=
   | PEmpty => true
   | PSet _ => false
   | PSequence p1 p2 =>
-      if nullable_comp lr p1 then
-        nullable_comp lr p2
-      else false
+      (nullable_comp lr p1 && nullable_comp lr p2)%bool
   | PChoice p1 p2 =>
-      if nullable_comp lr p1 then
-        true
-      else
-        nullable_comp lr p2
+      (nullable_comp lr p1 || nullable_comp lr p2)%bool
   | PRepetition _ => true
   | PNot _ => true
   | PAnd _ => true

@@ -30,6 +30,13 @@ Proof.
   repeat destructCond;
       eauto using not_null_set, not_null_seq2, not_null_seq1,
         nb_true, not_null_choice, VGcorrect_nonull.
+  - specialize (proj1 (Bool.andb_false_iff _ _) HNull) as [? | ?];
+      eauto using not_null_set, not_null_seq2, not_null_seq1,
+        nb_true, not_null_choice, VGcorrect_nonull.
+  - specialize (Bool.orb_false_elim _ _ HNull).
+    intros [? ?].
+      eauto using not_null_set, not_null_seq2, not_null_seq1,
+        nb_true, not_null_choice, VGcorrect_nonull.
 Qed.
 
 

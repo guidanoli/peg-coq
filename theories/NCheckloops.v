@@ -125,19 +125,19 @@ Proof with eauto using matches.
   specialize (Gnoloops_comp_complete _ _ Heqb) as ?.
   induction N; intros * Hlen; simpl in Hlen; try lia.
   generalize dependent s.
-  specialize (VGcomplete _ _ p Heqo) as ?.
+  specialize (VGcomplete _ _ p Heqr) as ?.
   breakEx.
   induction H0; intros * HSlen HNL; inversion HNL; subst...
   - destruct s...
     destruct (cs a) eqn:?...
-  - specialize (IHnoleftrec1 Heqb Heqo H IHN _ HSlen H3).
+  - specialize (IHnoleftrec1 Heqb Heqr H IHN _ HSlen H3).
     breakEx.
     destruct x...
     specialize (match_len _ _ _ _ H0) as ?.
     assert (HLen: String.length s0 < S N) by lia.
-    specialize (IHnoleftrec2 Heqb Heqo H IHN _ HLen H4).
+    specialize (IHnoleftrec2 Heqb Heqr H IHN _ HLen H4).
     breakEx...
-  - specialize (IHnoleftrec Heqb Heqo H IHN _ HSlen H4).
+  - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H4).
     breakEx.
     destruct x...
     assert (String.length s0 < N) as Hlen0.
@@ -145,12 +145,12 @@ Proof with eauto using matches.
       eapply (proj1 (notnull_len g p1)) in H1; eauto; try lia. }
     specialize (IHN s0 p2 Hlen0 H5).
     breakEx...
-  - specialize (IHnoleftrec1 Heqb Heqo H IHN _ HSlen H3).
+  - specialize (IHnoleftrec1 Heqb Heqr H IHN _ HSlen H3).
     breakEx.
     destruct x...
-    specialize (IHnoleftrec2 Heqb Heqo H IHN _ HSlen H4).
+    specialize (IHnoleftrec2 Heqb Heqr H IHN _ HSlen H4).
     breakEx...
-  - specialize (IHnoleftrec Heqb Heqo H IHN _ HSlen H4).
+  - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H4).
     breakEx.
     destruct x...
     assert (String.length s0 < N) as Hlen0.
@@ -158,14 +158,14 @@ Proof with eauto using matches.
       eapply (proj1 (notnull_len g p)) in H2; eauto; try lia. }
     specialize (IHN s0 _ Hlen0 HNL).
     breakEx...
-  - specialize (IHnoleftrec Heqb Heqo H IHN _ HSlen H3).
+  - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H3).
     breakEx.
     destruct x...
-  - specialize (IHnoleftrec Heqb Heqo H IHN _ HSlen H3).
+  - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H3).
     breakEx.
     destruct x...
   - assert (HNLnth: noloops lr (nth i g PEmpty)) by eauto.
-    specialize (IHnoleftrec Heqb Heqo H IHN _ HSlen HNLnth).
+    specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen HNLnth).
     breakEx...
 Qed.
 

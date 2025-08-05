@@ -128,7 +128,7 @@ Inductive verifyrule :
   pat ->
   list RuleStatus ->
   bool ->
-  Result ->
+  RResult ->
   Prop :=
   | VREmpty :
       forall g lr nb,
@@ -306,7 +306,7 @@ Qed.
 
 
 Lemma VRcomplete : forall N g p lr nb,
-  count_notvisited lr < N -> {res : Result | verifyrule g p lr nb res}.
+  count_notvisited lr < N -> {res : RResult | verifyrule g p lr nb res}.
 Proof.
   induction N.
   - intros * HNV. exfalso. eapply Nat.nlt_0_r. eauto.
@@ -355,7 +355,7 @@ Proof.
 Qed.
 
 
-Definition WF (g : grammar) : Result.
+Definition WF (g : grammar) : RResult.
   specialize (VRcomplete (S (length g))
                          g
                          (PNT 0)

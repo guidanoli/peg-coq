@@ -29,7 +29,7 @@ Proof.
     injection HVG; intros; subst; clear HVG.
     eexists; eexists; eauto.
   - exfalso.
-    replace 1 with (costP (PNT n)) in Heqo0 by trivial.
+    replace 1 with (costP (PNT n)) in Heqo by trivial.
     eapply VR_comp; eauto.
 Qed.
 

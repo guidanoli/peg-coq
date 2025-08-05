@@ -29,12 +29,12 @@ Inductive RuleStatus : Type :=
   - None means left-recursion detected.
   - Some: bool true means pattern is nullable; list is status updated.
 *)
-Definition Result := option (bool * list RuleStatus).
+Definition RResult := option (bool * list RuleStatus).
 
 
-Fixpoint verifyrule_comp gas
+Fixpoint verifyrule_comp (gas : nat)
     (g : grammar) (p : pat) (lr : list RuleStatus) (nb : bool) :
-      option Result :=
+      option RResult :=
   match gas with
   | 0 => None
   | S gas' =>
@@ -105,18 +105,20 @@ Fixpoint costG g lr : nat :=
   end.
 
 
+Definition Result := option (list RuleStatus).
+
 (*
   Traverse all rules of a grammar up to 'n' (exclusive), passing forward
   the list of status.
  *)
 Fixpoint verifygrammar_comp n
-    (g : grammar) (lr : list RuleStatus) : option (list RuleStatus) :=
+    (g : grammar) (lr : list RuleStatus) : Result :=
   match n with
   | 0 => Some lr
   | S n' => match verifygrammar_comp n' g lr with
             | None => None
             | Some lr' =>
-                match verifyrule_comp (costG g lr' + costP (PNT n'))
+                match verifyrule_comp (costG g lr' + 1)
                                       g (PNT n') lr' false with
                 | None => Some lr'   (* cannot happen *)
                 | Some None => None
@@ -130,7 +132,7 @@ Fixpoint verifygrammar_comp n
   Traverse all rules of a grammar, returning the final list of status.
   (Start with all rules NotVisited.)
  *)
-Definition VG (g : grammar) : option (list RuleStatus) :=
+Definition VG (g : grammar) : Result :=
   verifygrammar_comp (length g) g (repeat NotVisited (length g)).
 
 
@@ -174,7 +176,7 @@ Fixpoint noloops_comp lr p : bool :=
       else noloops_comp lr p'
   | PNot p' => noloops_comp lr p'
   | PAnd p' => noloops_comp lr p'
-  | PNT _ => true   (* each rule will be checked alone *)
+  | PNT _ => true   (* each rule will be checked by itself *)
 end.
 
 
@@ -182,7 +184,7 @@ end.
   Check whether grammar doesn't have a loop with a nullable body,
   up to rule 'n' (exclusive).
 *)
-Fixpoint Gnoloops_comp n lr g : bool :=
+Fixpoint Gnoloops_comp (n : nat) (lr : list RuleStatus) (g : grammar) : bool :=
   match n with
   | 0 => true
   | S n' => match Gnoloops_comp n' lr g with
@@ -196,7 +198,7 @@ Fixpoint Gnoloops_comp n lr g : bool :=
   Final check: Checks whether grammar has neither left recursion nor
   loops with nullable body.
 *)
-Definition well_formed (g : grammar) : option (list RuleStatus) :=
+Definition well_formed (g : grammar) : Result :=
   match VG g with
   | Some lr => 
       if Gnoloops_comp (length g) lr g then Some lr

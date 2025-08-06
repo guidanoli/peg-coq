@@ -1,5 +1,6 @@
 From Peg Require Import Syntax.
 From Coq Require Import Lists.List.
+From Coq Require Import Lia.
 Import ListNotations.
 
 
@@ -74,7 +75,7 @@ Fixpoint verifyrule_comp (gas : nat)
   end.
 
 
-(* Cost (gas) to traverse a pattern *)
+(* Cost (gas) to traverse a pattern: It is equal to the size of the pattern *)
 Fixpoint costP p : nat :=
   match p with
   | PEmpty => 1
@@ -88,13 +89,16 @@ Fixpoint costP p : nat :=
   end.
 
 
-(* Cost (gas) to traverse a grammar *)
+(* Cost (gas) to traverse a grammar: It is the summation of the sizes of the
+   non-visited rules plus 1 for each non-visited rule. It also adds 2 for
+   each non-visited rule not present in the grammar, which does not happen
+   but we don't need to prove that. *)
 Fixpoint costG g lr : nat :=
   match lr with
   | nil => 0
   | NotVisited :: lr' =>
       match g with
-      | nil => S (1 + costG nil lr')
+      | nil => S (1 + costG nil lr')   (* should not happen *)
       | (p :: g') => S (costP p + costG g' lr')
       end
   | _ :: lr' =>    (* visited rules add no cost *)
@@ -276,4 +280,49 @@ Goal well_formed [PRepetition (PSequence (PRepetition dot) dot)] =
 
 End Examples.
 
+
+Module Cost.
+
+(* number of steps to perform nullable_comp lr p *)
+Fixpoint nullable_cost p : nat :=
+  match p with
+  | PEmpty => 1
+  | PSet _ => 1
+  | PSequence p1 p2 =>
+      1 + nullable_cost p1 + nullable_cost p2
+  | PChoice p1 p2 =>
+      1 + nullable_cost p1 + nullable_cost p2
+  | PRepetition _ => 1
+  | PNot _ => 1
+  | PAnd _ => 1
+  | PNT i => 1
+end.
+
+
+(* number of steps to perform noloops_comp lr p *)
+Fixpoint noloops_cost p : nat :=
+  match p with
+  | PEmpty => 1
+  | PSet _ => 1
+  | PSequence p1 p2 =>
+      1 + noloops_cost p1 + noloops_cost p2
+  | PChoice p1 p2 =>
+      1 + noloops_cost p1 + noloops_cost p2
+  | PRepetition p' =>
+      1 + nullable_cost p' + noloops_cost p'
+  | PNot p' => noloops_cost p'
+  | PAnd p' => noloops_cost p'
+  | PNT _ => 1
+end.
+
+
+(* Proof that noloop_comp has a time complexity linear with the size of the
+   pattern *)
+Lemma noloop_cost: forall p,
+  noloops_cost p + nullable_cost p <= 2 * costP p.
+Proof.
+  induction p; simpl; try lia.
+Qed.
+
+End Cost.
 

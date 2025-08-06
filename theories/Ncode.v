@@ -176,6 +176,48 @@ end.
 
 
 (*
+  Check whether pattern doesn't have a loop with a nullable body
+  and whether it is nullable.
+*)
+Fixpoint noloops_comp2 lr p : (bool * bool) :=
+  match p with
+  | PEmpty => (true, true)
+  | PSet _ => (true, false)
+  | PSequence p1 p2 =>
+      let (lp1, nl1) := noloops_comp2 lr p1 in
+      let (lp2, nl2) := noloops_comp2 lr p2 in
+        ((lp1 && lp2)%bool, (nl1 && nl2)%bool)
+  | PChoice p1 p2 =>
+      let (lp1, nl1) := noloops_comp2 lr p1 in
+      let (lp2, nl2) := noloops_comp2 lr p2 in
+        ((lp1 && lp2)%bool, (nl1 || nl2)%bool)
+  | PRepetition p' =>
+      let (lp, nl) := noloops_comp2 lr p' in
+        ((negb nl && lp)%bool, true)
+  | PNot p' =>
+      let (lp, _) := noloops_comp2 lr p' in (lp,  true)
+  | PAnd p' =>
+      let (lp, _) := noloops_comp2 lr p' in (lp,  true)
+  | PNT i => match nth i lr Visiting with
+             | Visited false => (true, false)
+             | _ => (true, true)
+             end
+end.
+
+
+
+
+Lemma noloops_comp2_null: forall lr p,
+  snd (noloops_comp2 lr p) = nullable_comp lr p.
+Proof.
+  induction p; simpl; trivial.
+  - destruct (noloops_comp lr p1).
+    destruct (noloops_comp lr p2).
+    simpl in *; subst. trivial.
+Abort.
+
+
+(*
   Check whether grammar doesn't have a loop with a nullable body,
   up to rule 'n' (exclusive).
 *)

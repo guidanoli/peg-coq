@@ -36,7 +36,7 @@ Qed.
 
 Definition GrammarComplete g :=
   forall (n : nat),
-    exists (nb : bool) (ln : list nat), noleftrec g (PNT n) nb ln.
+    exists (nb : bool), noleftrec g (PNT n) nb.
 
 
 Lemma vgcomp_ind: forall n g lr lr',
@@ -54,7 +54,7 @@ Proof.
     specialize (IHn _ _ _ H HLR) as [? ?].
     + intros i Hlt. apply HL1. lia.
     + specialize (NLRpreservation H0 H1) as HN.
-      destruct HN as [[? [? [? ?]]] ?].
+      destruct HN as [[? [? ?]] ?].
       simplOrb; subst.
       split; trivial.
       intros i Hlt.
@@ -102,19 +102,19 @@ Proof.
   unfold GrammarComplete. intros.
   specialize (Nat.lt_ge_cases n (length g)) as [? | ?].
   - apply H0 in H1. destruct H1. eauto.
-  - eexists; eexists; eauto using nth_overflow, noleftrec.
+  - eexists; eauto using nth_overflow, noleftrec.
 Qed.
 
 
 Theorem VGcomplete: forall g lr p,
   VG g = Some lr ->
-  exists nb ln, noleftrec g p nb ln.
+  exists nb, noleftrec g p nb.
 Proof.
   intros * HVG.
   apply VGcorrect in HVG.
   induction p; try breakEx;
-  try (eexists; eexists; eauto using noleftrec; fail).
-  - destruct x1; eauto using noleftrec.
+  try (eexists; eauto using noleftrec; fail).
+  - destruct x0; eauto using noleftrec.
   - specialize (HVG n); breakEx; eauto.
 Qed.
 
@@ -129,7 +129,7 @@ Proof.
   auto using LRCoherRep, nth_repeat_init.
   unfold LRCoher in *.
   intros * HVis.
-  apply H1 in HVis. destruct HVis.
+  apply H1 in HVis.
   eauto using nlr_nullable.
 Qed.
 

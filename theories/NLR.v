@@ -25,7 +25,7 @@ Inductive noleftrec : grammar -> pat -> bool -> Prop :=
       noleftrec g p2 nb ->
       noleftrec g (PSequence p1 p2) nb
   | NLRSequenceSomeFalse :
-      forall g p1 p2, 
+      forall g p1 p2,
       noleftrec g p1 false ->
       noleftrec g (PSequence p1 p2) false
   | NLRChoice :
@@ -49,7 +49,7 @@ Inductive noleftrec : grammar -> pat -> bool -> Prop :=
       forall g i p nb,
       nth i g PEmpty = p ->
       noleftrec g p nb ->
-      noleftrec g (PNT i) nb 
+      noleftrec g (PNT i) nb
 .
 
 
@@ -66,7 +66,7 @@ Proof.
 Qed.
 
 
-Lemma update_coher : forall g p lr i, 
+Lemma update_coher : forall g p lr i,
   nth i lr Visiting = NotVisited ->
   (forall (n : nat) (nb' : bool),
      nth n lr Visiting = Visited nb' -> noleftrec g p nb') ->
@@ -96,6 +96,38 @@ Definition LRCoher (g : grammar) lr :=
   forall n nb, nth n lr Visiting = Visited nb -> noleftrec g (PNT n) nb.
 
 
+Lemma LRCoherUpdateVisiting: forall g lr n,
+    LRCoher g lr ->
+    LRCoher g (update lr n Visiting).
+Proof.
+  intros * HC.
+  unfold LRCoher; intros * HV.
+  destruct (Nat.eq_dec n n0); subst.
+  - rewrite update_eq in HV; try discriminate.
+    replace (length lr) with (length (update lr n0 Visiting))
+        by auto using update_len.
+    eapply nth_overflow'; eauto. congruence.
+  - rewrite update_neq in HV; auto.
+Qed.
+
+
+Lemma LRCoherUpdateVisited: forall g lr n nb,
+    LRCoher g lr ->
+    noleftrec g (nth n g PEmpty) nb ->
+    LRCoher g (update lr n (Visited nb)).
+Proof.
+  intros * HC HNL.
+  unfold LRCoher; intros * HV.
+  destruct (Nat.eq_dec n n0); subst.
+  - rewrite update_eq in HV.
+    + injection HV; intros; subst.
+      eauto using noleftrec.
+    + replace (length lr) with (length (update lr n0 (Visited nb)))
+        by auto using update_len.
+      eapply nth_overflow'; eauto. congruence.
+  - rewrite update_neq in HV; auto.
+ Qed.
+
 
 Theorem NLRpreservation : forall g p lr nb onb lr',
     verifyrule g p lr nb (Some (onb, lr')) ->
@@ -115,7 +147,7 @@ Proof.
      H1: ?e |- _] =>
        specialize (H _ _ eq_refl H1) as [[? ?] ?] end;
     repeat match goal with
-    [H: _ /\ _ |- _] => 
+    [H: _ /\ _ |- _] =>
       destruct H as [? ?] end;
     subst; simplOrb; subst;
     eauto using noleftrec;
@@ -269,7 +301,7 @@ Lemma VRcompequiv : forall gas g p lr nb,
   verifyrule_comp gas g p lr nb = orres (verifyrule_comp' gas g p lr) nb.
 Proof.
   induction gas; trivial.
-  induction p; intros *; simpl; simpl; simplOrb; trivial;
+  destruct p; intros *; simpl; simpl; simplOrb; trivial;
   rewrite IHgas;
   try
    (destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ]; trivial;
@@ -288,4 +320,80 @@ Proof.
       as [[[? ?] | ] | ]; trivial.
 Qed.
 
+
+Corollary VRcompequivfalse : forall gas g p lr,
+  verifyrule_comp gas g p lr false = verifyrule_comp' gas g p lr.
+Proof.
+  intros *. rewrite VRcompequiv. apply orresfalse.
+Qed.
+
+
+Theorem NLRpreservation' : forall gas g p lr nb lr',
+    verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
+    LRCoher g lr ->
+    noleftrec g p nb /\ LRCoher g lr'.
+Proof.
+  induction gas; try discriminate.
+  destruct p; intros * Heq HC.
+  - simpl in Heq.
+    injection Heq; intros; subst; intuition eauto using noleftrec.
+  - simpl in Heq.
+    injection Heq; intros; subst; intuition eauto using noleftrec.
+  - simpl in Heq.
+    destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+        try discriminate.
+    destruct b.
+    + apply IHgas in Heqo; trivial.
+      destruct Heqo.
+      apply IHgas in Heq; trivial.
+      destruct Heq.
+      intuition eauto using noleftrec.
+    + injection Heq; intros; subst.
+      apply IHgas in Heqo; trivial.
+      destruct Heqo.
+      intuition eauto using noleftrec.
+  - simpl in Heq.
+    destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+       try discriminate.
+    apply IHgas in Heqo; trivial.
+    destruct Heqo.
+    destruct (verifyrule_comp' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
+       try discriminate.
+    apply IHgas in Heqo; trivial.
+    destruct Heqo.
+    simpl in Heq.
+    injection Heq; intros; subst.
+    intuition eauto using noleftrec.
+  - simpl in Heq.
+    destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+       try discriminate.
+    apply IHgas in Heqo; trivial.
+    simpl in Heq. injection Heq; intros; subst.
+    intuition eauto using noleftrec.
+  - simpl in Heq.
+    destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+       try discriminate.
+    apply IHgas in Heqo; trivial.
+    simpl in Heq. injection Heq; intros; subst.
+    intuition eauto using noleftrec.
+  - simpl in Heq.
+    destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+       try discriminate.
+    apply IHgas in Heqo; trivial.
+    simpl in Heq. injection Heq; intros; subst.
+    intuition eauto using noleftrec.
+  - simpl in Heq.
+    destruct (nth n lr Visiting) eqn:?; try discriminate.
+    + destruct
+       (verifyrule_comp' gas g (nth n g PEmpty) (update lr n Visiting))
+          as [[[? ?] | ] | ] eqn:?; try discriminate.
+      injection Heq; intros; subst. clear Heq.
+      apply IHgas in Heqo.
+      * destruct Heqo.
+        split; eauto using noleftrec.
+        auto using LRCoherUpdateVisited.
+      * auto using LRCoherUpdateVisiting.
+    + injection Heq; intros; subst.
+      apply HC in Heqr. intuition.
+Qed.
 

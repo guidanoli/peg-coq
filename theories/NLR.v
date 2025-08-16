@@ -53,6 +53,19 @@ Inductive noleftrec : grammar -> pat -> bool -> Prop :=
 .
 
 
+Lemma uniqueNLRnb: forall g p nb nb',
+    noleftrec g p nb ->
+    noleftrec g p nb' ->
+    nb = nb'.
+Proof.
+  intros * H1.
+  generalize dependent nb'.
+  induction H1; intros * H2; inversion H2;
+  subst; intuition; try congruence.
+  repeat f_equal; auto.
+Qed.
+
+
 Lemma update_coher : forall g p lr i, 
   nth i lr Visiting = NotVisited ->
   (forall (n : nat) (nb' : bool),
@@ -81,6 +94,7 @@ Ltac simplOrb :=
 
 Definition LRCoher (g : grammar) lr :=
   forall n nb, nth n lr Visiting = Visited nb -> noleftrec g (PNT n) nb.
+
 
 
 Theorem NLRpreservation : forall g p lr nb onb lr',
@@ -178,6 +192,5 @@ Proof.
   apply Bool.orb_false_elim in Heq; destruct Heq; subst.
   eauto using not_null_choice.
 Qed.
-
 
 

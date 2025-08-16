@@ -194,3 +194,98 @@ Proof.
 Qed.
 
 
+
+
+(*-------------------------------------------------------------------------*)
+
+Definition orres (res : option RResult) (nb : bool) : option RResult :=
+  match res with
+  | None => None
+  | Some None => Some None
+  | Some (Some (nb', lr)) => Some (Some (orb nb nb', lr))
+  end.
+
+
+Lemma orresfalse : forall res, orres res false = res.
+Proof.
+  destruct res; simpl; trivial.
+  destruct r; simpl; trivial.
+  destruct p. trivial.
+Qed.
+
+
+Lemma orres2 : forall res nb nb',
+    orres (orres res nb) nb' = orres res (orb nb' nb).
+Proof.
+  intros *.
+  destruct res as [[[? ?] | ] | ]; simpl; trivial.
+  rewrite Bool.orb_assoc. trivial.
+Qed.
+
+
+Fixpoint verifyrule_comp' (gas : nat)
+    (g : grammar) (p : pat) (lr : list RuleStatus) :
+      option RResult :=
+  match gas with
+  | 0 => None
+  | S gas' =>
+    match p with
+    | PEmpty => Some (Some (true, lr))
+    | PSet _ => Some (Some (false, lr))
+    | PSequence p1 p2 =>
+      match verifyrule_comp' gas' g p1 lr with
+      | None => None  (* out of gas *)
+      | Some None => Some None  (* ill formed *)
+      | Some (Some (false, lr')) => Some (Some (false, lr'))
+      | Some (Some (true, lr')) => verifyrule_comp' gas' g p2 lr'
+      end
+    | PChoice p1 p2 =>
+      match verifyrule_comp' gas' g p1 lr with
+      | None => None  (* out of gas *)
+      | Some None => Some None  (* ill formed *)
+      | Some (Some (nb, lr')) => orres (verifyrule_comp' gas' g p2 lr') nb
+      end
+    | PRepetition p' => orres (verifyrule_comp' gas' g p' lr) true
+    | PNot p' => orres (verifyrule_comp' gas' g p' lr) true
+    | PAnd p' => orres (verifyrule_comp' gas' g p' lr) true
+    | PNT i =>
+      match nth i lr Visiting with
+      | Visiting => Some None  (* left recursion *)
+      | Visited nb => Some (Some (nb, lr))
+      | NotVisited =>
+        match verifyrule_comp' gas' g (nth i g PEmpty)
+                              (update lr i Visiting) with
+        | None => None  (* out of gas *)
+        | Some None => Some None  (* ill formed *)
+        | Some (Some (nb, lr')) =>
+            Some (Some (nb, update lr' i (Visited nb)))
+        end
+      end
+    end
+  end.
+
+
+Lemma VRcompequiv : forall gas g p lr nb,
+  verifyrule_comp gas g p lr nb = orres (verifyrule_comp' gas g p lr) nb.
+Proof.
+  induction gas; trivial.
+  induction p; intros *; simpl; simpl; simplOrb; trivial;
+  rewrite IHgas;
+  try
+   (destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ]; trivial;
+    rewrite orres2; simplOrb; trivial; fail).
+  - rewrite orresfalse.
+    destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ]; trivial.
+    destruct b; eauto.
+    simpl. simplOrb. trivial.
+  - destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ]; trivial.
+    simpl.
+    rewrite IHgas.
+    destruct (verifyrule_comp' gas g p2 lr) as [[[? ?] | ] | ]; trivial;
+    rewrite orres2; trivial.
+  - destruct (nth n lr Visiting); trivial.
+    destruct (verifyrule_comp' gas g (nth n g PEmpty) (update lr n Visiting))
+      as [[[? ?] | ] | ]; trivial.
+Qed.
+
+

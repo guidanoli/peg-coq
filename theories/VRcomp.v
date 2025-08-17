@@ -20,70 +20,10 @@ Ltac destVR :=
   end.
 
 
-Lemma verifyrule_comp_sound : forall gas g p lr nb res,
-  verifyrule_comp gas g p lr nb = Some res ->
-  verifyrule g p lr nb res.
-Proof with eauto using verifyrule.
-  induction gas; intros * H; try discriminate.
-  destruct p; simpl in H;
-    try (injection H; intros; subst);
-      try discriminate...
-  - destVR; try discriminate; simplsome...
-    destruct b; simplsome...
-  - destVR; simplsome...
-  - destruct (nth n lr Visiting) eqn:?; simplsome...
-    destVR; simplsome...
-Qed.
-
-
 Ltac breakEx :=
   repeat match goal with
   [H: exists _, _ |- _] => destruct H as [? ?]
   end.
-
-Lemma verifyrule_comp_gas_exists : forall g p lr nb res,
-    verifyrule g p lr nb res ->
-    exists gas,
-      forall gas', gas < gas' -> verifyrule_comp gas' g p lr nb = Some res.
-Proof.
-  induction 1; intros *;
-    try (exists 0; destruct gas'; try lia; trivial; fail);
-    try (breakEx; exists (S x); intros * Hlt;
-    destruct gas'; try lia; simpl;
-    apply H0; lia; fail).
-  - breakEx. exists (S x). intros * Hlt.
-    destruct gas'. try lia. simpl.
-    rewrite H0; trivial; lia.
-  - breakEx. exists (S (x + x0)).
-    destruct gas'; try lia. simpl.
-    intros Hlt. rewrite H2; try lia; rewrite H1; trivial; lia.
-  - breakEx. exists (S x).
-    intros * Htl.
-    destruct gas'; try lia. simpl.
-    rewrite H0; trivial; try lia.
-  - breakEx. exists (S x).
-    destruct gas'; try lia; simpl.
-    intros ?. rewrite H0; trivial; try lia.
-  - breakEx. exists (S (x + x0)).
-    destruct gas'; try lia; simpl.
-    intros ?. rewrite H2; try lia.
-    apply H1; lia.
-  - exists 1. intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H; trivial.
-  - breakEx. exists (S x). intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H. subst.
-    rewrite H2; trivial; lia.
-  - breakEx. exists (S x). subst.
-    intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H.
-    rewrite H2; trivial; try lia.
-  - exists 1; intros gas' Hlt.
-    destruct gas'; try lia; simpl.
-    rewrite H. trivial.
-Qed.
 
 
 Lemma costP1 : forall p, 0 < costP p.
@@ -196,19 +136,5 @@ Proof.
       lia.
 Qed.
 
-
-Lemma VRVR : forall g p lr nb res,
-  verifyrule_comp (costG g lr + costP p) g p lr nb = Some res <->
-  verifyrule g p lr nb res.
-Proof.
-  intros *; split; intro H.
-  - eauto using verifyrule_comp_sound.
-  - assert (H1 : costG g lr + costP p <= costG g lr + costP p) by lia.
-    specialize (VR_comp (costG g lr + costP p) g p lr nb H1) as H2.
-    destruct (verifyrule_comp (costG g lr + costP p) g p lr nb) eqn:?.
-    + apply verifyrule_comp_sound in Heqo.
-      f_equal. eauto using verifyrule_unique.
-    + exfalso. apply H2. trivial.
-Qed.
 
 

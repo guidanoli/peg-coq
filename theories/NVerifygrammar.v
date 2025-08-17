@@ -12,7 +12,7 @@ From Peg Require Import VRcomp.
 From Peg Require Import NLR.
 
 
-Lemma verifygrammar_comp_S:
+Lemma verifygrammar_comp_inv:
     forall g lr n lr'',
     verifygrammar_comp (S n) g lr = Some lr'' ->
     exists lr' nb,
@@ -48,22 +48,20 @@ Lemma vgcomp_ind: forall n g lr lr',
 Proof.
   induction n; intros * HVG HLR HL1.
   - simpl in HVG. injection HVG; intros; subst. intuition; lia.
-  - apply verifygrammar_comp_S in HVG.
+  - apply verifygrammar_comp_inv in HVG.
     destruct HVG as [lrG [? [? ?]]].
-    apply verifyrule_comp_sound in H0.
+    rewrite VRcompequivfalse in H0.
     specialize (IHn _ _ _ H HLR) as [? ?].
     + intros i Hlt. apply HL1. lia.
-    + specialize (NLRpreservation H0 H1) as HN.
-      destruct HN as [[? [? ?]] ?].
-      simplOrb; subst.
+    + specialize (NLRpreservation' _ _ H0 H1) as [? ?].
       split; trivial.
       intros i Hlt.
       assert (Hlt1: i <= n) by lia. clear Hlt.
       apply Lt.le_lt_or_eq_stt in Hlt1.
       destruct Hlt1.
-      * apply H2 in H4. destruct H4 as [x ?].
-        exists x. eapply vrinc; eauto. subst; congruence.
-      * subst; eauto using VRAdd1.
+      * apply H2 in H5. destruct H5 as [x' ?].
+        exists x'. eapply vrinc'; eauto; try congruence.
+      * subst; eauto using VRAdd1N.
 Qed.
 
 

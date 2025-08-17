@@ -328,6 +328,52 @@ Proof.
 Qed.
 
 
+Ltac dstrm :=
+  match goal with
+    [H: match ?e with _ => _ end = _ |- _] =>
+      destruct e as [[[? ?] | ] | ] eqn:?; try congruence end.
+
+
+Lemma sameLen' : forall gas g p lr lr' nb,
+    verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
+    length lr = length lr'.
+Proof.
+  induction gas; try discriminate.
+  intros * Heq.
+  destruct p; simpl in Heq; try congruence; try dstrm.
+  - destruct b.
+    + apply IHgas in Heq.
+      apply IHgas in Heqo.
+      congruence.
+    + apply IHgas in Heqo.
+      congruence.
+  - destruct (verifyrule_comp' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
+      try discriminate.
+    simpl in Heq. injection Heq; intros; subst.
+    apply IHgas in Heqo0.
+    apply IHgas in Heqo.
+    congruence.
+  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+      try discriminate.
+    simpl in Heq. injection Heq; intros; subst.
+    eauto.
+  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+      try discriminate.
+    simpl in Heq. injection Heq; intros; subst.
+    eauto.
+  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+      try discriminate.
+    simpl in Heq. injection Heq; intros; subst.
+    eauto.
+  - destruct (nth n lr Visiting); try discriminate.
+    + dstrm.
+      simpl in Heq. injection Heq; intros; subst.
+      apply IHgas in Heqo.
+      rewrite update_len in *. trivial.
+    + congruence.
+Qed.
+
+
 Theorem NLRpreservation' : forall gas g p lr nb lr',
     verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
     LRCoher g lr ->
@@ -395,5 +441,89 @@ Proof.
       * auto using LRCoherUpdateVisiting.
     + injection Heq; intros; subst.
       apply HC in Heqr. intuition.
+Qed.
+
+
+Lemma vrinc': forall gas g p nb lr lr' n stat,
+  verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
+  nth n lr Visiting = stat ->
+  stat <> NotVisited ->
+  nth n lr' Visiting = stat.
+Proof.
+  induction gas; try discriminate.
+  intros * Heq Heq' HNeq.
+  destruct p; simpl in Heq.
+  - injection Heq; intros; subst. trivial.
+  - injection Heq; intros; subst. trivial.
+  - destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+      try discriminate.
+    destruct b.
+    + apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
+    + apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
+      injection Heq; intros; subst. trivial.
+  - destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+      try discriminate.
+    apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
+    destruct (verifyrule_comp' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
+          try discriminate.
+    injection Heq; intros; subst.
+    eauto.
+  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+          try discriminate.
+    injection Heq; intros; subst.
+    eauto.
+  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+          try discriminate.
+    injection Heq; intros; subst.
+    eauto.
+  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+          try discriminate.
+    injection Heq; intros; subst.
+    eauto.
+  - destruct (nth n0 lr Visiting) eqn:?; try discriminate.
+    + destruct
+        (verifyrule_comp' gas g (nth n0 g PEmpty) (update lr n0 Visiting))
+          as [[[? ?] | ] | ] eqn:?; try discriminate.
+      injection Heq; intros; subst. clear Heq.
+      apply IHgas with (n := n) (stat := (nth n lr Visiting)) in Heqo; auto.
+      * destruct (Nat.eq_dec n n0); subst; try congruence.
+        rewrite update_neq; trivial.
+      * destruct (Nat.eq_dec n n0); subst; try congruence.
+        rewrite update_neq; trivial.
+    + injection Heq; intros; subst. trivial.
+Qed.
+
+
+Lemma VRAdd1'': forall gas g r nb lr lr',
+  verifyrule_comp' gas g (PNT r) lr = Some (Some (nb, lr')) ->
+  nth r lr Visiting = NotVisited ->
+  nth r lr' Visiting = Visited nb.
+Proof.
+  destruct gas; try discriminate.
+  intros * Heq Hneq.
+  simpl in Heq.
+  destruct (nth r lr Visiting) eqn:?; try discriminate.
+  destruct (verifyrule_comp' gas g (nth r g PEmpty) (update lr r Visiting))
+          as [[[? ?] | ] | ] eqn:?; try discriminate.
+  inversion Heq; intros; subst.
+  rewrite update_eq; trivial.
+  eapply nth_overflow' in Heqr0; try congruence.
+  apply sameLen' in Heqo.
+  rewrite update_len in *. lia.
+ Qed. 
+
+
+Lemma VRAdd1N: forall gas g r nb lr lr',
+  verifyrule_comp' gas g (PNT r) lr = Some (Some (nb, lr')) ->
+   nth r lr' Visiting = Visited nb.
+Proof.
+  intros * HV.
+  destruct gas; try discriminate.
+  destruct (nth r lr Visiting) eqn:?.
+  - eauto using VRAdd1''.
+  - simpl in HV.
+    rewrite Heqr0 in HV. discriminate.
+  - simpl in HV.
+    rewrite Heqr0 in HV. congruence.
 Qed.
 

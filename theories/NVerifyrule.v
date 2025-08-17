@@ -569,20 +569,6 @@ Proof.
 Qed.
 
 
-Lemma vrPvisiting: forall g p nb nb' lr lr',
-  verifyrule g p lr nb (Some (nb', lr')) ->
-  forall n, nth n lr Visiting = Visiting <-> nth n lr' Visiting = Visiting.
-Proof.
-  intros * HVR n; split; intros H.
-  - erewrite vrinc; eauto. congruence.
-  - eapply VRInc in HVR. unfold leLR in HVR.
-    specialize (HVR n).
-    destruct (nth n lr Visiting) eqn:Heq; trivial; exfalso;
-      rewrite H in HVR;
-      inversion HVR.
-Qed.
-
-
 Lemma nullableVR: forall g p nb nb' lr lr',
   verifyrule g p lr nb (Some (nb', lr')) ->
   stateCorrect g lr ->

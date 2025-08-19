@@ -33,7 +33,7 @@ Inductive RuleStatus : Type :=
 Definition RResult := option (bool * list RuleStatus).
 
 
-Fixpoint verifyrule_comp (gas : nat)
+Fixpoint verifyrule (gas : nat)
     (g : grammar) (p : pat) (lr : list RuleStatus) (nb : bool) :
       option RResult :=
   match gas with
@@ -43,27 +43,27 @@ Fixpoint verifyrule_comp (gas : nat)
     | PEmpty => Some (Some (true, lr))
     | PSet _ => Some (Some (nb, lr))
     | PSequence p1 p2 =>
-      match verifyrule_comp gas' g p1 lr false with
+      match verifyrule gas' g p1 lr false with
       | None => None  (* out of gas *)
       | Some None => Some None  (* ill formed *)
       | Some (Some (false, lr')) => Some (Some (nb, lr'))
-      | Some (Some (true, lr')) => verifyrule_comp gas' g p2 lr' nb
+      | Some (Some (true, lr')) => verifyrule gas' g p2 lr' nb
       end
     | PChoice p1 p2 =>
-      match verifyrule_comp gas' g p1 lr nb with
+      match verifyrule gas' g p1 lr nb with
       | None => None  (* out of gas *)
       | Some None => Some None  (* ill formed *)
-      | Some (Some (nb', lr')) => verifyrule_comp gas' g p2 lr' nb'
+      | Some (Some (nb', lr')) => verifyrule gas' g p2 lr' nb'
       end
-    | PRepetition p' => verifyrule_comp gas' g p' lr true
-    | PNot p' => verifyrule_comp gas' g p' lr true
-    | PAnd p' => verifyrule_comp gas' g p' lr true
+    | PRepetition p' => verifyrule gas' g p' lr true
+    | PNot p' => verifyrule gas' g p' lr true
+    | PAnd p' => verifyrule gas' g p' lr true
     | PNT i =>
       match nth i lr Visiting with
       | Visiting => Some None  (* left recursion *)
       | Visited nb' => Some (Some (orb nb nb', lr))
       | NotVisited =>
-        match verifyrule_comp gas' g (nth i g PEmpty)
+        match verifyrule gas' g (nth i g PEmpty)
                               (update lr i Visiting) false with
         | None => None  (* out of gas *)
         | Some None => Some None  (* ill formed *)
@@ -115,14 +115,14 @@ Definition Result := option (list RuleStatus).
   Traverse all rules of a grammar up to 'n' (exclusive), passing forward
   the list of status.
  *)
-Fixpoint verifygrammar_comp n
+Fixpoint verifygrammar n
     (g : grammar) (lr : list RuleStatus) : Result :=
   match n with
   | 0 => Some lr
-  | S n' => match verifygrammar_comp n' g lr with
+  | S n' => match verifygrammar n' g lr with
             | None => None
             | Some lr' =>
-                match verifyrule_comp (costG g lr' + 1)
+                match verifyrule (costG g lr' + 1)
                                       g (PNT n') lr' false with
                 | None => Some lr'   (* cannot happen *)
                 | Some None => None
@@ -137,18 +137,18 @@ Fixpoint verifygrammar_comp n
   (Start with all rules NotVisited.)
  *)
 Definition VG (g : grammar) : Result :=
-  verifygrammar_comp (length g) g (repeat NotVisited (length g)).
+  verifygrammar (length g) g (repeat NotVisited (length g)).
 
 
 (* Check whether a pattern is nullable, using 'lr' to solve rules *)
-Fixpoint nullable_comp lr p : bool :=
+Fixpoint nullable lr p : bool :=
   match p with
   | PEmpty => true
   | PSet _ => false
   | PSequence p1 p2 =>
-      (nullable_comp lr p1 && nullable_comp lr p2)%bool
+      (nullable lr p1 && nullable lr p2)%bool
   | PChoice p1 p2 =>
-      (nullable_comp lr p1 || nullable_comp lr p2)%bool
+      (nullable lr p1 || nullable lr p2)%bool
   | PRepetition _ => true
   | PNot _ => true
   | PAnd _ => true
@@ -162,19 +162,19 @@ Fixpoint nullable_comp lr p : bool :=
 (*
   Check whether pattern doesn't have a loop with a nullable body.
 *)
-Fixpoint noloops_comp lr p : bool :=
+Fixpoint noloops lr p : bool :=
   match p with
   | PEmpty => true
   | PSet _ => true
   | PSequence p1 p2 =>
-      (noloops_comp lr p1 && noloops_comp lr p2)%bool
+      (noloops lr p1 && noloops lr p2)%bool
   | PChoice p1 p2 =>
-      (noloops_comp lr p1 && noloops_comp lr p2)%bool
+      (noloops lr p1 && noloops lr p2)%bool
   | PRepetition p' =>
-      if nullable_comp lr p' then false
-      else noloops_comp lr p'
-  | PNot p' => noloops_comp lr p'
-  | PAnd p' => noloops_comp lr p'
+      if nullable lr p' then false
+      else noloops lr p'
+  | PNot p' => noloops lr p'
+  | PAnd p' => noloops lr p'
   | PNT _ => true   (* each rule will be checked by itself *)
 end.
 
@@ -183,25 +183,25 @@ end.
   Check whether pattern doesn't have a loop with a nullable body
   and whether it is nullable.
 *)
-Fixpoint noloops_comp2 lr p : (bool * bool) :=
+Fixpoint noloops2 lr p : (bool * bool) :=
   match p with
   | PEmpty => (true, true)
   | PSet _ => (true, false)
   | PSequence p1 p2 =>
-      let (lp1, nl1) := noloops_comp2 lr p1 in
-      let (lp2, nl2) := noloops_comp2 lr p2 in
+      let (lp1, nl1) := noloops2 lr p1 in
+      let (lp2, nl2) := noloops2 lr p2 in
         ((lp1 && lp2)%bool, (nl1 && nl2)%bool)
   | PChoice p1 p2 =>
-      let (lp1, nl1) := noloops_comp2 lr p1 in
-      let (lp2, nl2) := noloops_comp2 lr p2 in
+      let (lp1, nl1) := noloops2 lr p1 in
+      let (lp2, nl2) := noloops2 lr p2 in
         ((lp1 && lp2)%bool, (nl1 || nl2)%bool)
   | PRepetition p' =>
-      let (lp, nl) := noloops_comp2 lr p' in
+      let (lp, nl) := noloops2 lr p' in
         ((negb nl && lp)%bool, true)
   | PNot p' =>
-      let (lp, _) := noloops_comp2 lr p' in (lp,  true)
+      let (lp, _) := noloops2 lr p' in (lp,  true)
   | PAnd p' =>
-      let (lp, _) := noloops_comp2 lr p' in (lp,  true)
+      let (lp, _) := noloops2 lr p' in (lp,  true)
   | PNT i => match nth i lr Visiting with
              | Visited false => (true, false)
              | _ => (true, true)
@@ -211,12 +211,12 @@ end.
 
 
 
-Lemma noloops_comp2_null: forall lr p,
-  snd (noloops_comp2 lr p) = nullable_comp lr p.
+Lemma noloops2_null: forall lr p,
+  snd (noloops2 lr p) = nullable lr p.
 Proof.
   induction p; simpl; trivial.
-  - destruct (noloops_comp lr p1).
-    destruct (noloops_comp lr p2).
+  - destruct (noloops lr p1).
+    destruct (noloops lr p2).
     simpl in *; subst. trivial.
 Abort.
 
@@ -225,12 +225,12 @@ Abort.
   Check whether grammar doesn't have a loop with a nullable body,
   up to rule 'n' (exclusive).
 *)
-Fixpoint Gnoloops_comp (n : nat) (lr : list RuleStatus) (g : grammar) : bool :=
+Fixpoint Gnoloops (n : nat) (lr : list RuleStatus) (g : grammar) : bool :=
   match n with
   | 0 => true
-  | S n' => match Gnoloops_comp n' lr g with
+  | S n' => match Gnoloops n' lr g with
             | false => false
-            | true => noloops_comp lr (nth n' g PEmpty)
+            | true => noloops lr (nth n' g PEmpty)
             end
   end.
 
@@ -242,7 +242,7 @@ Fixpoint Gnoloops_comp (n : nat) (lr : list RuleStatus) (g : grammar) : bool :=
 Definition well_formed (g : grammar) : Result :=
   match VG g with
   | Some lr => 
-      if Gnoloops_comp (length g) lr g then Some lr
+      if Gnoloops (length g) lr g then Some lr
       else None
   | None => None
 end.
@@ -283,7 +283,7 @@ End Examples.
 
 Module Cost.
 
-(* number of steps to perform nullable_comp lr p *)
+(* number of steps to perform nullable lr p *)
 Fixpoint nullable_cost p : nat :=
   match p with
   | PEmpty => 1
@@ -299,7 +299,7 @@ Fixpoint nullable_cost p : nat :=
 end.
 
 
-(* number of steps to perform noloops_comp lr p *)
+(* number of steps to perform noloops lr p *)
 Fixpoint noloops_cost p : nat :=
   match p with
   | PEmpty => 1
@@ -316,7 +316,7 @@ Fixpoint noloops_cost p : nat :=
 end.
 
 
-(* Proof that noloop_comp has a time complexity linear with the size of the
+(* Proof that noloop has a time complexity linear with the size of the
    pattern *)
 Lemma noloop_cost: forall p,
   noloops_cost p + nullable_cost p <= 2 * costP p.

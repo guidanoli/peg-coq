@@ -12,18 +12,18 @@ From Peg Require Import VRcomp.
 From Peg Require Import NLR.
 
 
-Lemma verifygrammar_comp_inv:
+Lemma verifygrammar_inv:
     forall g lr n lr'',
-    verifygrammar_comp (S n) g lr = Some lr'' ->
+    verifygrammar (S n) g lr = Some lr'' ->
     exists lr' nb,
-      verifygrammar_comp n g lr = Some lr' /\
-      verifyrule_comp (costG g lr' + costP (PNT n)) g (PNT n) lr' false =
+      verifygrammar n g lr = Some lr' /\
+      verifyrule (costG g lr' + costP (PNT n)) g (PNT n) lr' false =
         Some (Some (nb, lr'')).
 Proof.
   intros * HVG.
   simpl in HVG.
-  destruct (verifygrammar_comp n g lr) eqn:?; try (simpl; congruence).
-  destruct (verifyrule_comp (costG g l + 1) g (PNT n) l false) eqn:?.
+  destruct (verifygrammar n g lr) eqn:?; try (simpl; congruence).
+  destruct (verifyrule (costG g l + 1) g (PNT n) l false) eqn:?.
   - destruct r; try discriminate.
     destruct p.
     injection HVG; intros; subst; clear HVG.
@@ -40,7 +40,7 @@ Definition GrammarComplete g :=
 
 
 Lemma vgcomp_ind: forall n g lr lr',
-    verifygrammar_comp n g lr = Some lr' ->
+    verifygrammar n g lr = Some lr' ->
     LRCoher g lr ->
     (forall i, i < n -> nth i lr Visiting = NotVisited) ->
     LRCoher g lr' /\
@@ -48,7 +48,7 @@ Lemma vgcomp_ind: forall n g lr lr',
 Proof.
   induction n; intros * HVG HLR HL1.
   - simpl in HVG. injection HVG; intros; subst. intuition; lia.
-  - apply verifygrammar_comp_inv in HVG.
+  - apply verifygrammar_inv in HVG.
     destruct HVG as [lrG [? [? ?]]].
     rewrite VRcompequivfalse in H0.
     specialize (IHn _ _ _ H HLR) as [? ?].

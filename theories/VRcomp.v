@@ -13,10 +13,10 @@ From Peg Require Import NVerifyrule.
 
 Ltac destVR :=
   match goal with
-  | [H: context [verifyrule_comp ?gas ?g ?p1 ?lr ?nb] |- _]
-        => destruct (verifyrule_comp gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq
-  | [|- context [verifyrule_comp ?gas ?g ?p1 ?lr ?nb]]
-        => destruct (verifyrule_comp gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq
+  | [H: context [verifyrule ?gas ?g ?p1 ?lr ?nb] |- _]
+        => destruct (verifyrule gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq
+  | [|- context [verifyrule ?gas ?g ?p1 ?lr ?nb]]
+        => destruct (verifyrule gas g p1 lr nb) as [[[? ?] | ] | ] eqn:Heq
   end.
 
 
@@ -72,13 +72,13 @@ Qed.
 
 
 Lemma dimCost : forall gas g p lr lr' nb nb',
-    verifyrule_comp gas g p lr nb = Some (Some (nb', lr')) ->
+    verifyrule gas g p lr nb = Some (Some (nb', lr')) ->
     costG g lr' <= costG g lr.
 Proof.
   induction gas; intros * HVr; try discriminate.
   destruct p; simpl in HVr; simplsome; trivial;
     repeat match goal with
-    [H : verifyrule_comp _ _ _ _ _ = Some _ |- _] =>
+    [H : verifyrule _ _ _ _ _ = Some _ |- _] =>
        eapply IHgas in H
     end; try lia.
   - destVR; try congruence.
@@ -106,7 +106,7 @@ Qed.
 
 Lemma VR_comp : forall gas g p lr nb,
     (costG g lr + costP p) <= gas ->
-    verifyrule_comp gas g p lr nb <> None.
+    verifyrule gas g p lr nb <> None.
 Proof.
   induction gas; intros * Hle.
   - specialize (costP1 p). lia.

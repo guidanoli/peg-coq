@@ -20,9 +20,9 @@ Ltac destructCond :=
 end.
 
 
-Lemma nullable_comp_correct : forall g lr p,
+Lemma nullable_correct : forall g lr p,
     VG g = Some lr ->
-    nullable_comp lr p = false ->
+    nullable lr p = false ->
     not_nullable g p.
 Proof.
   induction p; intros HVG HNull; try discriminate;
@@ -43,37 +43,37 @@ Qed.
 (** CheckLoops predicate **)
 (** Check whether a pattern has potential infinite loops **)
 
-Inductive noloops : list RuleStatus -> pat -> Prop :=
-  | CLEmpty : forall lr, noloops lr PEmpty
-  | CLSet : forall lr cs, noloops lr (PSet cs)
+Inductive Pnoloops : list RuleStatus -> pat -> Prop :=
+  | CLEmpty : forall lr, Pnoloops lr PEmpty
+  | CLSet : forall lr cs, Pnoloops lr (PSet cs)
   | CLSequence : forall lr p1 p2,
-      noloops lr p1 ->
-      noloops lr p2 ->
-      noloops lr (PSequence p1 p2)
+      Pnoloops lr p1 ->
+      Pnoloops lr p2 ->
+      Pnoloops lr (PSequence p1 p2)
   | CLChoice : forall lr p1 p2,
-      noloops lr p1 ->
-      noloops lr p2 ->
-      noloops lr (PChoice p1 p2)
+      Pnoloops lr p1 ->
+      Pnoloops lr p2 ->
+      Pnoloops lr (PChoice p1 p2)
   | CLRepetition : forall lr p,
-      nullable_comp lr p = false ->
-      noloops lr p ->
-      noloops lr (PRepetition p)
+      nullable lr p = false ->
+      Pnoloops lr p ->
+      Pnoloops lr (PRepetition p)
   | CLNot : forall lr p,
-      noloops lr p ->
-      noloops lr (PNot p)
+      Pnoloops lr p ->
+      Pnoloops lr (PNot p)
   | CLAnd : forall lr p,
-      noloops lr p ->
-      noloops lr (PAnd p)
+      Pnoloops lr p ->
+      Pnoloops lr (PAnd p)
   | CLNT : forall lr i,
-      noloops lr (PNT i)
+      Pnoloops lr (PNT i)
   .
 
 
 
-Lemma noloops_comp_necessary :
+Lemma noloops_necessary :
   forall lr p,
-  noloops lr p ->
-  noloops_comp lr p = true.
+  Pnoloops lr p ->
+  noloops lr p = true.
 Proof.
   induction 1; trivial; simpl;
     specialize (Bool.andb_true_l true); try congruence.
@@ -81,40 +81,40 @@ Proof.
 Qed.
 
 
-Lemma noloops_comp_sufficient :
+Lemma noloops_sufficient :
   forall lr p,
-  noloops_comp lr p = true ->
-  noloops lr p.
+  noloops lr p = true ->
+  Pnoloops lr p.
 Proof.
   induction p; intros Hnl; simpl in Hnl;
-    try apply andb_prop in Hnl; intuition (auto using noloops).
+    try apply andb_prop in Hnl; intuition (auto using Pnoloops).
   destructCond.
-  auto using noloops.
+  auto using Pnoloops.
 Qed.
 
 
-Lemma Gnoloops_comp_complete_aux : forall n lr g,
-  Gnoloops_comp n lr g = true ->
-  forall i, i < n -> noloops lr (nth i g PEmpty).
+Lemma Gnoloops_complete_aux : forall n lr g,
+  Gnoloops n lr g = true ->
+  forall i, i < n -> Pnoloops lr (nth i g PEmpty).
 Proof.
   induction n; intros * HGnl i Hlt; try lia.
   simpl in HGnl.
   destructCond.
   assert (Hlt1: i <= n) by lia. clear Hlt.
   specialize (Lt.le_lt_or_eq_stt _ _ Hlt1) as [? | ?]; subst;
-    auto using noloops_comp_sufficient.
+    auto using noloops_sufficient.
 Qed.
 
   
-Lemma Gnoloops_comp_complete : forall lr g,
-  Gnoloops_comp (length g) lr g = true ->
-  forall n, noloops lr (nth n g PEmpty).
+Lemma Gnoloops_complete : forall lr g,
+  Gnoloops (length g) lr g = true ->
+  forall n, Pnoloops lr (nth n g PEmpty).
 Proof.
   intros * H n.
-  specialize (Gnoloops_comp_complete_aux _ _ _ H) as ?.
+  specialize (Gnoloops_complete_aux _ _ _ H) as ?.
   specialize (Nat.lt_ge_cases n (length g)) as [? | ?]; auto.
   apply nth_overflow with (d := PEmpty) in H1.
-  rewrite H1. auto using noloops.
+  rewrite H1. auto using Pnoloops.
 Qed.
 
 
@@ -122,14 +122,14 @@ Lemma well_formed_correct_aux : forall g lr,
   well_formed g  = Some lr ->
   forall N s p,
   String.length s < N ->
-  noloops lr p ->
+  Pnoloops lr p ->
   exists res, matches g p s res.
 Proof with eauto using matches.
   intros * HWF.
   unfold well_formed in HWF.
   repeat destructCond.
   injection HWF; intro; subst; clear HWF.
-  specialize (Gnoloops_comp_complete _ _ Heqb) as ?.
+  specialize (Gnoloops_complete _ _ Heqb) as ?.
   induction N; intros * Hlen; simpl in Hlen; try lia.
   generalize dependent s.
   specialize (VGcomplete _ _ p Heqr) as ?.
@@ -161,7 +161,7 @@ Proof with eauto using matches.
     breakEx.
     destruct x...
     assert (String.length s0 < N) as Hlen0.
-    { eapply nullable_comp_correct in H2; eauto.
+    { eapply nullable_correct in H2; eauto.
       eapply (proj1 (notnull_len g p)) in H2; eauto; try lia. }
     specialize (IHN s0 _ Hlen0 HNL).
     breakEx...
@@ -171,7 +171,7 @@ Proof with eauto using matches.
   - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H3).
     breakEx.
     destruct x...
-  - assert (HNLnth: noloops lr (nth i g PEmpty)) by eauto.
+  - assert (HNLnth: Pnoloops lr (nth i g PEmpty)) by eauto.
     specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen HNLnth).
     breakEx...
 Qed.
@@ -187,7 +187,7 @@ Proof.
   unfold well_formed in HWF.
   repeat destructCond.
   injection HWF; intro; subst; clear HWF.
-  eauto using Gnoloops_comp_complete.
+  eauto using Gnoloops_complete.
 Qed.
   
 

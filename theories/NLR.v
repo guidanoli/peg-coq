@@ -184,7 +184,7 @@ Proof.
 Qed.
 
 
-Fixpoint verifyrule_comp' (gas : nat)
+Fixpoint verifyrule' (gas : nat)
     (g : grammar) (p : pat) (lr : list RuleStatus) :
       option RResult :=
   match gas with
@@ -194,27 +194,27 @@ Fixpoint verifyrule_comp' (gas : nat)
     | PEmpty => Some (Some (true, lr))
     | PSet _ => Some (Some (false, lr))
     | PSequence p1 p2 =>
-      match verifyrule_comp' gas' g p1 lr with
+      match verifyrule' gas' g p1 lr with
       | None => None  (* out of gas *)
       | Some None => Some None  (* ill formed *)
       | Some (Some (false, lr')) => Some (Some (false, lr'))
-      | Some (Some (true, lr')) => verifyrule_comp' gas' g p2 lr'
+      | Some (Some (true, lr')) => verifyrule' gas' g p2 lr'
       end
     | PChoice p1 p2 =>
-      match verifyrule_comp' gas' g p1 lr with
+      match verifyrule' gas' g p1 lr with
       | None => None  (* out of gas *)
       | Some None => Some None  (* ill formed *)
-      | Some (Some (nb, lr')) => orres (verifyrule_comp' gas' g p2 lr') nb
+      | Some (Some (nb, lr')) => orres (verifyrule' gas' g p2 lr') nb
       end
-    | PRepetition p' => orres (verifyrule_comp' gas' g p' lr) true
-    | PNot p' => orres (verifyrule_comp' gas' g p' lr) true
-    | PAnd p' => orres (verifyrule_comp' gas' g p' lr) true
+    | PRepetition p' => orres (verifyrule' gas' g p' lr) true
+    | PNot p' => orres (verifyrule' gas' g p' lr) true
+    | PAnd p' => orres (verifyrule' gas' g p' lr) true
     | PNT i =>
       match nth i lr Visiting with
       | Visiting => Some None  (* left recursion *)
       | Visited nb => Some (Some (nb, lr))
       | NotVisited =>
-        match verifyrule_comp' gas' g (nth i g PEmpty)
+        match verifyrule' gas' g (nth i g PEmpty)
                               (update lr i Visiting) with
         | None => None  (* out of gas *)
         | Some None => Some None  (* ill formed *)
@@ -227,31 +227,31 @@ Fixpoint verifyrule_comp' (gas : nat)
 
 
 Lemma VRcompequiv : forall gas g p lr nb,
-  verifyrule_comp gas g p lr nb = orres (verifyrule_comp' gas g p lr) nb.
+  verifyrule gas g p lr nb = orres (verifyrule' gas g p lr) nb.
 Proof.
   induction gas; trivial.
   destruct p; intros *; simpl; simpl; simplOrb; trivial;
   rewrite IHgas;
   try
-   (destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ]; trivial;
+   (destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ]; trivial;
     rewrite orres2; simplOrb; trivial; fail).
   - rewrite orresfalse.
-    destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ]; trivial.
+    destruct (verifyrule' gas g p1 lr) as [[[? ?] | ] | ]; trivial.
     destruct b; eauto.
     simpl. simplOrb. trivial.
-  - destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ]; trivial.
+  - destruct (verifyrule' gas g p1 lr) as [[[? ?] | ] | ]; trivial.
     simpl.
     rewrite IHgas.
-    destruct (verifyrule_comp' gas g p2 lr) as [[[? ?] | ] | ]; trivial;
+    destruct (verifyrule' gas g p2 lr) as [[[? ?] | ] | ]; trivial;
     rewrite orres2; trivial.
   - destruct (nth n lr Visiting); trivial.
-    destruct (verifyrule_comp' gas g (nth n g PEmpty) (update lr n Visiting))
+    destruct (verifyrule' gas g (nth n g PEmpty) (update lr n Visiting))
       as [[[? ?] | ] | ]; trivial.
 Qed.
 
 
 Corollary VRcompequivfalse : forall gas g p lr,
-  verifyrule_comp gas g p lr false = verifyrule_comp' gas g p lr.
+  verifyrule gas g p lr false = verifyrule' gas g p lr.
 Proof.
   intros *. rewrite VRcompequiv. apply orresfalse.
 Qed.
@@ -264,7 +264,7 @@ Ltac dstrm :=
 
 
 Lemma sameLen' : forall gas g p lr lr' nb,
-    verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
+    verifyrule' gas g p lr = Some (Some (nb, lr')) ->
     length lr = length lr'.
 Proof.
   induction gas; try discriminate.
@@ -276,21 +276,21 @@ Proof.
       congruence.
     + apply IHgas in Heqo.
       congruence.
-  - destruct (verifyrule_comp' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
       try discriminate.
     simpl in Heq. injection Heq; intros; subst.
     apply IHgas in Heqo0.
     apply IHgas in Heqo.
     congruence.
-  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
       try discriminate.
     simpl in Heq. injection Heq; intros; subst.
     eauto.
-  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
       try discriminate.
     simpl in Heq. injection Heq; intros; subst.
     eauto.
-  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
       try discriminate.
     simpl in Heq. injection Heq; intros; subst.
     eauto.
@@ -304,7 +304,7 @@ Qed.
 
 
 Theorem NLRpreservation' : forall gas g p lr nb lr',
-    verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
+    verifyrule' gas g p lr = Some (Some (nb, lr')) ->
     LRCoher g lr ->
     noleftrec g p nb /\ LRCoher g lr'.
 Proof.
@@ -315,7 +315,7 @@ Proof.
   - simpl in Heq.
     injection Heq; intros; subst; intuition eauto using noleftrec.
   - simpl in Heq.
-    destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
         try discriminate.
     destruct b.
     + apply IHgas in Heqo; trivial.
@@ -328,11 +328,11 @@ Proof.
       destruct Heqo.
       intuition eauto using noleftrec.
   - simpl in Heq.
-    destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
        try discriminate.
     apply IHgas in Heqo; trivial.
     destruct Heqo.
-    destruct (verifyrule_comp' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
        try discriminate.
     apply IHgas in Heqo; trivial.
     destruct Heqo.
@@ -340,19 +340,19 @@ Proof.
     injection Heq; intros; subst.
     intuition eauto using noleftrec.
   - simpl in Heq.
-    destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
        try discriminate.
     apply IHgas in Heqo; trivial.
     simpl in Heq. injection Heq; intros; subst.
     intuition eauto using noleftrec.
   - simpl in Heq.
-    destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
        try discriminate.
     apply IHgas in Heqo; trivial.
     simpl in Heq. injection Heq; intros; subst.
     intuition eauto using noleftrec.
   - simpl in Heq.
-    destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
        try discriminate.
     apply IHgas in Heqo; trivial.
     simpl in Heq. injection Heq; intros; subst.
@@ -360,7 +360,7 @@ Proof.
   - simpl in Heq.
     destruct (nth n lr Visiting) eqn:?; try discriminate.
     + destruct
-       (verifyrule_comp' gas g (nth n g PEmpty) (update lr n Visiting))
+       (verifyrule' gas g (nth n g PEmpty) (update lr n Visiting))
           as [[[? ?] | ] | ] eqn:?; try discriminate.
       injection Heq; intros; subst. clear Heq.
       apply IHgas in Heqo.
@@ -374,7 +374,7 @@ Qed.
 
 
 Lemma vrinc': forall gas g p nb lr lr' n stat,
-  verifyrule_comp' gas g p lr = Some (Some (nb, lr')) ->
+  verifyrule' gas g p lr = Some (Some (nb, lr')) ->
   nth n lr Visiting = stat ->
   stat <> NotVisited ->
   nth n lr' Visiting = stat.
@@ -384,34 +384,34 @@ Proof.
   destruct p; simpl in Heq.
   - injection Heq; intros; subst. trivial.
   - injection Heq; intros; subst. trivial.
-  - destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
       try discriminate.
     destruct b.
     + apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
     + apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
       injection Heq; intros; subst. trivial.
-  - destruct (verifyrule_comp' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p1 lr) as [[[? ?] | ] | ] eqn:?;
       try discriminate.
     apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
-    destruct (verifyrule_comp' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
+    destruct (verifyrule' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
           try discriminate.
     injection Heq; intros; subst.
     eauto.
-  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
           try discriminate.
     injection Heq; intros; subst.
     eauto.
-  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
           try discriminate.
     injection Heq; intros; subst.
     eauto.
-  - destruct (verifyrule_comp' gas g p lr) as [[[? ?] | ] | ] eqn:?;
+  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
           try discriminate.
     injection Heq; intros; subst.
     eauto.
   - destruct (nth n0 lr Visiting) eqn:?; try discriminate.
     + destruct
-        (verifyrule_comp' gas g (nth n0 g PEmpty) (update lr n0 Visiting))
+        (verifyrule' gas g (nth n0 g PEmpty) (update lr n0 Visiting))
           as [[[? ?] | ] | ] eqn:?; try discriminate.
       injection Heq; intros; subst. clear Heq.
       apply IHgas with (n := n) (stat := (nth n lr Visiting)) in Heqo; auto.
@@ -424,7 +424,7 @@ Qed.
 
 
 Lemma VRAdd1'': forall gas g r nb lr lr',
-  verifyrule_comp' gas g (PNT r) lr = Some (Some (nb, lr')) ->
+  verifyrule' gas g (PNT r) lr = Some (Some (nb, lr')) ->
   nth r lr Visiting = NotVisited ->
   nth r lr' Visiting = Visited nb.
 Proof.
@@ -432,7 +432,7 @@ Proof.
   intros * Heq Hneq.
   simpl in Heq.
   destruct (nth r lr Visiting) eqn:?; try discriminate.
-  destruct (verifyrule_comp' gas g (nth r g PEmpty) (update lr r Visiting))
+  destruct (verifyrule' gas g (nth r g PEmpty) (update lr r Visiting))
           as [[[? ?] | ] | ] eqn:?; try discriminate.
   inversion Heq; intros; subst.
   rewrite update_eq; trivial.
@@ -443,7 +443,7 @@ Proof.
 
 
 Lemma VRAdd1N: forall gas g r nb lr lr',
-  verifyrule_comp' gas g (PNT r) lr = Some (Some (nb, lr')) ->
+  verifyrule' gas g (PNT r) lr = Some (Some (nb, lr')) ->
    nth r lr' Visiting = Visited nb.
 Proof.
   intros * HV.

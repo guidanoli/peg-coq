@@ -57,7 +57,6 @@ Fixpoint verifyrule (gas : nat)
       end
     | PRepetition p' => verifyrule gas' g p' lr true
     | PNot p' => verifyrule gas' g p' lr true
-    | PAnd p' => verifyrule gas' g p' lr true
     | PNT i =>
       match nth i lr Visiting with
       | Visiting => Some None  (* left recursion *)
@@ -84,7 +83,6 @@ Fixpoint costP p : nat :=
   | PChoice p1 p2 => S (costP p1 + costP p2)
   | PRepetition p => S (costP p)
   | PNot p => S (costP p)
-  | PAnd p => S (costP p)
   | PNT _ => 1
   end.
 
@@ -151,7 +149,6 @@ Fixpoint nullable lr p : bool :=
       (nullable lr p1 || nullable lr p2)%bool
   | PRepetition _ => true
   | PNot _ => true
-  | PAnd _ => true
   | PNT i => match nth i lr Visiting with
              | Visited false => false
              | _ => true
@@ -174,7 +171,6 @@ Fixpoint noloops lr p : bool :=
       if nullable lr p' then false
       else noloops lr p'
   | PNot p' => noloops lr p'
-  | PAnd p' => noloops lr p'
   | PNT _ => true   (* each rule will be checked by itself *)
 end.
 
@@ -199,8 +195,6 @@ Fixpoint noloops2 lr p : (bool * bool) :=
       let (lp, nl) := noloops2 lr p' in
         ((negb nl && lp)%bool, true)
   | PNot p' =>
-      let (lp, _) := noloops2 lr p' in (lp,  true)
-  | PAnd p' =>
       let (lp, _) := noloops2 lr p' in (lp,  true)
   | PNT i => match nth i lr Visiting with
              | Visited false => (true, false)
@@ -264,7 +258,7 @@ Goal well_formed [PChoice (PSequence dot (PNT 0)) dot] =
 
 (* R0 -> !. / &. . R0 *)
 Goal well_formed [PChoice (PNot dot)
-                          (PSequence (PAnd dot)
+                          (PSequence (PNot (PNot dot))
                           (PSequence dot (PNT 0)))] = Some [Visited true].
 reflexivity. Qed.
 
@@ -294,7 +288,6 @@ Fixpoint nullable_cost p : nat :=
       1 + nullable_cost p1 + nullable_cost p2
   | PRepetition _ => 1
   | PNot _ => 1
-  | PAnd _ => 1
   | PNT i => 1
 end.
 
@@ -311,7 +304,6 @@ Fixpoint noloops_cost p : nat :=
   | PRepetition p' =>
       1 + nullable_cost p' + noloops_cost p'
   | PNot p' => noloops_cost p'
-  | PAnd p' => noloops_cost p'
   | PNT _ => 1
 end.
 

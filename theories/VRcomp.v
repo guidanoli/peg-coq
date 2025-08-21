@@ -126,7 +126,6 @@ Proof.
       * exfalso. eapply IHgas; eauto. lia.
     + apply IHgas. simpl in Hle. lia.
     + apply IHgas. simpl in Hle. lia.
-    + apply IHgas. simpl in Hle. lia.
     + simpl in Hle; simpl.
       destruct (nth n lr Visiting) eqn:?; try congruence.
       destVR; try congruence.

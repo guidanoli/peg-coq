@@ -61,9 +61,6 @@ Inductive Pnoloops : list RuleStatus -> pat -> Prop :=
   | CLNot : forall lr p,
       Pnoloops lr p ->
       Pnoloops lr (PNot p)
-  | CLAnd : forall lr p,
-      Pnoloops lr p ->
-      Pnoloops lr (PAnd p)
   | CLNT : forall lr i,
       Pnoloops lr (PNT i)
   .
@@ -165,9 +162,6 @@ Proof with eauto using matches.
       eapply (proj1 (notnull_len g p)) in H2; eauto; try lia. }
     specialize (IHN s0 _ Hlen0 HNL).
     breakEx...
-  - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H3).
-    breakEx.
-    destruct x...
   - specialize (IHnoleftrec Heqb Heqr H IHN _ HSlen H3).
     breakEx.
     destruct x...

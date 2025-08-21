@@ -62,14 +62,6 @@ Inductive matches : grammar -> pat -> string -> MatchResult -> Prop :=
       forall g p s,
       matches g p s Failure ->
       matches g (PNot p) s (Success s)
-  | MAndSuccess :
-      forall g p s s',
-      matches g p s (Success s') ->
-      matches g (PAnd p) s (Success s)
-  | MAndFailure :
-      forall g p s,
-      matches g p s Failure ->
-      matches g (PAnd p) s Failure
   | MNonTerminalSome :
       forall g i p s res,
       nth i g PEmpty = p ->
@@ -172,6 +164,8 @@ Ltac invert_matches p :=
         inversion Hx; subst
   end.
 
+Definition PAnd p := PNot (PNot p).
+
 Lemma matches_if_then_else :
   forall g pcond p1 p2 s rescond res,
   matches g pcond s rescond ->
@@ -217,10 +211,10 @@ Proof.
   - (* <- *)
     destruct rescond.
     + (* pcond fails *)
-      eauto 6 using matches.
+      eauto 7 using matches.
     + (* pcond matches *)
       destruct res;
-      eauto 6 using matches.
+      eauto 7 using matches.
 Qed.
 
 (** Match function with gas **)
@@ -252,11 +246,6 @@ Fixpoint matches_comp g p s gas {struct gas} :=
               | PNot p' => match matches_comp g p' s gas' with
                            | Some Failure => Some (Success s)
                            | Some (Success _) => Some Failure
-                           | None => None
-                           end
-              | PAnd p' => match matches_comp g p' s gas' with
-                           | Some Failure => Some Failure
-                           | Some (Success _) => Some (Success s)
                            | None => None
                            end
               | PNT i => matches_comp g (nth i g PEmpty) s gas'
@@ -309,12 +298,6 @@ Proof with eauto using matches.
        destruct1...
     -- (* Success s1 *)
        apply IHgas in H...
-  - (* PNot p *)
-    destruct (matches_comp g p s gas) as [res1|] eqn:H1; try discriminate.
-    apply IHgas in H1.
-    destruct res1 as [|s1];
-    destruct1;
-    eauto using matches.
   - (* PNot p *)
     destruct (matches_comp g p s gas) as [res1|] eqn:H1; try discriminate.
     apply IHgas in H1.

@@ -41,10 +41,6 @@ Inductive noleftrec : grammar -> pat -> bool -> Prop :=
       forall g p nb,
       noleftrec g p nb ->
       noleftrec g (PNot p) true
-  | NLRAnd :
-      forall g p nb,
-      noleftrec g p nb ->
-      noleftrec g (PAnd p) true
   | NLRNT :
       forall g i p nb,
       nth i g PEmpty = p ->
@@ -208,7 +204,6 @@ Fixpoint verifyrule' (gas : nat)
       end
     | PRepetition p' => orres (verifyrule' gas' g p' lr) true
     | PNot p' => orres (verifyrule' gas' g p' lr) true
-    | PAnd p' => orres (verifyrule' gas' g p' lr) true
     | PNT i =>
       match nth i lr Visiting with
       | Visiting => Some None  (* left recursion *)
@@ -290,10 +285,6 @@ Proof.
       try discriminate.
     simpl in Heq. injection Heq; intros; subst.
     eauto.
-  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
-      try discriminate.
-    simpl in Heq. injection Heq; intros; subst.
-    eauto.
   - destruct (nth n lr Visiting); try discriminate.
     + dstrm.
       simpl in Heq. injection Heq; intros; subst.
@@ -352,12 +343,6 @@ Proof.
     simpl in Heq. injection Heq; intros; subst.
     intuition eauto using noleftrec.
   - simpl in Heq.
-    destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
-       try discriminate.
-    apply IHgas in Heqo; trivial.
-    simpl in Heq. injection Heq; intros; subst.
-    intuition eauto using noleftrec.
-  - simpl in Heq.
     destruct (nth n lr Visiting) eqn:?; try discriminate.
     + destruct
        (verifyrule' gas g (nth n g PEmpty) (update lr n Visiting))
@@ -394,10 +379,6 @@ Proof.
       try discriminate.
     apply IHgas with (stat := stat) (n := n) in Heqo; eauto.
     destruct (verifyrule' gas g p2 l) as [[[? ?] | ] | ] eqn:?;
-          try discriminate.
-    injection Heq; intros; subst.
-    eauto.
-  - destruct (verifyrule' gas g p lr) as [[[? ?] | ] | ] eqn:?;
           try discriminate.
     injection Heq; intros; subst.
     eauto.

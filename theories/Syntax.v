@@ -12,7 +12,6 @@ Inductive pat : Type :=
   | PChoice : pat -> pat -> pat           (* p1 / p2      *)
   | PRepetition : pat -> pat              (* p*           *)
   | PNot : pat -> pat                     (* !p           *)
-  | PAnd : pat -> pat                     (* &p           *)
   | PNT : nat -> pat                      (* G[i]         *)
   .
 
@@ -24,7 +23,6 @@ Fixpoint pat_size p :=
   | PChoice p1 p2 => 1 + pat_size p1 + pat_size p2
   | PRepetition p => 1 + pat_size p
   | PNot p => 1 + pat_size p
-  | PAnd p => 1 + pat_size p
   | PNT _ => 1
   end.
 
@@ -61,10 +59,6 @@ Inductive pat_le (p : pat) : pat -> Prop :=
       forall p1,
       pat_le p p1 ->
       pat_le p (PNot p1)
-  | PLEAnd :
-      forall p1,
-      pat_le p p1 ->
-      pat_le p (PAnd p1)
   .
 
 (** Grammar **)
@@ -97,3 +91,4 @@ Proof.
       specialize (IHg _ HIn').
       lia.
 Qed.
+

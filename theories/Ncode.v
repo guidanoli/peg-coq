@@ -233,7 +233,7 @@ Fixpoint Gnoloops (n : nat) (lr : list RuleStatus) (g : grammar) : bool :=
   Final check: Checks whether grammar has neither left recursion nor
   loops with nullable body.
 *)
-Definition well_formed (g : grammar) : Result :=
+Definition wf (g : grammar) : Result :=
   match VG g with
   | Some lr => 
       if Gnoloops (length g) lr g then Some lr
@@ -244,32 +244,32 @@ end.
 
 Module Examples.
 (* R0 -> R0 *)
-Goal well_formed [PNT 0] = None. reflexivity. Qed.
+Goal wf [PNT 0] = None. reflexivity. Qed.
 
 Definition dot : pat := PSet (fun c => true).
 
 (* R0 -> R1 R1; R1 -> ε / . *)
-Goal well_formed [PSequence (PNT 1) (PNT 1); PChoice PEmpty dot] =
+Goal wf [PSequence (PNT 1) (PNT 1); PChoice PEmpty dot] =
      Some [Visited true; Visited true]. reflexivity. Qed.
 
 (* R0 -> . R0 / . *)
-Goal well_formed [PChoice (PSequence dot (PNT 0)) dot] =
+Goal wf [PChoice (PSequence dot (PNT 0)) dot] =
        Some [Visited false]. reflexivity. Qed.
 
 (* R0 -> !. / &. . R0 *)
-Goal well_formed [PChoice (PNot dot)
+Goal wf [PChoice (PNot dot)
                           (PSequence (PNot (PNot dot))
                           (PSequence dot (PNT 0)))] = Some [Visited true].
 reflexivity. Qed.
 
 
 (* R0 -> ( .* )*  *)
-Goal well_formed [PRepetition (PRepetition dot)] = None.
+Goal wf [PRepetition (PRepetition dot)] = None.
 reflexivity. Qed.
 
 
 (* R0 -> ( .* . )*  *)
-Goal well_formed [PRepetition (PSequence (PRepetition dot) dot)] =
+Goal wf [PRepetition (PSequence (PRepetition dot) dot)] =
       Some [Visited true]. reflexivity. Qed.
 
 End Examples.

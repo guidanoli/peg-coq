@@ -116,14 +116,14 @@ Qed.
 
 
 Lemma well_formed_correct_aux : forall g lr,
-  well_formed g  = Some lr ->
+  wf g  = Some lr ->
   forall N s p,
   String.length s < N ->
   Pnoloops lr p ->
   exists res, matches g p s res.
 Proof with eauto using matches.
   intros * HWF.
-  unfold well_formed in HWF.
+  unfold wf in HWF.
   repeat destructCond.
   injection HWF; intro; subst; clear HWF.
   specialize (Gnoloops_complete _ _ Heqb) as ?.
@@ -172,13 +172,13 @@ Qed.
 
 
 Corollary well_formed_correct : forall g lr,
-  well_formed g  = Some lr ->
+  wf g  = Some lr ->
   forall s,
     exists res, matches g (nth 0 g PEmpty) s res.
 Proof.
   intros * HWF s.
   eapply well_formed_correct_aux; eauto.
-  unfold well_formed in HWF.
+  unfold wf in HWF.
   repeat destructCond.
   injection HWF; intro; subst; clear HWF.
   eauto using Gnoloops_complete.

@@ -1,0 +1,12 @@
+coqc -Q . Peg Tactics.v
+coqc -Q . Peg Charset.v
+coqc -Q . Peg Syntax.v
+coqc -Q . Peg Suffix.v
+coqc -Q . Peg NMatch.v
+coqc -Q . Peg Ncode.v
+coqc -Q . Peg NVerifyrule.v
+coqc -Q . Peg VRcomp.v
+coqc -Q . Peg NLR.v
+coqc -Q . Peg NVerifygrammar.v
+coqc -Q . Peg NCheckloops.v
+

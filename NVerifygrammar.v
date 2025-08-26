@@ -123,8 +123,9 @@ Theorem VGcorrect_nonull: forall g lr',
 Proof.
   unfold VG.
   intros * HVG.
-  apply vgcomp_ind in HVG; destruct HVG as [H1 ?];
+  apply vgcomp_ind in HVG;
   auto using LRCoherRep, nth_repeat_init.
+  destruct HVG as [H1 ?].
   unfold LRCoher in *.
   intros * HVis.
   apply H1 in HVis.

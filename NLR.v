@@ -57,7 +57,7 @@ Proof.
   intros * H1.
   generalize dependent nb'.
   induction H1; intros * H2; inversion H2;
-  subst; intuition; try congruence.
+  subst; intuition auto with *; try congruence.
   repeat f_equal; auto.
 Qed.
 
